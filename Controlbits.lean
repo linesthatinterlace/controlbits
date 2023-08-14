@@ -48,6 +48,23 @@ simp_rw [getResiduum, mergeBitResiduum, Function.curry_apply, Function.comp_appl
 lemma ne_mergeBitResiduum_of_getResiduum_ne (i : Fin (m + 1)) (h : getResiduum i q ≠ p) :
 q ≠ mergeBitResiduum i b p := by rintro rfl ; exact h (getResiduum_mergeBitResiduum i)
 
+lemma getBit_succAbove_eq_getBit_getResiduum : getBit (j.succAbove i) = getBit i ∘ getResiduum j := by
+ext ; simp_rw [Function.comp_apply, getResiduum_def, getBit_def, Equiv.symm_apply_apply, Function.comp_apply, Equiv.symm_apply_apply]
+
+lemma getBit_succAbove_eq_getBit_getResiduum_apply : getBit (j.succAbove i) q = getBit i (getResiduum j q) := by
+simp_rw [getResiduum_def, getBit_def, Equiv.symm_apply_apply, Function.comp_apply, Equiv.symm_apply_apply]
+
+lemma exists_getBit_eq_getBit_getResiduum {j : Fin (m + 2)} (h : i ≠ j) : ∃ k, j.succAbove k = i ∧ getBit i = getBit k ∘ getResiduum j := by
+rcases Fin.exists_succAbove_eq h with ⟨k, rfl⟩
+use k ; exact ⟨rfl, getBit_succAbove_eq_getBit_getResiduum⟩
+
+lemma exists_getBit_eq_getBit_getResiduum_apply {j : Fin (m + 2)} (h : i ≠ j) : ∃ k, j.succAbove k = i ∧ ∀ q, getBit i q = getBit k (getResiduum j q) := by
+rcases Fin.exists_succAbove_eq h with ⟨k, rfl⟩
+use k ; exact ⟨rfl, fun _ => getBit_succAbove_eq_getBit_getResiduum_apply⟩
+
+lemma getBit_eq_getBit_succAbove_mergeBitResiduum (j : Fin (m + 2)) : getBit i p = getBit (j.succAbove i) (mergeBitResiduum j b p) := by
+simp [getBit_succAbove_eq_getBit_getResiduum, getResiduum_mergeBitResiduum]
+
 @[simp]
 lemma mergeBitResiduum_getBit_getResiduum : mergeBitResiduum i (getBit i q) (getResiduum i q) = q := by
 simp_rw [getResiduum, mergeBitResiduum, getBit, Function.comp_apply, Function.curry_apply, Prod.mk.eta, Equiv.symm_apply_apply]
@@ -94,13 +111,6 @@ getBit i q₁ = getBit i q₂ ∧ getResiduum i q₁ = getResiduum i q₂ ↔ q�
 ⟨and_imp.mpr (getResiduum_getBit_inj i), by rintro rfl ; exact ⟨rfl, rfl⟩⟩
 
 end GetMerge
-
-section OffPlace
-
-lemma getBit_succAbove_eq_getBit_getResiduum : getBit i (getResiduum j q) = getBit (j.succAbove i) q := by
-simp_rw [getResiduum_def, getBit_def, Equiv.symm_apply_apply, Function.comp_apply, Equiv.symm_apply_apply]
-
-end OffPlace
 
 section Invariants
 
@@ -213,61 +223,11 @@ lemma id_iff_bitInvariant_residuumInvariant : (bitInvariant i f) ∧ (residuumIn
 ⟨fun h => id_of_bitInvariant_residuumInvariant h.1 h.2 , fun h => h ▸ ⟨id_bitInvariant, id_residuumInvariant⟩⟩
 
 end Invariants
-section Maps
 
-def mapFactorEquiv (i : Fin (m + 1)) : (Fin (2^(m + 1)) → Fin (2^(m + 1))) ≃
-(Bool → Fin (2^m) → Bool) × (Bool → Fin (2^m) → Fin (2^m)) where
-  toFun f := (fun b p => ((getBitResiduum i).conj f (b, p)).fst, fun b p => ((getBitResiduum i).conj f (b, p)).snd)
-  invFun := fun (fb, fp) => (getBitResiduum i).symm.conj (fun bp => (fb bp.fst bp.snd, fp bp.fst bp.snd))
-  left_inv f := by ext q ; simp only [Equiv.conj_apply, getBitResiduum_symm_apply, getBitResiduum_apply,
-    Equiv.symm_symm, mergeBitResiduum_getBit_getResiduum]
-  right_inv := fun (fb, fp) => by ext <;> simp only [Equiv.conj_apply, getBitResiduum_symm_apply, Equiv.symm_symm,
-    getBitResiduum_apply, getBit_mergeBitResiduum, getResiduum_mergeBitResiduum]
-
-
-lemma bitInvariant_alt (i : Fin (m + 1)) : (bitInvariant i f) ↔ (∀ b p, ((getBitResiduum i).conj f (b, p)).fst = b) := by
-rw [bitInvariant_iff_getBit_apply_mergeBitResiduum_Bool_cases, Bool.forall_bool] ; rfl
-
-lemma residuumInvariant_alt (i : Fin (m + 1)) : (residuumInvariant i f) ↔ (∀ b p, ((getBitResiduum i).conj f (b, p)).snd = p) := by
-rw [residuumInvariant_iff_getResiduum_apply_mergeBitResiduum_Bool_cases, Bool.forall_bool] ; rfl
-
-def bitIndifferent (i : Fin (m + 1)) (f : (Fin (2^(m + 1)) → Fin (2^(m + 1)))) : Prop :=
-(∀ b b' p, ((getBitResiduum i).conj f (b, p)).snd = ((getBitResiduum i).conj f (b', p)).snd)
-
-def residuumIndifferent (i : Fin (m + 1)) (f : (Fin (2^(m + 1)) → Fin (2^(m + 1)))) : Prop :=
-(∀ b p p', ((getBitResiduum i).conj f (b, p)).fst = ((getBitResiduum i).conj f (b, p')).fst)
-
-end Maps
-end BitResiduum
-
-section ControlBits
-open Nat
-
--- DEF
+section FlipBit
 
 def flipBit (i : Fin (m + 1)) : Equiv.Perm (Fin (2^(m + 1))) :=
 (getBitResiduum i).symm.permCongr <| (finTwoEquiv.permCongr (finRotate _)).prodCongr (Equiv.refl _)
-
-lemma flipBit_def : flipBit i q = (finFunctionFinEquiv
-  <| finTwoEquiv.symm ∘ Fin.insertNth i (finTwoEquiv <| finFunctionFinEquiv.symm q i + 1)
-    (finTwoEquiv ∘ finTwoEquiv.symm ∘ fun j => finTwoEquiv <| finFunctionFinEquiv.symm q <| i.succAbove j))
-:= by
-simp_rw [flipBit, Equiv.permCongr_apply, Equiv.symm_symm, getBitResiduum_apply, getBit_def, getResiduum_def,
-  Equiv.prodCongr_apply, Equiv.coe_refl, Prod_map, id_eq, getBitResiduum_symm_apply, mergeBitResiduum_def,
-  Equiv.permCongr_apply, Equiv.symm_apply_apply, finRotate_succ_apply]
-
-lemma getBit_flipBit_ne (h : i ≠ j) : getBit i (flipBit j q) = getBit i q := by
-simp [getBit_def]
-simp [getBit, getBitResiduum, Equiv.coe_trans, Equiv.prodCongr_apply, Equiv.coe_refl,
-  Equiv.piFinSuccAboveEquiv_apply, Function.comp_apply, Equiv.arrowCongr_apply, Equiv.refl_symm, Function.comp.right_id,
-  Prod_map, id_eq, Equiv.permCongr_apply, Equiv.symm_symm, Equiv.trans_apply, Equiv.symm_apply_apply,
-  finRotate_succ_apply, Equiv.symm_trans_apply, Equiv.prodCongr_symm, Equiv.arrowCongr_symm,
-  Equiv.piFinSuccAboveEquiv_symm_apply, Equiv.apply_symm_apply, flipBit] ;
-rcases lt_or_gt_of_ne h with hij | hij
-· simp only [Fin.insertNth_apply_below hij, Equiv.arrowCongr_apply, Equiv.refl_symm, Equiv.coe_refl,
-  Function.comp.right_id, Function.comp_apply, Fin.succAbove_castLT hij, Equiv.symm_apply_apply, eq_rec_constant]
-· simp only [Fin.insertNth_apply_above hij, Equiv.arrowCongr_apply, Equiv.refl_symm, Equiv.coe_refl,
-  Function.comp.right_id, Function.comp_apply, Fin.succAbove_pred hij, Equiv.symm_apply_apply, eq_rec_constant]
 
 lemma flipBit_eq_mergeBitResiduum_not_getBit_getResiduum : flipBit i q = mergeBitResiduum i (!(getBit i q)) (getResiduum i q) := by
 simp_rw [flipBit, Equiv.permCongr_apply, Equiv.symm_symm, Equiv.trans_apply, getBitResiduum_apply]
@@ -294,121 +254,127 @@ simp_rw [flipBit_eq_mergeBitResiduum_not_getBit_getResiduum, getBit_mergeBitResi
 lemma getResiduum_flipBit : getResiduum i (flipBit i q) = getResiduum i q := by
 rw [flipBit_eq_mergeBitResiduum_not_getBit_getResiduum, getResiduum_mergeBitResiduum]
 
+lemma getBit_flipBit_ne {i : Fin (m + 1)} (h : i ≠ j) : getBit i (flipBit j q) = getBit i q := by
+cases m
+· exact (h (subsingleton_fin_one.elim i j)).elim
+· rcases exists_getBit_eq_getBit_getResiduum_apply h with ⟨k, rfl, hk2⟩
+  simp_rw [hk2, getResiduum_flipBit]
+
 lemma flipBit_bitInvariant (h : i ≠ j) : bitInvariant i (flipBit j) :=
 bitInvariant_of_getBit_apply_eq_getBit (fun _ => (getBit_flipBit_ne h) )
 
 lemma flipBit_residuumInvariant : residuumInvariant i (flipBit i) :=
 residuumInvariant_of_getResiduum_apply_eq_getBit (fun _ => getResiduum_flipBit)
+end FlipBit
 
--- DEF
+section ResiduumCondFlip
 
-def ControlBitsLayer (m : ℕ) := Fin (2^m) → Bool
+def residuumCondFlipCore (c : Fin (2^m) → Bool) (i : Fin (m + 1)) : Fin (2^(m + 1)) → Fin (2^(m + 1)) :=
+  fun q => bif c (getResiduum i q) then flipBit i q else q
 
-namespace ControlBitsLayer
+lemma residuumCondFlipCore_false (h : c (getResiduum i q) = false) : residuumCondFlipCore c i q = q := by
+unfold residuumCondFlipCore ; simp only [h, cond_false]
 
--- DEF
+lemma residuumCondFlipCore_true (h : c (getResiduum i q) = true) : residuumCondFlipCore c i q = flipBit i q := by
+unfold residuumCondFlipCore ; simp only [h, cond_true]
 
-def layerPermCore (c : ControlBitsLayer m) (i : Fin (m + 1)) (q : Fin (2^(m + 1))) : Fin (2^(m + 1)) :=
-  bif (c (getResiduum i q)) then flipBit i q else q
+lemma residuumCondFlipCore_flipBit : residuumCondFlipCore c i (flipBit i q) =
+  bif c (getResiduum i q) then q else flipBit i q := by
+unfold residuumCondFlipCore ; simp only [getResiduum_flipBit, flipBit_flipBit]
 
-lemma layerPermCore_false (h : c (getResiduum i q) = false) : layerPermCore c i q = q := by
-unfold layerPermCore ; simp only [h, cond_false]
-
-lemma layerPermCore_true (h : c (getResiduum i q) = true) : layerPermCore c i q = flipBit i q := by
-unfold layerPermCore ; simp only [h, cond_true]
-
-lemma layerPermCore_flipBit : layerPermCore c i (flipBit i q) =
-  bif (c (getResiduum i q)) then q else flipBit i q := by
-unfold layerPermCore ; simp only [getResiduum_flipBit, flipBit_flipBit]
-
-lemma layerPermCore_layerPermCore : layerPermCore c i (layerPermCore c i q) = q := by
+lemma residuumCondFlipCore_residuumCondFlipCore : residuumCondFlipCore c i (residuumCondFlipCore c i q) = q := by
 rcases (c (getResiduum i q)).dichotomy with h | h
-· simp only [h, layerPermCore_false]
-· simp only [h, layerPermCore_true, getResiduum_flipBit, flipBit_flipBit]
+· simp only [h, residuumCondFlipCore_false]
+· simp only [h, residuumCondFlipCore_true, getResiduum_flipBit, flipBit_flipBit]
 
-def layerPerm (c : ControlBitsLayer m) (i : Fin (m + 1)) : Equiv.Perm (Fin (2^(m + 1))) where
-  toFun := layerPermCore c i
-  invFun := layerPermCore c i
-  left_inv _ := layerPermCore_layerPermCore
-  right_inv _ := layerPermCore_layerPermCore
+def residuumCondFlip (c : Fin (2^m) → Bool) (i : Fin (m + 1)) : Equiv.Perm (Fin (2^(m + 1))) where
+  toFun := residuumCondFlipCore c i
+  invFun := residuumCondFlipCore c i
+  left_inv _ := residuumCondFlipCore_residuumCondFlipCore
+  right_inv _ := residuumCondFlipCore_residuumCondFlipCore
 
-lemma layerPerm_apply_def : layerPerm c i q = bif (c (getResiduum i q)) then flipBit i q else q := rfl
-
-@[simp]
-lemma layerPerm_apply_def_false (h : c (getResiduum i q) = false) :
-layerPerm c i q = q := layerPermCore_false h
+lemma residuumCondFlip_apply_def : residuumCondFlip c i q = bif c (getResiduum i q) then flipBit i q else q := rfl
 
 @[simp]
-lemma layerPerm_apply_def_true (h : c (getResiduum i q) = true) :
-layerPerm c i q = flipBit i q := layerPermCore_true h
+lemma residuumCondFlip_apply_def_false (h : c (getResiduum i q) = false) :
+residuumCondFlip c i q = q := residuumCondFlipCore_false h
 
 @[simp]
-lemma layerPerm_refl_of_all_false (h : ∀ p, c p = false) : layerPerm c i = Equiv.refl _ :=
-Equiv.ext fun _ =>  layerPerm_apply_def_false (h _)
+lemma residuumCondFlip_apply_def_true (h : c (getResiduum i q) = true) :
+residuumCondFlip c i q = flipBit i q := residuumCondFlipCore_true h
 
 @[simp]
-lemma layerPerm_refl_of_all_true (h : ∀ p, c p = true) : layerPerm c i = flipBit i :=
-Equiv.ext fun _ => layerPerm_apply_def_true (h _)
-
-lemma layerPerm_apply_flipBit :
-layerPerm c i (flipBit i q) = bif (c (getResiduum i q)) then q else flipBit i q := layerPermCore_flipBit
+lemma residuumCondFlip_refl_of_all_false (h : ∀ p, c p = false) : residuumCondFlip c i = Equiv.refl _ :=
+Equiv.ext fun _ =>  residuumCondFlip_apply_def_false (h _)
 
 @[simp]
-lemma layerPerm_apply_flipBit_false (h : c (getResiduum i q) = false) : layerPerm c i (flipBit i q) = (flipBit i q) :=
-by simp only [getResiduum_flipBit, h, layerPerm_apply_def_false]
+lemma residuumCondFlip_refl_of_all_true (h : ∀ p, c p = true) : residuumCondFlip c i = flipBit i :=
+Equiv.ext fun _ => residuumCondFlip_apply_def_true (h _)
+
+lemma residuumCondFlip_apply_flipBit :
+residuumCondFlip c i (flipBit i q) = bif c (getResiduum i q) then q else flipBit i q := residuumCondFlipCore_flipBit
 
 @[simp]
-lemma layerPerm_apply_flipBit_true (h : c (getResiduum i q) = true) : layerPerm c i (flipBit i q) = q :=
-by simp only [getResiduum_flipBit, h, layerPerm_apply_def_true, flipBit_flipBit]
+lemma residuumCondFlip_apply_flipBit_false (h : c (getResiduum i q) = false) : residuumCondFlip c i (flipBit i q) = (flipBit i q) :=
+by simp only [getResiduum_flipBit, h, residuumCondFlip_apply_def_false]
 
 @[simp]
-lemma layerPerm_layerPerm :
-(layerPerm c i).trans (layerPerm c i) = Equiv.refl _ :=
-  Equiv.ext fun _ => layerPermCore_layerPermCore
+lemma residuumCondFlip_apply_flipBit_true (h : c (getResiduum i q) = true) : residuumCondFlip c i (flipBit i q) = q :=
+by simp only [getResiduum_flipBit, h, residuumCondFlip_apply_def_true, flipBit_flipBit]
 
 @[simp]
-lemma symm_layerPerm : (layerPerm c i).symm = (layerPerm c i) := rfl
+lemma residuumCondFlip_residuumCondFlip :
+(residuumCondFlip c i).trans (residuumCondFlip c i) = Equiv.refl _ :=
+  Equiv.ext fun _ => residuumCondFlipCore_residuumCondFlipCore
 
 @[simp]
-lemma layerPerm_inv : (layerPerm c i)⁻¹ = layerPerm c i := rfl
+lemma symm_residuumCondFlip : (residuumCondFlip c i).symm = (residuumCondFlip c i) := rfl
 
 @[simp]
-lemma layerPerm_mul_self : (layerPerm c i) * (layerPerm c i) = 1 := layerPerm_layerPerm
+lemma residuumCondFlip_inv : (residuumCondFlip c i)⁻¹ = residuumCondFlip c i := rfl
 
-lemma getResiduum_layerPerm : getResiduum i (layerPerm c i q) = getResiduum i q := by
+@[simp]
+lemma residuumCondFlip_mul_self : (residuumCondFlip c i) * (residuumCondFlip c i) = 1 := residuumCondFlip_residuumCondFlip
+
+lemma getResiduum_residuumCondFlip : getResiduum i (residuumCondFlip c i q) = getResiduum i q := by
 rcases (c (getResiduum i q)).dichotomy with h | h
-· simp only [h, layerPerm_apply_def_false]
-· simp only [h, layerPerm_apply_def_true, getResiduum_flipBit]
+· simp only [h, residuumCondFlip_apply_def_false]
+· simp only [h, residuumCondFlip_apply_def_true, getResiduum_flipBit]
 
-lemma getBit_layerPerm :
-getBit i (layerPerm c i q) = bif c (getResiduum i q) then !(getBit i q) else getBit i q := by
+lemma getBit_residuumCondFlip : getBit i (residuumCondFlip c i q) =
+bif c (getResiduum i q) then !(getBit i q) else getBit i q := by
 rcases (c (getResiduum i q)).dichotomy with h | h
-· simp only [h, layerPerm_apply_def_false, cond_false]
-· simp only [h, layerPerm_apply_def_true, getBit_flipBit, cond_true]
+· simp only [h, residuumCondFlip_apply_def_false, cond_false]
+· simp only [h, residuumCondFlip_apply_def_true, getBit_flipBit, cond_true]
 
 @[simp]
-lemma getBit_layerPerm_false (h : c (getResiduum i q) = false) :
-getBit i (layerPerm c i q) = getBit i q := by rw [getBit_layerPerm, h, cond_false]
+lemma getBit_residuumCondFlip_false (h : c (getResiduum i q) = false) :
+getBit i (residuumCondFlip c i q) = getBit i q := by rw [getBit_residuumCondFlip, h, cond_false]
 
 @[simp]
-lemma getBit_layerPerm_true (h : c (getResiduum i q) = true) :
-getBit i (layerPerm c i q) = !(getBit i q) := by rw [getBit_layerPerm, h, cond_true]
+lemma getBit_residuumCondFlip_true (h : c (getResiduum i q) = true) :
+getBit i (residuumCondFlip c i q) = !(getBit i q) := by rw [getBit_residuumCondFlip, h, cond_true]
 
-lemma layerPerm_mergeBitResiduum :
-layerPerm c i (mergeBitResiduum i b p) = bif c p then mergeBitResiduum i (!b) p else mergeBitResiduum i b p := by
-rw [layerPerm_apply_def, getResiduum_mergeBitResiduum, flipBit_mergeBitResiduum]
-
-@[simp]
-lemma layerPerm_mergeBitResiduum_false (h : c p = false) : layerPerm c i (mergeBitResiduum i b p) = mergeBitResiduum i b p := by
-simp only [getResiduum_mergeBitResiduum, h, layerPerm_apply_def_false]
+lemma residuumCondFlip_mergeBitResiduum :
+residuumCondFlip c i (mergeBitResiduum i b p) = bif c p then mergeBitResiduum i (!b) p else mergeBitResiduum i b p := by
+rw [residuumCondFlip_apply_def, getResiduum_mergeBitResiduum, flipBit_mergeBitResiduum]
 
 @[simp]
-lemma layerPerm_mergeBitResiduum_true (h : c p = true) : layerPerm c i (mergeBitResiduum i b p) = mergeBitResiduum i (!b) p := by
-simp only [getResiduum_mergeBitResiduum, h, layerPerm_apply_def_true, flipBit_mergeBitResiduum]
+lemma residuumCondFlip_mergeBitResiduum_false (h : c p = false) : residuumCondFlip c i (mergeBitResiduum i b p) = mergeBitResiduum i b p := by
+simp only [getResiduum_mergeBitResiduum, h, residuumCondFlip_apply_def_false]
 
-end ControlBitsLayer
+@[simp]
+lemma residuumCondFlip_mergeBitResiduum_true (h : c p = true) : residuumCondFlip c i (mergeBitResiduum i b p) = mergeBitResiduum i (!b) p := by
+simp only [getResiduum_mergeBitResiduum, h, residuumCondFlip_apply_def_true, flipBit_mergeBitResiduum]
 
--- DEF
+end ResiduumCondFlip
+
+end BitResiduum
+
+section ControlBits
+
+section FoldFin
+open Nat
 
 def foldFin (i : Fin (2*m + 1)) : Fin (m + 1) := m - (dist i m)
 
@@ -430,23 +396,24 @@ lemma foldFin2M: foldFin (2*m : ℕ) = (0 : Fin (m + 1)) := by
 rw [foldFinCast_of_ge le_bit0 (lt_succ_self _), cast_mul, cast_two, sub_self]
 
 lemma foldFinM : foldFin (m : ℕ) = (m : Fin (m + 1)) := foldFinCast_of_le (le_refl _)
+end FoldFin
 
-
--- DEF
-
+def ControlBitsLayer (m : ℕ) := Fin (2^m) → Bool
 def ControlBits (m : ℕ) := Fin (2*m + 1) → ControlBitsLayer m
 
 namespace ControlBits
 
 def controlBitsPerm (cb : ControlBits m) : Equiv.Perm (Fin (2^(m + 1))) :=
-(List.ofFn (fun k => (cb k).layerPerm (foldFin k))).prod
+(List.ofFn (fun k => residuumCondFlip (cb k) (foldFin k))).prod
 
 end ControlBits
+
 def myControlBits1 : ControlBits 1 := ![![true, false], ![true, false], ![false, false]]
 def myControlBits2 : ControlBits 1 := ![![true, false], ![true, true], ![true, false]]
 def myControlBits3 : ControlBits 0 := ![![true]]
 def myControlBits4 : ControlBits 0 := ![![false]]
-#eval [0, 1, 2, 3].map (myControlBits2.controlBitsPerm)
+
+#eval [0, 1, 2, 3].map (ControlBits.controlBitsPerm ((fun (i : Fin (2*100 + 1)) (p : Fin (2^100)) => false) : ControlBits 100))
 
 -- DEF
 
@@ -491,7 +458,7 @@ def oddPerm {π : Equiv.Perm (Fin (2^(m + 1)))} (h : bitInvariant 0 π) := permO
 
 --Equiv.boolProdEquivSum
 
-def xIf (bv : ControlBitsLayer m) : Equiv.Perm (Fin (2^(m + 1))) := bv.layerPerm 0
+def xIf : ControlBitsLayer m → Equiv.Perm (Fin (2^(m + 1))) := (residuumCondFlip · 0)
 
 def piBar (π : Equiv.Perm (Fin (2^(m + 1)))) := (π.permCongr (flipBit 0)).trans (flipBit 0)
 
@@ -500,18 +467,16 @@ ControlBitsLayer (m + 1) × Equiv.Perm (Fin (2^((m + 1) + 1))) × ControlBitsLay
 := sorry
 
 lemma flmDecomp_invar (π : Equiv.Perm (Fin (2^((m + 1) + 1)))) :
-bitInvariant (flmDecomp π).2.1 0 :=
-sorry
+bitInvariant 0 (flmDecomp π).2.1 := sorry
 
 
 def ControlBitsBase (π : Equiv.Perm (Fin (2^(0 + 1)))) : ControlBits 0 := ![![π 0 == 1]]
 def ControlBitsCheat (π : Equiv.Perm (Fin (2^(m + 1)))) : ControlBits m := sorry
 
-def ControlBitsInductive (π : Equiv.Perm (Fin (2^((m + 1) + 1)))) :
+def ControlBitsInductive' (π : Equiv.Perm (Fin (2^((m + 1) + 1)))) :
 ControlBits (m + 1)
 := inductiveControl.symm ((flmDecomp π).1, ControlBitsCheat (evenPerm (flmDecomp_invar π)),
 ControlBitsCheat (oddPerm (flmDecomp_invar π)), (flmDecomp π).2.2)
-
 
 
 end ControlBits
