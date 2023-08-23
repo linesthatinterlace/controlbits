@@ -3,6 +3,7 @@ import Mathlib.Data.Nat.Dist
 import Mathlib.Data.Matrix.Notation
 import Mathlib.Logic.Equiv.Defs
 import Mathlib.GroupTheory.Perm.Cycle.Concrete
+import Mathlib.Combinatorics.Derangements.Basic
 
 section BitResiduum
 
@@ -18,21 +19,25 @@ def getBit (i : Fin (m + 1)) : Fin (2^(m + 1)) → Bool := Prod.fst ∘ (getBitR
 
 def getResiduum (i : Fin (m + 1)) : Fin (2^(m + 1)) → Fin (2^m) := Prod.snd ∘ (getBitResiduum i)
 
-def mergeBitResiduum (i : Fin (m + 1)) : Bool → Fin (2^m) → Fin (2^(m + 1)) := Function.curry (getBitResiduum i).symm
+def mergeBitResiduum (i : Fin (m + 1)) : Bool → Fin (2^m) → Fin (2^(m + 1)) :=
+Function.curry (getBitResiduum i).symm
 
 @[simp]
 lemma getBitResiduum_apply : getBitResiduum i q = (getBit i q, getResiduum i q) := rfl
 
 @[simp]
-lemma getBitResiduum_symm_apply : (getBitResiduum i).symm bp = mergeBitResiduum i bp.fst bp.snd := rfl
+lemma getBitResiduum_symm_apply : (getBitResiduum i).symm bp = mergeBitResiduum i bp.fst bp.snd :=
+rfl
 
 lemma getBit_def : getBit i q = finTwoEquiv (finFunctionFinEquiv.symm q i) := rfl
 
 lemma getResiduum_def : getResiduum i q =
-(finFunctionFinEquiv <| (finTwoEquiv.symm) ∘ (fun j => finTwoEquiv (finFunctionFinEquiv.symm q (Fin.succAbove i j)))) := rfl
+(finFunctionFinEquiv <| (finTwoEquiv.symm) ∘
+(fun j => finTwoEquiv (finFunctionFinEquiv.symm q (Fin.succAbove i j)))) := rfl
 
 lemma mergeBitResiduum_def : mergeBitResiduum i b p =
-(finFunctionFinEquiv <| (finTwoEquiv.symm) ∘ (Fin.insertNth i b <| finTwoEquiv ∘ (finFunctionFinEquiv.symm p))) := rfl
+(finFunctionFinEquiv <| (finTwoEquiv.symm) ∘
+(Fin.insertNth i b <| finTwoEquiv ∘ (finFunctionFinEquiv.symm p))) := rfl
 
 @[simp]
 lemma getBit_mergeBitResiduum (i : Fin (m + 1)) : getBit i (mergeBitResiduum i b p) = b := by
@@ -88,7 +93,7 @@ lemma mergeBitResiduum_inj (i : Fin (m + 1)) (h : mergeBitResiduum i b₁ p₁ =
 lemma mergeBitResiduum_inj_iff (i : Fin (m + 1)) : mergeBitResiduum i b₁ p₁ = mergeBitResiduum i b₂ p₂ ↔ b₁ = b₂ ∧ p₁ = p₂ :=
 ⟨mergeBitResiduum_inj i, by rintro ⟨rfl, rfl⟩ ; rfl⟩
 
-lemma mergeBitResiduum_surj (i : Fin (m + 1)) (q : Fin (2^(m + 1))): ∃ b p, mergeBitResiduum i b p = q :=
+lemma mergeBitResiduum_surj (i : Fin (m + 1)) (q : Fin (2^(m + 1))) : ∃ b p, mergeBitResiduum i b p = q :=
 ⟨getBit i q, getResiduum i q, mergeBitResiduum_getBit_getResiduum⟩
 
 lemma getResiduum_inv (i : Fin (m + 1)) (h : mergeBitResiduum i (getBit i q) p = q) : getResiduum i q = p := by
@@ -106,6 +111,11 @@ lemma forall_iff_forall_mergeBitResiduum (i : Fin (m + 1)) {pr : Fin (2^(m + 1))
                 · exact h.1 _
                 · exact h.2 _⟩
 
+lemma exists_iff_exists_mergeBitResiduum (i : Fin (m + 1)) {pr : Fin (2^(m + 1)) → Prop} :
+(∃ (q : Fin (2^(m + 1))), pr q) ↔ (∃ b p, pr (mergeBitResiduum i b p)) :=
+⟨ fun ⟨q, hq⟩ => ⟨getBit i q, getResiduum i q, mergeBitResiduum_getBit_getResiduum ▸ hq⟩,
+  fun ⟨b, p, hbp⟩ => ⟨mergeBitResiduum i b p, hbp⟩⟩
+
 lemma getBit_surj (i : Fin (m + 1)) : ∃ p, mergeBitResiduum i (getBit i q) p = q :=
 ⟨getResiduum i q, mergeBitResiduum_getBit_getResiduum⟩
 
@@ -118,6 +128,16 @@ q₁ = q₂ := by rw [← mergeBitResiduum_getBit_getResiduum (i := i) (q := q�
 lemma getResiduum_getBit_inj_iff (i : Fin (m + 1)) :
 getBit i q₁ = getBit i q₂ ∧ getResiduum i q₁ = getResiduum i q₂ ↔ q₁ = q₂ :=
 ⟨and_imp.mpr (getResiduum_getBit_inj i), by rintro rfl ; exact ⟨rfl, rfl⟩⟩
+
+lemma ne_iff_getBit_ne_or_getResiduum_ne (i : Fin (m + 1)) :
+getBit i q₁ ≠ getBit i q₂ ∨ getResiduum i q₁ ≠ getResiduum i q₂ ↔ q₁ ≠ q₂  := by
+rw [ne_eq q₁, ← getResiduum_getBit_inj_iff i, not_and_or]
+
+lemma ne_of_getBit_ne (i : Fin (m + 1)) (h : getBit i q₁ ≠ getBit i q₂) :
+q₁ ≠ q₂ := (ne_iff_getBit_ne_or_getResiduum_ne i).mp (Or.inl h)
+
+lemma ne_of_getResiduum_ne (i : Fin (m + 1)) (h : getResiduum i q₁ ≠ getResiduum i q₂) :
+q₁ ≠ q₂ := (ne_iff_getBit_ne_or_getResiduum_ne i).mp (Or.inr h)
 
 end GetMerge
 
@@ -245,13 +265,13 @@ section FlipBit
 def flipBit (i : Fin (m + 1)) : Equiv.Perm (Fin (2^(m + 1))) :=
 (getBitResiduum i).symm.permCongr <| (finTwoEquiv.permCongr (finRotate _)).prodCongr (Equiv.refl _)
 
-lemma flipBit_eq_mergeBitResiduum_not_getBit_getResiduum :
+lemma flipBit_apply :
 flipBit i q = mergeBitResiduum i (!(getBit i q)) (getResiduum i q) := by
-simp_rw [flipBit, Equiv.permCongr_apply, Equiv.symm_symm, Equiv.trans_apply, getBitResiduum_apply]
+simp_rw [flipBit, Equiv.permCongr_apply, Equiv.symm_symm, getBitResiduum_apply]
 rcases (getBit i q).dichotomy with h | h <;> simp_rw [h] <;> rfl
 
 lemma flipBit_mergeBitResiduum : flipBit i (mergeBitResiduum i b p) = mergeBitResiduum i (!b) p := by
-rw [flipBit_eq_mergeBitResiduum_not_getBit_getResiduum, getBit_mergeBitResiduum, getResiduum_mergeBitResiduum]
+rw [flipBit_apply, getBit_mergeBitResiduum, getResiduum_mergeBitResiduum]
 
 @[simp]
 lemma flipBit_mergeBitResiduum_false : flipBit i (mergeBitResiduum i false k) = mergeBitResiduum i true k :=
@@ -263,7 +283,7 @@ flipBit_mergeBitResiduum (b := true)
 
 @[simp]
 lemma flipBit_flipBit : flipBit i (flipBit i q) = q := by
-simp_rw [flipBit_eq_mergeBitResiduum_not_getBit_getResiduum, getBit_mergeBitResiduum,
+simp_rw [flipBit_apply, getBit_mergeBitResiduum,
   getResiduum_mergeBitResiduum, Bool.not_not, mergeBitResiduum_getBit_getResiduum]
 
 @[simp]
@@ -278,19 +298,19 @@ rw [mul_eq_one_iff_inv_eq] ; exact flipBit_inv
 
 @[simp]
 lemma flipBit_mul_cancel_right : ρ * (flipBit i) * (flipBit i) = ρ := by
-ext ; simp only [Equiv.Perm.coe_mul, Function.comp_apply, flipBit_flipBit]
+rw [mul_assoc, flipBit_mul_self, mul_one]
 
 @[simp]
 lemma flipBit_mul_cancel_left : (flipBit i) * ((flipBit i) * ρ)  = ρ := by
-ext ; simp only [Equiv.Perm.coe_mul, Function.comp_apply, flipBit_flipBit]
+rw [← mul_assoc, flipBit_mul_self, one_mul]
 
 @[simp]
 lemma getBit_flipBit : getBit i (flipBit i q) = !(getBit i q) := by
-simp_rw [flipBit_eq_mergeBitResiduum_not_getBit_getResiduum, getBit_mergeBitResiduum]
+simp_rw [flipBit_apply, getBit_mergeBitResiduum]
 
 @[simp]
 lemma getResiduum_flipBit : getResiduum i (flipBit i q) = getResiduum i q := by
-rw [flipBit_eq_mergeBitResiduum_not_getBit_getResiduum, getResiduum_mergeBitResiduum]
+rw [flipBit_apply, getResiduum_mergeBitResiduum]
 
 lemma getBit_flipBit_ne {i : Fin (m + 1)} (h : i ≠ j) : getBit i (flipBit j q) = getBit i q := by
 cases m
@@ -304,6 +324,22 @@ bitInvariant_of_getBit_apply_eq_getBit (fun _ => (getBit_flipBit_ne h) )
 lemma flipBit_residuumInvariant : residuumInvariant i (flipBit i) :=
 residuumInvariant_of_getResiduum_apply_eq_getBit (fun _ => getResiduum_flipBit)
 end FlipBit
+
+@[simp]
+lemma flipBit_apply_ne_self : flipBit i q ≠ q := by
+apply ne_of_getBit_ne i
+rw [getBit_flipBit, ne_eq, Bool.not_not_eq]
+
+lemma flipBit_mem_derangements {i : Fin (m + 1)} : (flipBit i) ∈ derangements (Fin (2^(m + 1))) :=
+fun _ => flipBit_apply_ne_self
+
+@[simp]
+lemma flipBit_ne_one : flipBit i ≠ 1 := by
+rw [ne_eq, Equiv.ext_iff, not_forall]
+exact ⟨0, flipBit_apply_ne_self⟩
+
+@[simp]
+lemma one_ne_flipBit : 1 ≠ flipBit i := flipBit_ne_one.symm
 
 section ResiduumCondFlip
 
@@ -323,19 +359,24 @@ def residuumCondFlip (i : Fin (m + 1)) (c : Fin (2^m) → Bool) : Equiv.Perm (Fi
 lemma residuumCondFlip_apply_def :
 residuumCondFlip i c q = bif c (getResiduum i q) then flipBit i q else q := rfl
 
+lemma residuumCondFlip_eq_mergeBitResiduum_xor_residuum : residuumCondFlip i c q =
+mergeBitResiduum i (xor (c (getResiduum i q)) (getBit i q)) (getResiduum i q) := by
+rcases (c (getResiduum i q)).dichotomy with h | h <;> rw [residuumCondFlip_apply_def, h]
+· rw [cond_false, Bool.xor_false_left, mergeBitResiduum_getBit_getResiduum]
+· rw [cond_true, Bool.true_xor, flipBit_apply]
+
 @[simp]
 lemma residuumCondFlip_residuumCondFlip : residuumCondFlip i c (residuumCondFlip i c q) = q :=
 (residuumCondFlip i c).left_inv q
 
 lemma residuumCondFlip_apply_comm :
 residuumCondFlip i c (residuumCondFlip i d q) = residuumCondFlip i d (residuumCondFlip i c q) := by
-simp_rw [residuumCondFlip_apply_def] ;
-rcases (d (getResiduum i q) ).dichotomy with hd | hd <;> rcases (c (getResiduum i q) ).dichotomy with hc | hc <;>
-simp only [cond_false, hd, hc, cond_true, getResiduum_flipBit]
+simp_rw [residuumCondFlip_eq_mergeBitResiduum_xor_residuum, getResiduum_mergeBitResiduum,
+  getBit_mergeBitResiduum, Bool.xor_left_comm]
 
 lemma residuumCondFlip_comm :
 (residuumCondFlip i c) * (residuumCondFlip i d) = (residuumCondFlip i d) * (residuumCondFlip i c) := by
-ext ; simp_rw [Equiv.Perm.coe_mul, Function.comp_apply, residuumCondFlip_apply_comm]
+ext ; simp ; rw [residuumCondFlip_apply_comm]
 
 @[simp]
 lemma residuumCondFlip_symm : (residuumCondFlip i c).symm = (residuumCondFlip i c) := rfl
@@ -347,9 +388,11 @@ lemma residuumCondFlip_inv : (residuumCondFlip i c)⁻¹ = residuumCondFlip i c 
 lemma residuumCondFlip_mul_self : (residuumCondFlip i c) * (residuumCondFlip i c) = 1 := by
 ext ; simp_rw [Equiv.Perm.coe_mul, Function.comp_apply, residuumCondFlip_residuumCondFlip, Equiv.Perm.coe_one, id_eq]
 
-lemma residuumCondFlip_flipBit_of_all_true : flipBit i = residuumCondFlip i (Function.const _ true) := rfl
+lemma residuumCondFlip_flipBit_of_all_true : flipBit i = residuumCondFlip i (Function.const _ true) := by
+ext ; rw [residuumCondFlip_apply_def] ; rfl
 
-lemma residuumCondFlip_refl_of_all_false : Equiv.refl _ = residuumCondFlip i (Function.const _ false)  := rfl
+lemma residuumCondFlip_refl_of_all_false : Equiv.refl _ = residuumCondFlip i (Function.const _ false) :=
+rfl
 
 lemma residuumCondFlip_apply_comm_flipBit : residuumCondFlip i c (flipBit i q) = flipBit i (residuumCondFlip i c q) := by
 rw [residuumCondFlip_flipBit_of_all_true, residuumCondFlip_apply_comm]
@@ -365,6 +408,7 @@ rcases (c (getResiduum i q)).dichotomy with h | h <;> rw [residuumCondFlip_apply
 · simp_rw [cond_false]
 · simp_rw [cond_true, flipBit_flipBit]
 
+@[simp]
 lemma getResiduum_residuumCondFlip : getResiduum i (residuumCondFlip i c q) = getResiduum i q := by
 rcases (c (getResiduum i q)).dichotomy with h | h  <;> rw [residuumCondFlip_apply_def, h]
 · rfl
@@ -372,22 +416,23 @@ rcases (c (getResiduum i q)).dichotomy with h | h  <;> rw [residuumCondFlip_appl
 
 lemma getBit_residuumCondFlip : getBit i (residuumCondFlip i c q) =
 bif c (getResiduum i q) then !(getBit i q) else getBit i q := by
-rcases (c (getResiduum i q)).dichotomy with hc | hc <;> rcases (getBit i q).dichotomy with h | h <;>
-rw [residuumCondFlip_apply_def, h, hc] <;> simp only [cond_false, cond_true, getBit_flipBit, h, Bool.not_true]
+rcases (c (getResiduum i q)).dichotomy with hc | hc <;> simp [residuumCondFlip_apply_def, hc]
 
 lemma getBit_residuumCondFlip' : getBit i (residuumCondFlip i c q) =
-bif (getBit i q) then !(c (getResiduum i q)) else c (getResiduum i q) := by
-rw [getBit_residuumCondFlip] ; rcases (getBit i q).dichotomy with h | h <;>
-rcases (c (getResiduum i q)).dichotomy with hc | hc <;> rw [h, hc] <;> rfl
+xor (c (getResiduum i q)) (getBit i q) := by
+rcases (c (getResiduum i q)).dichotomy with hc | hc <;> simp [residuumCondFlip_apply_def, hc]
 
 lemma getBit_residuumCondFlip'' : getBit i (residuumCondFlip i c q) =
-xor (c (getResiduum i q)) (getBit i q) := by
-rw [getBit_residuumCondFlip] ; rcases (getBit i q).dichotomy with h | h <;>
-rcases (c (getResiduum i q)).dichotomy with hc | hc <;> rw [h, hc] <;> rfl
+bif (getBit i q) then !(c (getResiduum i q)) else c (getResiduum i q) := by
+rcases (getBit i q).dichotomy with h | h <;> simp [getBit_residuumCondFlip', h]
 
-lemma residuumCondFlip_mergeBitResiduum :
-residuumCondFlip i c (mergeBitResiduum i b p) = bif c p then mergeBitResiduum i (!b) p else mergeBitResiduum i b p := by
+lemma residuumCondFlip_mergeBitResiduum : residuumCondFlip i c (mergeBitResiduum i b p) =
+bif c p then mergeBitResiduum i (!b) p else mergeBitResiduum i b p := by
 rw [residuumCondFlip_apply_def, getResiduum_mergeBitResiduum, flipBit_mergeBitResiduum]
+
+lemma residuumCondFlip_mergeBitResiduum' : residuumCondFlip i c (mergeBitResiduum i b p) =
+mergeBitResiduum i (xor (c p) b) p := by
+rw [residuumCondFlip_eq_mergeBitResiduum_xor_residuum,getResiduum_mergeBitResiduum, getBit_mergeBitResiduum]
 
 end ResiduumCondFlip
 
@@ -437,8 +482,10 @@ if Function.IsFixedPt π x then {x} else (π.cycleOf x).support
 lemma cycleFull_of_fixed (h : Function.IsFixedPt π x) : CycleFull π x = {x} := dif_pos h
 
 @[simp]
-lemma cycleFull_of_not_fixed (h : ¬ Function.IsFixedPt π x) : CycleFull π x = (π.cycleOf x).support := dif_neg h
+lemma cycleFull_of_not_fixed (h : ¬ Function.IsFixedPt π x) : CycleFull π x = (π.cycleOf x).support :=
+dif_neg h
 
+@[simp]
 lemma mem_cycleFull_iff : y ∈ CycleFull π x ↔ π.SameCycle x y := by
 by_cases h₂ : Function.IsFixedPt π x
 · simp_rw [cycleFull_of_fixed h₂, Finset.mem_singleton]
@@ -494,6 +541,9 @@ rw [mem_cycleFull_iff] ; refine ⟨?_, ?_⟩
 · rintro hb ; rcases (Equiv.Perm.SameCycle.exists_pow_eq π hb) with ⟨b, _, _, rfl⟩
   refine ⟨b % (CycleFull π x).card, Nat.le_pred_of_lt <| Nat.mod_lt _ card_cycleFull_pos, pow_mod_card_cycleFull_self_apply⟩
 · rintro ⟨b, _, rfl⟩ ; refine ⟨b, rfl⟩
+
+lemma mem_cycleFull_iff'' : y ∈ CycleFull π x ↔ ∃ b, b < (CycleFull π x).card ∧ (π ^ b) x = y := by
+simp_rw [mem_cycleFull_iff', ← Nat.lt_iff_le_pred card_cycleFull_pos]
 
 lemma cycleFull_apply_eq_cycleMin : CycleFull π (π x) = CycleFull π x := by
 by_cases h₂ : Function.IsFixedPt π x
@@ -587,11 +637,29 @@ lemma cycleMin_eq_min_cycleSection :
 CycleMin π x = (CycleSection π x ((CycleFull π x).card - 1)).min' cycleSection_nonempty := by
 rw [cycleMin_eq_min_CycleFull] ; congr ; exact cycleFull_eq_cycleSection_cycleFull_pred
 
+lemma cycleMin_mem_cycleFull (π : Equiv.Perm α) (x : α):
+CycleMin π x ∈ CycleFull π x := by
+by_cases h : Function.IsFixedPt π x
+· simp_rw [cycleMin_of_fixed h, cycleFull_of_fixed h, Finset.mem_singleton]
+· simp_rw [cycleMin_of_not_fixed h, cycleFull_of_not_fixed h, Finset.min'_mem]
+
+lemma cycleMin_exists_pow_apply (π : Equiv.Perm α) (x : α):
+∃ k : ℤ, (π^k) x = CycleMin π x :=
+mem_cycleFull_iff.mp (cycleMin_mem_cycleFull π x)
+
+lemma cycleMin_exists_pow_apply' (π : Equiv.Perm α) (x : α):
+∃ k, k ≤ ((CycleFull π x).card - 1) ∧ (π^k) x = CycleMin π x :=
+mem_cycleFull_iff'.mp (cycleMin_mem_cycleFull π x)
+
+lemma cycleMin_exists_pow_apply'' (π : Equiv.Perm α) (x : α):
+∃ k, k < (CycleFull π x).card ∧ (π^k) x = CycleMin π x :=
+mem_cycleFull_iff''.mp (cycleMin_mem_cycleFull π x)
+
 lemma cycleMin_eq_min_cycleSection_ge (ha : (CycleFull π x).card - 1 ≤ a) :
 CycleMin π x = (CycleSection π x a).min' cycleSection_nonempty := by
 simp_rw [cycleMin_eq_min_CycleFull, cycleFull_eq_cycleSection_ge_cycleFull_pred ha]
 
-lemma cycleMin_le (h : π.SameCycle x y) : CycleMin π x ≤ y := by
+lemma cycleMin_le (π : Equiv.Perm α) (x : α) (h : π.SameCycle x y) : CycleMin π x ≤ y := by
 rw [cycleMin_eq_min_CycleFull] ; exact Finset.min'_le _ y (mem_cycleFull_iff.mpr h)
 
 lemma le_cycleMin (h : ∀ y, π.SameCycle x y → z ≤ y) : z ≤ CycleMin π x  := by
@@ -649,19 +717,9 @@ end CycleMin
 
 
 
-def XIf (c : Fin (2^m) → Bool) : Equiv.Perm (Fin (2^(m + 1))) := residuumCondFlip 0 c
+
 
 def XBackXForth (π : Equiv.Perm (Fin (2^(m + 1)))) := π * (flipBit 0) * π⁻¹ * (flipBit 0)
-
-def FirstControlBits (π) (p : Fin (2^m)) := getBit 0 (CycleMin (XBackXForth π) (mergeBitResiduum 0 false p))
-
-def FirstControl (π : Equiv.Perm (Fin (2^(m + 1)))) := XIf (FirstControlBits π)
-
-def LastControlBits (π) (p : Fin (2^m)) := getBit 0 ((FirstControl π) (π (mergeBitResiduum 0 false p)))
-
-def LastControl (π : Equiv.Perm (Fin (2^(m + 1)))) := XIf (LastControlBits π)
-
-def MiddlePerm (π : Equiv.Perm (Fin (2^(m + 1)))) := (FirstControl π) * π * (LastControl π)
 
 lemma xBXF_def : XBackXForth π = π * (flipBit 0) * π⁻¹ * (flipBit 0) := rfl
 
@@ -670,36 +728,197 @@ rw [xBXF_def] ; simp only [mul_assoc, mul_inv_rev, flipBit_inv, inv_inv]
 
 lemma xBXF_apply : (XBackXForth π) q = π ((flipBit 0) (π⁻¹ (flipBit 0 q))) := rfl
 
-lemma xBXF_inv_apply : (XBackXForth π)⁻¹ q = (flipBit 0) (π ((flipBit 0) (π⁻¹ q))) := by rw [xBXF_inv] ; rfl
+lemma xBXF_inv_apply : (XBackXForth π)⁻¹ q = (flipBit 0) (π ((flipBit 0) (π⁻¹ q))) := by
+rw [xBXF_inv] ; rfl
 
-lemma xBXF_inv_eq_conj_flipBit : (XBackXForth π)⁻¹ = (flipBit 0) * (XBackXForth π) * (flipBit 0) := by
-rw [xBXF_inv, xBXF_def] ; simp only [mul_assoc, flipBit_mul_self, mul_one]
 
-lemma flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit : (flipBit 0) * (XBackXForth π)⁻¹ = (XBackXForth π) * (flipBit 0) := by
-simp only [xBXF_inv_eq_conj_flipBit, mul_assoc, flipBit_mul_cancel_left]
+lemma flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit : flipBit 0 * XBackXForth π =
+(XBackXForth π)⁻¹ * flipBit 0 := by simp_rw [xBXF_inv, xBXF_def, mul_assoc]
 
-lemma xBXF_mul_flipBit_mul_xBXF_eq_flipBit : (XBackXForth π) * (flipBit 0) * (XBackXForth π) = (flipBit 0) := by
-simp only [xBXF_def, mul_assoc, inv_mul_cancel_left, flipBit_mul_cancel_left, mul_inv_cancel_left]
+lemma flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit : XBackXForth π * flipBit 0 =
+flipBit 0 * (XBackXForth π)⁻¹ := by rw [eq_mul_inv_iff_mul_eq, mul_assoc,
+  flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit, mul_inv_cancel_left]
 
-lemma xBXF_pow_inv_eq_conj_pow_flipBit {k : ℕ} :
-((XBackXForth π)^k)⁻¹ = (flipBit 0) * (XBackXForth π)^k * (flipBit 0) := by
+/-
+lemma xBXF_eq_xBXF_inv_conj_flipBit : (XBackXForth π) = flipBit 0 * (XBackXForth π)⁻¹ * flipBit 0 := by
+rw [← flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit, flipBit_mul_cancel_right]
+
+lemma xBXF_inv_eq_xBXF_conj_flipBit : (XBackXForth π)⁻¹ = flipBit 0 * XBackXForth π * flipBit 0 := by
+rw [flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit, flipBit_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_mul_flipBit_mul_xBXF : flipBit 0 = (XBackXForth π) * (flipBit 0) *
+  (XBackXForth π) := by rw [flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit, inv_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_inv_mul_flipBit_mul_xBXF_inv : flipBit 0 = (XBackXForth π)⁻¹ * (flipBit 0) *
+  (XBackXForth π)⁻¹ := by rw [← flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit, mul_inv_cancel_right]
+-/
+
+@[simp]
+lemma xBXF_apply_flipBit_eq_flipBit_apply_xBXF_inv : XBackXForth π (flipBit 0 q) =
+flipBit 0 ((XBackXForth π)⁻¹ q) := by
+rw [← Equiv.Perm.mul_apply, flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit, Equiv.Perm.mul_apply]
+
+@[simp]
+lemma xBXF_inv_apply_flipBit_eq_flipBit_apply_xBXF : (XBackXForth π)⁻¹ (flipBit 0 q) =
+flipBit 0 (XBackXForth π q)
+:= by
+rw [← Equiv.Perm.mul_apply, ← flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit, Equiv.Perm.mul_apply]
+
+lemma flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit {k : ℕ} : flipBit 0 * ((XBackXForth π)^k) =
+((XBackXForth π)^k)⁻¹ * flipBit 0 := by
 induction' k with n hn
-· simp_rw [Nat.zero_eq, pow_zero, inv_one, mul_one, flipBit_mul_self]
-· simp_rw [pow_succ', mul_inv_rev, ← pow_succ', pow_succ'', hn, xBXF_inv_eq_conj_flipBit,
-    mul_assoc, flipBit_mul_cancel_left]
+· rw [Nat.zero_eq, pow_zero, inv_one, mul_one, one_mul]
+· simp_rw [pow_succ', ← mul_assoc, hn, ← pow_succ', pow_succ'', mul_inv_rev, mul_assoc,
+    flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit]
 
-lemma flipBit_mul_pow_xBXF_inv_eq_pow_xBXF_mul_flipBit {k : ℕ} :
-(flipBit 0) * ((XBackXForth π)^k)⁻¹ = (XBackXForth π)^k * (flipBit 0) := by
-simp_rw [xBXF_pow_inv_eq_conj_pow_flipBit, mul_assoc, flipBit_mul_cancel_left]
+lemma xBXF_pow_mul_flipBit_eq_flipBit_mul_xBXF_pow {k : ℕ} : ((XBackXForth π)^k) * flipBit 0 =
+flipBit 0 * ((XBackXForth π)^k)⁻¹ := by
+rw [eq_mul_inv_iff_mul_eq, mul_assoc, flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit,
+  mul_inv_cancel_left]
 
-lemma pow_xBXF_mul_flipBit_mul_pow_xBXF_eq_flipBit {k : ℕ} :
-(XBackXForth π)^k * (flipBit 0) * (XBackXForth π)^k = (flipBit 0) := by
-rw [← flipBit_mul_pow_xBXF_inv_eq_pow_xBXF_mul_flipBit, mul_assoc, mul_left_inv, mul_one]
+/-
+lemma xBXF_pow_eq_conj_flipBit_xBXF_pow_inv {k : ℕ} :
+(XBackXForth π)^k = (flipBit 0) * ((XBackXForth π)^k)⁻¹ * (flipBit 0) := by
+rw [← xBXF_pow_mul_flipBit_eq_flipBit_mul_xBXF_pow, flipBit_mul_cancel_right]
+
+lemma xBXF_pow_inv_eq_conj_flipBit_xBXF_pow {k : ℕ} :
+((XBackXForth π)^k)⁻¹ = (flipBit 0) * (XBackXForth π)^k * (flipBit 0) := by
+rw [flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit, flipBit_mul_cancel_right]
+
+
+lemma flipBit_eq_xBXF_pow_mul_flipBit_mul_xBXF_pow {k : ℕ} :
+flipBit 0 = (XBackXForth π)^k * (flipBit 0) * (XBackXForth π)^k := by
+rw [xBXF_pow_mul_flipBit_eq_flipBit_mul_xBXF_pow, inv_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_pow_inv_mul_flipBit_mul_xBXF_pow_inv {k : ℕ} :
+flipBit 0 = ((XBackXForth π)^k)⁻¹ * (flipBit 0) * ((XBackXForth π)^k)⁻¹ := by
+rw [← flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit, mul_inv_cancel_right]
+-/
+
+@[simp]
+lemma xBXF_pow_apply_flipBit_eq_flipBit_apply_xBXF_pow {k : ℕ} : ((XBackXForth π)^k) (flipBit 0 q) =
+flipBit 0 (((XBackXForth π)^k)⁻¹ q) := by
+rw [← Equiv.Perm.mul_apply, xBXF_pow_mul_flipBit_eq_flipBit_mul_xBXF_pow, Equiv.Perm.mul_apply]
+
+@[simp]
+lemma xBXF_pow_inv_apply_flipBit_eq_flipBit_apply_xBXF {k : ℕ} : ((XBackXForth π)^k)⁻¹ (flipBit 0 q)
+= flipBit 0 (((XBackXForth π)^k) q)
+:= by
+rw [← Equiv.Perm.mul_apply, ← flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit, Equiv.Perm.mul_apply]
+
+lemma xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv {k : ℤ} :
+(XBackXForth π)^k * (flipBit 0) = (flipBit 0) * ((XBackXForth π)^k)⁻¹ := by
+cases k
+· simp only [Int.ofNat_eq_coe, zpow_coe_nat, zpow_neg]
+  exact xBXF_pow_mul_flipBit_eq_flipBit_mul_xBXF_pow
+· simp only [zpow_negSucc, zpow_neg, inv_inv]
+  exact flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit.symm
+
+lemma flipBit_mul_xBXF_zpow_eq_xBXR_zpow_inv_mul_flipBit {k : ℤ} :
+(flipBit 0) * (XBackXForth π)^k = ((XBackXForth π)^k)⁻¹ * (flipBit 0) := by
+rw [← zpow_neg, xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv, zpow_neg, inv_inv]
+
+/-
+lemma xBXF_zpow_eq_conj_flipBit_xBXF_zpow_inv {k : ℤ} :
+(XBackXForth π)^k = (flipBit 0) * ((XBackXForth π)^k)⁻¹ * (flipBit 0) := by
+rw [← xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv, flipBit_mul_cancel_right]
+
+lemma xBXF_zpow_neg_eq_conj_flipBit_xBXF_zpow {k : ℤ} :
+((XBackXForth π)^k)⁻¹ = (flipBit 0) * (XBackXForth π)^k * (flipBit 0) := by
+rw [flipBit_mul_xBXF_zpow_eq_xBXR_zpow_inv_mul_flipBit, flipBit_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_zpow_mul_flipBit_mul_xBXF_zpow {k : ℤ} :
+flipBit 0 = (XBackXForth π)^k * (flipBit 0) * (XBackXForth π)^k := by
+rw [xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv, inv_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_zpow_inv_mul_flipBit_mul_xBXF_zpow_inv {k : ℤ} :
+flipBit 0 = ((XBackXForth π)^k)⁻¹ * (flipBit 0) * ((XBackXForth π)^k)⁻¹ := by
+rw [← flipBit_mul_xBXF_zpow_eq_xBXR_zpow_inv_mul_flipBit, mul_inv_cancel_right]
+-/
+
+-- Theorem 4.3 (a) (ish)
+
+@[simp]
+lemma xBXF_zpow_apply_flipBit_eq_flipBit_apply_xBXF_zpow_inv {k : ℤ} :
+((XBackXForth π)^k) (flipBit 0 q) = (flipBit 0) (((XBackXForth π)^k)⁻¹ q) := by
+rw [← Equiv.Perm.mul_apply, xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv, Equiv.Perm.mul_apply]
+
+@[simp]
+lemma xBXR_zpow_inv_apply_flipBit_eq_flipBit_apply_xBXF_zpow {k : ℤ} :
+(((XBackXForth π)^k)⁻¹) (flipBit 0 q) = flipBit 0 (((XBackXForth π)^k) q) := by
+rw [← Equiv.Perm.mul_apply, ← flipBit_mul_xBXF_zpow_eq_xBXR_zpow_inv_mul_flipBit, Equiv.Perm.mul_apply]
+
+@[simp]
+lemma xBXF_apply_ne_flipBit_apply : (XBackXForth π) q ≠ (flipBit 0) q := by
+simp_rw [xBXF_apply, ne_eq, ← Equiv.Perm.eq_inv_iff_eq (y := (flipBit 0) q)]
+exact flipBit_apply_ne_self
+
+@[simp]
+lemma xBXF_pow_apply_ne_flipBit_apply {k : ℕ} : ((XBackXForth π)^k) q ≠ (flipBit 0) q := by
+induction' k using Nat.twoStepInduction with k IH generalizing q
+· rw [pow_zero]
+  exact (flipBit_apply_ne_self).symm
+· rw [pow_one]
+  exact xBXF_apply_ne_flipBit_apply
+· intros h
+  rw [pow_succ'' (n := k.succ), pow_succ' (n := k), Equiv.Perm.mul_apply, Equiv.Perm.mul_apply,
+    ← Equiv.eq_symm_apply (x := flipBit 0 q), ← Equiv.Perm.inv_def,
+    xBXF_inv_apply_flipBit_eq_flipBit_apply_xBXF] at h
+  exact IH h
+
+@[simp]
+lemma xBXF_pow_inv_ne_flipBit {k : ℕ} : (((XBackXForth π)^k)⁻¹) q ≠ flipBit 0 q := by
+simp_rw [ne_eq, Equiv.Perm.inv_def, Equiv.symm_apply_eq]
+convert (xBXF_pow_apply_ne_flipBit_apply (q := flipBit 0 q)).symm
+exact flipBit_flipBit.symm
+
+@[simp]
+lemma xBXF_zpow_ne_flipBit {k : ℤ} : ((XBackXForth π)^k) q ≠ flipBit 0 q := by
+cases k <;> simp
+
+-- Theorem 4.3 (b)
+lemma xBXF_zpow_ne_flipBit_mul_xBXF_zpow {j k : ℤ}  :
+((XBackXForth π)^j) q ≠ flipBit 0 (((XBackXForth π)^k) q) := by
+rw [← sub_add_cancel j k, zpow_add, Equiv.Perm.mul_apply]
+exact xBXF_zpow_ne_flipBit
+
+lemma cycleFull_xBXF_disjoint_image_flipBit {x: Fin (2 ^ (m + 1))} : Disjoint (CycleFull (XBackXForth π) x)
+((CycleFull (XBackXForth π) x).image (flipBit 0)) := by
+simp_rw [Finset.disjoint_iff_ne, Finset.mem_image, mem_cycleFull_iff]
+rintro _ ⟨j, rfl⟩ _ ⟨_, ⟨⟨_, rfl⟩, rfl⟩⟩
+exact xBXF_zpow_ne_flipBit_mul_xBXF_zpow
+
+-- Theorem 4.3 (c)
+lemma cycleFull_xBXF_card_le_two_pow {x: Fin (2 ^ (m + 1))} :
+  (CycleFull (XBackXForth π) x).card ≤ 2^m := by
+refine' le_of_mul_le_mul_left _ (zero_lt_two)
+rw [two_mul]; nth_rewrite 2 [← Finset.card_image_of_injective _ ((flipBit 0).injective)]
+rw [← Nat.pow_succ', ← Finset.card_disjoint_union cycleFull_xBXF_disjoint_image_flipBit]
+exact le_of_le_of_eq (Finset.card_le_of_subset (Finset.subset_univ _)) (Finset.card_fin _)
+
+lemma bar : mergeBitResiduum 0 true p = mergeBitResiduum 0 false p + 1 := by
+sorry
+
+lemma foo (h : flipBit 0 q < flipBit 0 q') : q < q' ∨ ((q < flipBit 0 q) ∧ (q' = flipBit 0 q) ) := by
+rcases mergeBitResiduum_surj 0 q with ⟨b, p, rfl⟩
+rcases mergeBitResiduum_surj 0 q' with ⟨b', p', rfl⟩
+cases b <;> cases b' <;> simp  at h ⊢
+<;> simp [bar]
 
 -- Theorem 4.4
 lemma cycleMin_backForth :
-∀ q, CycleMin (XBackXForth π) (flipBit 0 q) = (flipBit 0) (CycleMin (XBackXForth π) q) := by
-sorry
+CycleMin (XBackXForth π) (flipBit 0 q) = (flipBit 0) (CycleMin (XBackXForth π) q) := by
+rcases cycleMin_exists_pow_apply (XBackXForth π) q with ⟨j, hjq₂⟩
+refine' eq_of_le_of_not_lt _ (fun h => _)
+· refine' cycleMin_le (XBackXForth π) (flipBit 0 q)  ⟨-j, _⟩
+  simp_rw [zpow_neg, xBXR_zpow_inv_apply_flipBit_eq_flipBit_apply_xBXF_zpow, hjq₂]
+· rcases cycleMin_exists_pow_apply (XBackXForth π) (flipBit 0 q) with ⟨k, hkq₂⟩
+  rw [←hkq₂, ← hjq₂, xBXF_zpow_apply_flipBit_eq_flipBit_apply_xBXF_zpow_inv] at h
+  rcases foo h with h | ⟨_, h2⟩
+  · apply (cycleMin_le (XBackXForth π) q ⟨-k, rfl⟩).not_lt
+    rw [zpow_neg, ← hjq₂]
+    exact h
+  · exact xBXF_zpow_ne_flipBit_mul_xBXF_zpow ((zpow_neg (XBackXForth π) k).symm ▸ h2)
 
 end Reimplementation
 
@@ -867,6 +1086,16 @@ def ControlBitsToPerm' (cb : ControlBits m) : Equiv.Perm (Fin (2^(m + 1))) :=
 
 end ControlBits
 
+def XIf (c : Fin (2^m) → Bool) : Equiv.Perm (Fin (2^(m + 1))) := residuumCondFlip 0 c
+def FirstControlBits (π) (p : Fin (2^m)) := getBit 0 (CycleMin (XBackXForth π) (mergeBitResiduum 0 false p))
+def FirstControl (π : Equiv.Perm (Fin (2^(m + 1)))) := XIf (FirstControlBits π)
+
+def LastControlBits (π) (p : Fin (2^m)) := getBit 0 (((FirstControl π) * π) (mergeBitResiduum 0 false p))
+
+def LastControl (π : Equiv.Perm (Fin (2^(m + 1)))) := XIf (LastControlBits π)
+
+def MiddlePerm (π : Equiv.Perm (Fin (2^(m + 1)))) := (FirstControl π) * π * (LastControl π)
+
 def flmDecomp (π : Equiv.Perm (Fin (2^((m + 1) )))) := (FirstControlBits π, MiddlePerm π, LastControlBits π)
 
 lemma MiddlePerm_invar (π : Equiv.Perm (Fin (2^((m + 1) + 1)))) :
@@ -898,6 +1127,6 @@ def myControlBits4 : ControlBits 0 := ![![false]]
 #eval [0, 1, 2, 3].map (((residuumCondFlip 0 (myControlBits2 0))) *
   ((myfoo 0 (residuumCondFlip 0 (myControlBits4 0), residuumCondFlip 0 (myControlBits3 0))).1) * ((residuumCondFlip 0 (myControlBits2 2))))
 
-#eval PermToControlBits (ControlBits.ControlBitsToPerm' (myControlBits2))
+#eval PermToControlBits (ControlBits.ControlBitsToPerm' (myControlBits1))
 
-#eval PermToControlBits (ControlBits.ControlBitsToPerm (myControlBits2))
+#eval PermToControlBits (ControlBits.ControlBitsToPerm (myControlBits1))

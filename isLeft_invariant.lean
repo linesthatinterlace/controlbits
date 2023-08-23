@@ -1,82 +1,161 @@
-import Mathlib.Logic.Equiv.Defs
+import Mathlib.Logic.Equiv.Basic
+import Mathlib.Order.PropInstances
 
-lemma sumCongr_isLeft_invariant {α₁ : Type u_1} {α₂ : Type u_2} {β₁ : Type u_3} {β₂ : Type u_4}
-(ea : α₁ ≃ α₂) (eb : β₁ ≃ β₂) : ∀ x : α₁ ⊕ β₁, ((Equiv.sumCongr ea eb) x).isLeft = x.isLeft :=
-by rintro (x | x) <;> rfl
 
-lemma isLeft_invariant_iff_symm_isLeft_invariant {α₁ : Type u_1} {α₂ : Type u_2} {β₁ : Type u_3} {β₂ : Type u_4} (e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂) :
-(∀ x, (e x).isLeft = x.isLeft) ↔ (∀ x, (e.symm x).isLeft = x.isLeft) := by
-refine ⟨fun h => ?_, fun h => ?_⟩
-· intro x ; specialize h (e.symm x) ; rw [Equiv.apply_symm_apply] at h ; rw [h]
-· intro x ; specialize h (e x) ; rw [Equiv.symm_apply_apply] at h  ; rw [h]
 
-lemma isLeft_invariant_iff {α₁ : Type u_1} {α₂ : Type u_2} {β₁ : Type u_3} {β₂ : Type u_4} (e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂) :
-(∀ x, (e x).isLeft = x.isLeft) ↔
-((∀ (a : α₁), ∃ y, e (Sum.inl a) = Sum.inl y) ∧ (∀ (b : β₁), ∃ y, e (Sum.inr b) = Sum.inr y)) := by
-simp [Sum.isLeft_iff, Sum.isRight_iff]
+namespace Sum
+variable {α : Type u} {β: Type v}
 
-lemma equiv_isLeft_invariant_iff' {α₁ : Type u_1} {α₂ : Type u_2} {β₁ : Type u_3} {β₂ : Type u_4} (e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂) :
-(∀ x, (e x).isLeft = x.isLeft) ↔
-((∀ (a : α₁), ∃ y, e (Sum.inl a) = Sum.inl y) ∧ (∀ (b : β₁), ∃ y, e (Sum.inr b) = Sum.inr y) ∧
-(∀ (a : α₂), ∃ y, e.symm (Sum.inl a) = Sum.inl y) ∧ (∀ (b : β₂), ∃ y, e.symm (Sum.inr b) = Sum.inr y)) := by
-rw [← isLeft_invariant_iff, ← and_assoc, ← isLeft_invariant_iff, isLeft_invariant_iff_symm_isLeft_invariant, and_self]
+/-- Get the data from a sum type given a proof that it is of the left constructor. -/
+def getLeft! : (ab : α ⊕ β) → ab.isLeft → α | inl a, _ => a
 
-def equivSumInvariantLeft {α₁ : Type*} {α₂ : Type*} {β₁ : Type*} {β₂ : Type*} (e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂)
-(he₁ : (∀ (a : α₁), ∃ y, e (Sum.inl a) = Sum.inl y))
-(he₂ : (∀ (a : α₂), ∃ y, e.symm (Sum.inl a) = Sum.inl y)) : (α₁ ≃ α₂) where
-  toFun a₁ := (e (Sum.inl a₁)).getLeft.get (by
-    rcases he₁ a₁ with ⟨a₂, ha₂⟩ ; rw [ha₂] ; rfl )
-  invFun a₂ := (e.symm (Sum.inl a₂)).getLeft.get (by
-    rcases he₂ a₂ with ⟨a₁, ha₁⟩ ; rw [ha₁] ; rfl
-  )
-  left_inv a₁ := (by
-    rcases he₁ a₁ with ⟨a₂, ha₂⟩ ; rcases he₂ a₂ with ⟨na₁, hna₁⟩ ;
-    simp_rw [ha₂, Sum.getLeft_inl, Option.get_some, hna₁]
-    simp_rw [← ha₂, Equiv.symm_apply_apply, Sum.inl.injEq] at hna₁ ; exact hna₁.symm
-  )
-  right_inv a₂ := (by
-    rcases he₂ a₂ with ⟨a₁, ha₁⟩ ; rcases he₁ a₁ with ⟨na₂, hna₂⟩ ;
-    simp_rw [ha₁, Sum.getLeft_inl, Option.get_some, hna₂]
-    simp_rw [← ha₁, Equiv.apply_symm_apply, Sum.inl.injEq] at hna₂ ; exact hna₂.symm
-  )
+@[simp]
+lemma left_getLeft! : ∀ (ab : α ⊕ β) (h : ab.isLeft), inl (ab.getLeft! h) = ab | inl _, _ => rfl
 
-def equivSumInvariantRight {α₁ : Type*} {α₂ : Type*} {β₁ : Type*} {β₂ : Type*} (e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂)
-(he₁ : (∀ (b : β₁), ∃ y, e (Sum.inr b) = Sum.inr y))
-(he₂ : (∀ (b : β₂), ∃ y, e.symm (Sum.inr b) = Sum.inr y)) : (β₁ ≃ β₂) where
-  toFun b₁ := (e (Sum.inr b₁)).getRight.get (by
-    rcases he₁ b₁ with ⟨b₂, hb₂⟩ ; rw [hb₂] ; rfl )
-  invFun b₂ := (e.symm (Sum.inr b₂)).getRight.get (by
-    rcases he₂ b₂ with ⟨b₁, hb₁⟩ ; rw [hb₁] ; rfl)
-  left_inv b₁ := (by
-    rcases he₁ b₁ with ⟨b₂, hb₂⟩ ; rcases he₂ b₂ with ⟨nb₁, hnb₁⟩ ;
-    simp_rw [hb₂, Sum.getRight_inr, Option.get_some, hnb₁]
-    simp_rw [← hb₂, Equiv.symm_apply_apply, Sum.inr.injEq] at hnb₁ ; exact hnb₁.symm)
-  right_inv b₂ := (by
-    rcases he₂ b₂ with ⟨b₁, hb₁⟩ ; rcases he₁ b₁ with ⟨nb₂, hnb₂⟩ ;
-    simp_rw [hb₁, Sum.getRight_inr, Option.get_some, hnb₂]
-    simp_rw [← hb₁, Equiv.apply_symm_apply, Sum.inr.injEq] at hnb₂ ; exact hnb₂.symm)
+@[simp]
+lemma getLeft!_left (a : α) (h : (inl a : α ⊕ β).isLeft) : (inl a).getLeft! h = a := rfl
 
-def equivSumInvariant {α₁ : Type*} {α₂ : Type*} {β₁ : Type*} {β₂ : Type*} (e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂)
-(h : ∀ x, (e x).isLeft = x.isLeft) : (α₁ ≃ α₂) × (β₁ ≃ β₂) :=
-(equivSumInvariantLeft e ((equiv_isLeft_invariant_iff' e).mp h).1 ((equiv_isLeft_invariant_iff' e).mp h).2.2.1,
-equivSumInvariantRight e ((equiv_isLeft_invariant_iff' e).mp h).2.1 ((equiv_isLeft_invariant_iff' e).mp h).2.2.2)
+lemma eq_left_iff_getLeft!_eq {ab : α ⊕ β} {a : α} : ab = inl a ↔ ∃ h, ab.getLeft! h = a := by
+  cases ab <;> simp?
 
-def equivSubInvariantSubtype : {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂ // ∀ x, (e x).isLeft = x.isLeft} ≃
-(α₁ ≃ α₂) × (β₁ ≃ β₂) where
-  toFun := fun ⟨e, he⟩ => equivSumInvariant e he
-  invFun := fun ⟨ea, eb⟩ => ⟨Equiv.sumCongr ea eb, sumCongr_isLeft_invariant ea eb⟩
-  left_inv := fun ⟨e, he⟩ => (by
-    ext x ;
-    simp only [equivSumInvariant, equivSumInvariantLeft, equivSumInvariantRight, Equiv.sumCongr_apply, Equiv.coe_fn_mk]
-    rcases x with (a₁ | b₁) <;> rw [equiv_isLeft_invariant_iff'] at he
-    · rcases he.1 a₁ with ⟨a₂, ha₂⟩ ;
-      simp only [Sum.map_inl, ha₂, Sum.getLeft_inl, Option.get_some]
-    · rcases he.2.1 b₁ with ⟨b₂, hb₂⟩ ;
-      simp only [Sum.map_inr, hb₂, Sum.getRight_inr, Option.get_some])
-  right_inv := fun ⟨ea, eb⟩ => (by
-    ext x ;
-    · simp only [equivSumInvariant, equivSumInvariantLeft, Equiv.sumCongr_apply, Sum.map_inl, Sum.getLeft_inl,
-      Option.get_some, Equiv.sumCongr_symm, equivSumInvariantRight, Sum.map_inr, Sum.getRight_inr, Equiv.coe_fn_mk]
-    · simp only [equivSumInvariant, equivSumInvariantLeft, Equiv.sumCongr_apply, Sum.map_inl, Sum.getLeft_inl,
-      Option.get_some, Equiv.sumCongr_symm, equivSumInvariantRight, Sum.map_inr, Sum.getRight_inr, Equiv.coe_fn_mk]
-  )
+lemma eq_left_of_isLeft : ∀ {ab : α ⊕ β} (h : ab.isLeft), ab = inl (ab.getLeft! h)
+  | inl _, _ => rfl
+
+/-- Get the data from a sum type given a proof that it is of the right constructor. -/
+def getRight! : (ab : α ⊕ β) → ab.isRight → β | inr b, _ => b
+
+@[simp]
+lemma right_getRight! : ∀ (ab : α ⊕ β) (h : ab.isRight), inr (ab.getRight! h) = ab | inr _, _ => rfl
+
+@[simp]
+lemma getRight!_right (b : β) (h : (inr b : α ⊕ β).isRight) : (inr b).getRight! h = b := rfl
+
+lemma eq_right_iff_getRight!_eq {ab : α ⊕ β} {b : β} : ab = inr b ↔ ∃ h, ab.getRight! h = b := by
+  cases ab <;> simp
+
+lemma eq_right_of_isRight : ∀ {ab : α ⊕ β} (h : ab.isRight), ab = inr (ab.getRight! h)
+  | inr _, _ => rfl
+
+@[simp]
+lemma isLeft_eq_of_liftRel_inl_right (h : LiftRel ra rb ab (inl c)) : ab.isLeft  := by
+  cases h ; simp
+
+@[simp]
+lemma isLeft_eq_of_liftRel_inl_left (h : LiftRel ra rb (inl a) cd) : cd.isLeft := by
+  cases h ; simp
+
+lemma isLeft_eq_of_liftRel (h : LiftRel ra rb ab cd) : ab.isLeft = cd.isLeft := by
+  cases h <;> simp
+
+lemma isRight_eq_of_liftRel (h : LiftRel ra rb ab cd) : ab.isRight = cd.isRight := by
+  cases h <;> simp
+
+@[simp]
+lemma isRight_eq_of_liftRel_inr_left (h : LiftRel ra rb (inr b) cd) : cd.isRight := by
+  cases h ; simp
+
+@[simp]
+lemma isRight_eq_of_liftRel_inr_right (h : LiftRel ra rb ab (inr d)) : ab.isRight := by
+  cases h ; simp
+
+lemma liftRel_equiv_left_iff_symm_right {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂} :
+(∀ ab, LiftRel ra rb (e ab) ab) ↔ ∀ cd, LiftRel ra rb cd (e.symm cd) :=
+⟨fun H cd => by convert (H (e.symm cd)) ; exact (e.apply_symm_apply _).symm,
+fun H ab => by convert (H (e ab)) ; exact (e.symm_apply_apply _).symm⟩
+
+lemma liftRel_equiv_right_iff_symm_left {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂} :
+(∀ ab, LiftRel ra rb ab (e ab)) ↔ ∀ cd, LiftRel ra rb (e.symm cd) cd :=
+by convert liftRel_equiv_left_iff_symm_right.symm ; exact e.symm_symm
+
+end Sum
+
+open Sum
+
+variable {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂} {ra : α₂ → α₁ → Prop} {rb : β₂ → β₁ → Prop}
+{ea : α₁ ≃ α₂} {eb : β₁ ≃ β₂}
+
+/-- Given an equiv is compatible with the lifted relation, induce an equivalence between first
+types of a sum type. -/
+@[simps]
+def equivOfLiftRelToEquivLeft (he : ∀ ab, LiftRel ra rb (e ab) ab) : α₁ ≃ α₂ where
+  toFun := fun a₁ => (e (inl a₁)).getLeft! (
+    isLeft_eq_of_liftRel_inl_right (he (inl _)))
+  invFun := fun a₂ => (e.symm (inl a₂)).getLeft! (by
+    rw [liftRel_equiv_left_iff_symm_right] at he ;
+    exact isLeft_eq_of_liftRel_inl_left (he (inl a₂)))
+  left_inv := fun a₁ => (by simp_rw [left_getLeft!, Equiv.symm_apply_apply, getLeft!_left])
+  right_inv := fun a₂ => (by simp_rw [left_getLeft!, Equiv.apply_symm_apply, getLeft!_left])
+
+/-- Given an equiv is compatible with the lifted relation, induce an equivalence between second
+types of a sum type. -/
+@[simps]
+def equivOfLiftRelToEquivRight (he : ∀ ab, LiftRel ra rb (e ab) ab) : β₁ ≃ β₂ where
+  toFun := fun b₁ => (e (inr b₁)).getRight! (
+    isRight_eq_of_liftRel_inr_right (he (inr _)))
+  invFun := fun b₂ => (e.symm (inr b₂)).getRight! (by
+    rw [liftRel_equiv_left_iff_symm_right] at he ;
+    exact isRight_eq_of_liftRel_inr_left (he (inr b₂)))
+  left_inv := fun b₁ => (by simp_rw [right_getRight!, Equiv.symm_apply_apply, getRight!_right])
+  right_inv := fun b₂ => (by simp_rw [right_getRight!, Equiv.apply_symm_apply, getRight!_right])
+
+lemma equivOfLiftRelToEquivLeft_rel_left {he : ∀ ab, LiftRel ra rb (e ab) ab} (a : α₁) :
+ra (equivOfLiftRelToEquivLeft he a) a := by
+  simp only [equivOfLiftRelToEquivLeft_apply, ← liftRel_inl_inl (r := ra) (s := rb),
+    left_getLeft!, he]
+
+lemma equivOfLiftRelToEquivRight_rel_right {he : ∀ ab, LiftRel ra rb (e ab) ab} (b : β₁):
+rb (equivOfLiftRelToEquivRight he b) b := by
+  simp only [equivOfLiftRelToEquivRight_apply, ← liftRel_inr_inr (r := ra) (s := rb),
+    right_getRight!, he]
+
+lemma liftRelSumCongr_of_rel_left_rel_right (hea : ∀ a, ra (ea a) a) (heb : ∀ b, rb (eb b) b) (ab) :
+LiftRel ra rb (ea.sumCongr eb ab) ab := by
+  cases ab <;> simp [hea, heb]
+
+lemma sumCongrEquivLiftRelLeftRight_eq_self (he : ∀ ab, LiftRel ra rb (e ab) ab) :
+(equivOfLiftRelToEquivLeft he).sumCongr (equivOfLiftRelToEquivRight he) = e := by
+  ext ab ; cases ab <;> simp [he]
+
+/-- There is an equivalence between the subtype of equivalences between sum types compatible
+with the lifted relations and the product of equivalences compatible with each relation. -/
+
+def foo : {eab : (α₁ ≃ α₂) × (β₁ ≃ β₂) // (∀ x, ra (eab.fst x) x) ∧ (∀ y, rb (eab.snd y) y)} ≃
+    {ea : α₁ ≃ α₂ // ∀ x, ra (ea x) x} × {eb : β₁ ≃ β₂ // ∀ x, rb (eb x) x} :=
+    Equiv.subtypeProdEquivProd (p := fun ea : α₁ ≃ α₂ => ∀ x, ra (ea x) x) (q := fun eb : β₁ ≃ β₂ => ∀ y, rb (eb y) y)
+
+@[simps]
+def equivLiftRelSum (ra : α₂ → α₁ → Prop) (rb : β₂ → β₁ → Prop) :
+    {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂ // ∀ x, LiftRel ra rb (e x) x} ≃
+    {ea : α₁ ≃ α₂ // ∀ x, ra (ea x) x} × {eb : β₁ ≃ β₂ // ∀ x, rb (eb x) x} where
+    toFun :=  fun ⟨e, he⟩ =>
+  ⟨⟨equivOfLiftRelToEquivLeft he, equivOfLiftRelToEquivLeft_rel_left⟩,
+  ⟨equivOfLiftRelToEquivRight he, equivOfLiftRelToEquivRight_rel_right⟩⟩
+    invFun :=  fun ⟨⟨ea, hea⟩, ⟨_, heb⟩⟩ => ⟨ea.sumCongr _, liftRelSumCongr_of_rel_left_rel_right hea heb⟩
+    left_inv := fun ⟨_, he⟩ => by simp_rw [Subtype.mk.injEq] ; exact sumCongrEquivLiftRelLeftRight_eq_self he
+    right_inv := fun ⟨⟨_, hea⟩, ⟨_, heb⟩⟩ => rfl
+
+--
+
+lemma equivIsLeftInvariant_iff_liftRel_top_top (e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂) :
+(∀ ab, isLeft (e ab) = isLeft ab) ↔ ∀ ab, LiftRel ⊤ ⊤ (e ab) ab := by
+  simp_rw  [Sum.forall, isLeft_inl, isLeft_inr, isLeft_eq_false, isLeft_iff, isRight_iff]
+  exact ⟨fun ⟨hA, hB⟩ => ⟨fun a => (hA a).elim (fun _ h => h ▸ LiftRel.inl (trivial)),
+                          fun b => (hB b).elim (fun _ h => h ▸ LiftRel.inr (trivial))⟩,
+          fun ⟨hA, hB⟩ => ⟨fun a => isLeft_iff.mp (isLeft_eq_of_liftRel (hA a)),
+                          fun b => isRight_iff.mp (isRight_eq_of_liftRel (hB b))⟩⟩
+
+lemma equivIsRightInvariant_iff_liftRel_top_top (e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂) :
+(∀ ab, isRight (e ab) = isRight ab) ↔
+∀ ab, LiftRel ⊤ ⊤ (e ab) ab := by
+  rw [← equivIsLeftInvariant_iff_liftRel_top_top] ;
+  simp_rw [← not_isLeft]
+
+/-- There is an equivalence between the subtype of equivalences between sum types which
+preserve chiarality and the product of equivalences compatible with each relation. -/
+@[simps!]
+def equivIsChiralInvariantProdEquiv : {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂ // ∀ x, (e x).isLeft = x.isLeft} ≃
+(α₁ ≃ α₂) × (β₁ ≃ β₂) :=
+(Equiv.subtypeEquivRight equivIsLeftInvariant_iff_liftRel_top_top).trans
+  <| (equivLiftRelSum ⊤ ⊤).trans
+    <| (Equiv.subtypeUnivEquiv (fun _ _ => trivial)).prodCongr
+        <| Equiv.subtypeUnivEquiv (fun _ _ => trivial)
