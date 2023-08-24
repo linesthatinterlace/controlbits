@@ -1082,21 +1082,21 @@ lemma getResiduum_cycleMin_true_eq_getResiduum_cycleMin_false :
   (getResiduum 0 (CycleMin (XBackXForth π) (mergeBitResiduum 0 false p))))  :=
 Bool.not_false ▸ getResiduum_cycleMin_not_eq_getResiduum_cycleMin
 
-def XIf (c : Fin (2^m) → Bool) : Equiv.Perm (Fin (2^(m + 1))) := residuumCondFlip 0 c
+abbrev XIf (c : Fin (2^m) → Bool) : Equiv.Perm (Fin (2^(m + 1))) := residuumCondFlip 0 c
 
-def FirstControlBits (π) (p : Fin (2^m)) :=
+abbrev FirstControlBits (π) (p : Fin (2^m)) :=
 getBit 0 (CycleMin (XBackXForth π) (mergeBitResiduum 0 false p))
 
 def FirstControl (π : Equiv.Perm (Fin (2^(m + 1)))) := XIf (FirstControlBits π)
 
-def LastControlBits (π) (p : Fin (2^m)) :=
+abbrev LastControlBits (π) (p : Fin (2^m)) :=
 getBit 0 ((FirstControl π) (π (mergeBitResiduum 0 false p)))
 
-def LastControl (π : Equiv.Perm (Fin (2^(m + 1)))) := XIf (LastControlBits π)
+abbrev LastControl (π : Equiv.Perm (Fin (2^(m + 1)))) := XIf (LastControlBits π)
 
-def MiddlePerm (π : Equiv.Perm (Fin (2^(m + 1)))) := (FirstControl π) * π * (LastControl π)
+abbrev MiddlePerm (π : Equiv.Perm (Fin (2^(m + 1)))) := (FirstControl π) * π * (LastControl π)
 
-def flmDecomp (π : Equiv.Perm (Fin (2^((m + 1) )))) :=
+abbrev flmDecomp (π : Equiv.Perm (Fin (2^((m + 1) )))) :=
 (FirstControlBits π, MiddlePerm π, LastControlBits π)
 
 -- Theorem 5.2
@@ -1107,7 +1107,7 @@ rw [FirstControlBits, mergeBitResiduum_zero, getBit_zero_val, decide_eq_false_if
 -- Theorem 5.3
 lemma getBit_zero_firstControl_apply_eq_getBit_zero_cycleMin :
 ∀ {q}, getBit 0 (FirstControl π q) = getBit 0 (CycleMin (XBackXForth π) q) := by
-simp_rw [forall_iff_forall_mergeBitResiduum 0, FirstControl, XIf,
+simp_rw [forall_iff_forall_mergeBitResiduum 0, FirstControl,
   residuumCondFlip_mergeBitResiduum', FirstControlBits, getBit_mergeBitResiduum,
   Bool.xor_false_right, Bool.xor_true, getBit_cycleMin_true_eq_not_getBit_cycleMin_false,
   forall_const]
@@ -1138,20 +1138,20 @@ CycleMin (XBackXForth π) (π (mergeBitResiduum 0 false p)) =
 Bool.not_false ▸ cycleMin_apply_mergeBitResiduum_zero_eq_flipBit_zero_cycleMin_apply_mergeBitResiduum_zero_not
 
 -- Theorem 5.4
-lemma getBit_zero_lasttControl_apply_eq_getBit_zero_firstControl_perm_apply :
+lemma getBit_zero_lastControl_apply_eq_getBit_zero_firstControl_perm_apply :
 ∀ {q}, getBit 0 (LastControl π q) = getBit 0 (FirstControl π (π q)) := by
 rw [forall_iff_forall_mergeBitResiduum 0]
-simp_rw [LastControl, LastControlBits, XIf,
-  getBit_residuumCondFlip', getBit_zero_firstControl_apply_eq_getBit_zero_cycleMin,
-  getResiduum_mergeBitResiduum, getBit_mergeBitResiduum, Bool.xor_false_right,
+simp_rw [LastControl, getBit_residuumCondFlip',
+  getBit_zero_firstControl_apply_eq_getBit_zero_cycleMin, getResiduum_mergeBitResiduum,
+  getBit_mergeBitResiduum, Bool.xor_false_right,
   cycleMin_apply_mergeBitResiduum_zero_false_eq_flipBit_zero_cycleMin_apply_mergeBitResiduum_zero_true,
   Bool.xor_true, getBit_flipBit, Bool.not_not, forall_const]
 
 -- Theorem 5.5
 lemma MiddlePerm_invar (π : Equiv.Perm (Fin (2^((m + 1) + 1)))) : bitInvariant 0 (MiddlePerm π) := by
-simp_rw [bitInvariant_iff_getBit_apply_eq_getBit, MiddlePerm, Equiv.Perm.mul_apply,
-← getBit_zero_lasttControl_apply_eq_getBit_zero_firstControl_perm_apply, ← Equiv.Perm.mul_apply,
-LastControl, XIf, residuumCondFlip_mul_self, Equiv.Perm.coe_one, id_eq, forall_const]
+simp_rw [bitInvariant_iff_getBit_apply_eq_getBit, Equiv.Perm.mul_apply,
+  ← getBit_zero_lastControl_apply_eq_getBit_zero_firstControl_perm_apply, ← Equiv.Perm.mul_apply,
+  residuumCondFlip_mul_self, Equiv.Perm.coe_one, id_eq, forall_const]
 
 end Reimplementation
 
