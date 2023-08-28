@@ -1,8 +1,6 @@
 import Mathlib.Logic.Equiv.Basic
 import Mathlib.Order.PropInstances
 
-
-
 namespace Sum
 variable {α : Type u} {β: Type v}
 
@@ -119,10 +117,6 @@ lemma sumCongrEquivLiftRelLeftRight_eq_self (he : ∀ ab, LiftRel ra rb (e ab) a
 /-- There is an equivalence between the subtype of equivalences between sum types compatible
 with the lifted relations and the product of equivalences compatible with each relation. -/
 
-def foo : {eab : (α₁ ≃ α₂) × (β₁ ≃ β₂) // (∀ x, ra (eab.fst x) x) ∧ (∀ y, rb (eab.snd y) y)} ≃
-    {ea : α₁ ≃ α₂ // ∀ x, ra (ea x) x} × {eb : β₁ ≃ β₂ // ∀ x, rb (eb x) x} :=
-    Equiv.subtypeProdEquivProd (p := fun ea : α₁ ≃ α₂ => ∀ x, ra (ea x) x) (q := fun eb : β₁ ≃ β₂ => ∀ y, rb (eb y) y)
-
 @[simps]
 def equivLiftRelSum (ra : α₂ → α₁ → Prop) (rb : β₂ → β₁ → Prop) :
     {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂ // ∀ x, LiftRel ra rb (e x) x} ≃
@@ -148,7 +142,8 @@ lemma equivIsRightInvariant_iff_liftRel_top_top (e : α₁ ⊕ β₁ ≃ α₂ �
 (∀ ab, isRight (e ab) = isRight ab) ↔
 ∀ ab, LiftRel ⊤ ⊤ (e ab) ab := by
   rw [← equivIsLeftInvariant_iff_liftRel_top_top] ;
-  simp_rw [← not_isLeft]
+  simp_rw [Sum.forall]
+  simp_rw  [isRight_inl, isRight_eq_false, isRight_inr, isLeft_inl, isLeft_inr, isLeft_eq_false]
 
 /-- There is an equivalence between the subtype of equivalences between sum types which
 preserve chiarality and the product of equivalences compatible with each relation. -/
