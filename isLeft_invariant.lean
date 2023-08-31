@@ -1,5 +1,6 @@
 import Mathlib.Logic.Equiv.Basic
 import Mathlib.Order.PropInstances
+import Mathlib.GroupTheory.Perm.Basic
 
 namespace Sum
 variable {α : Type u} {β: Type v}
@@ -65,12 +66,25 @@ lemma liftRel_equiv_right_iff_symm_left {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂
 (∀ ab, LiftRel ra rb ab (e ab)) ↔ ∀ cd, LiftRel ra rb (e.symm cd) cd :=
 by convert liftRel_equiv_left_iff_symm_right.symm ; exact e.symm_symm
 
+def shouldExistLeft (α β) : {x : Sum α β // x.isLeft} ≃ α where
+  toFun := fun ⟨x, hx⟩ => x.getLeft! hx
+  invFun := fun x => ⟨Sum.inl x, rfl⟩
+  left_inv := by intro _; ext ; dsimp ; exact left_getLeft! _ _
+  right_inv := fun x => rfl
+
+def shouldExistRight (α β): {x : Sum α β // x.isRight} ≃ β where
+  toFun := fun ⟨x, hx⟩ => x.getRight! hx
+  invFun := fun x => ⟨Sum.inr x, rfl⟩
+  left_inv := by intro _; ext ; dsimp ; exact right_getRight! _ _
+  right_inv := fun x => rfl
+
 end Sum
 
 open Sum
 
 variable {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂} {ra : α₂ → α₁ → Prop} {rb : β₂ → β₁ → Prop}
 {ea : α₁ ≃ α₂} {eb : β₁ ≃ β₂}
+
 
 /-- Given an equiv is compatible with the lifted relation, induce an equivalence between first
 types of a sum type. -/

@@ -5,6 +5,49 @@ import Mathlib.Logic.Equiv.Defs
 import Mathlib.GroupTheory.Perm.Cycle.Concrete
 import Mathlib.Combinatorics.Derangements.Basic
 
+lemma Fin.perm_fintwo (π : Equiv.Perm (Fin 2)) :
+π = (if (π 0 = 1) then Equiv.swap 0 1 else 1) := by
+rw [Equiv.ext_iff, Fin.forall_fin_two]
+rcases (Fin.exists_fin_two.mp ⟨π 0, rfl⟩) with (h0 | h0) <;>
+rcases (Fin.exists_fin_two.mp ⟨π 1, rfl⟩) with (h1 | h1) <;>
+simp only [h0, h1, ite_false, Equiv.refl_apply, true_and,
+    ite_true, Equiv.swap_apply_left, Equiv.swap_apply_right]
+· rw [← h0, Equiv.apply_eq_iff_eq] at h1
+  simp only at h1
+· rw [← h1, Equiv.apply_eq_iff_eq] at h0
+  simp only at h0
+
+lemma Fin.perm_fintwo_mul_self (π : Equiv.Perm (Fin 2)) : π * π  = 1 := by
+  have h := Fin.perm_fintwo π
+  split_ifs at h <;> rw [h]
+  · rw [Equiv.swap_mul_self]
+  · rw [mul_one]
+
+lemma Fin.perm_fintwo_apply_apply (π : Equiv.Perm (Fin 2)) : π (π q) = q := by
+  rw [← Equiv.Perm.mul_apply, Fin.perm_fintwo_mul_self, Equiv.Perm.one_apply]
+
+lemma Fin.perm_fintwo_of_fix_zero {π : Equiv.Perm (Fin 2)} (h : π 0 = 0) : π = 1 := by
+  have h2 := Fin.perm_fintwo π
+  simp_rw [h, Fin.zero_ne_one, ite_false] at h2
+  exact h2
+
+lemma Fin.perm_fintwo_of_fix_one {π : Equiv.Perm (Fin 2)} (h : π 1 = 1) : π = 1 := by
+  have h2 := Fin.perm_fintwo π
+  rw [← h] at h2
+  simp_rw [EmbeddingLike.apply_eq_iff_eq, ite_false] at h2
+  exact h2
+
+lemma Fin.perm_fintwo_of_unfix_zero {π : Equiv.Perm (Fin 2)} (h : π 0 = 1) : π = Equiv.swap 0 1 := by
+  have h2 := Fin.perm_fintwo π
+  simp_rw [h, Fin.zero_ne_one, ite_true] at h2
+  exact h2
+
+lemma Fin.perm_fintwo_of_unfix_one {π : Equiv.Perm (Fin 2)} (h : π 1 = 0) : π = Equiv.swap 0 1 := by
+  have h2 := Fin.perm_fintwo π
+  rw [← h, Fin.perm_fintwo_apply_apply, h] at h2
+  simp only [ite_true] at h2
+  exact h2
+
 section BitRes
 
 section GetMerge
@@ -56,6 +99,10 @@ ext
 lemma getBit_apply_two_pow {i : Fin (m + 1)} : getBit i ⟨2^(i : ℕ), pow_lt_pow one_lt_two i.isLt⟩ = true := by
 rw [getBit_apply, getBitRes_apply_two_pow]
 
+lemma getBit_apply_zero_one : getBit 0 (1 : Fin (2^(m + 1))) = true := by
+convert getBit_apply_two_pow
+rw [Fin.val_one', Nat.mod_eq_of_lt (Nat.one_lt_pow' _ _ ), Fin.val_zero, pow_zero]
+
 lemma getRes_apply_two_pow {i : Fin (m + 1)} : getRes i ⟨2^(i : ℕ), pow_lt_pow one_lt_two i.isLt⟩ = 0 := by
 rw [getRes_apply, getBitRes_apply_two_pow]
 
@@ -79,6 +126,10 @@ rw [Fin.eq_zero p] ; exact mergeBitRes_apply_false_zero
 
 lemma coe_mergeBitRes_true_fin_one : (mergeBitRes (i : Fin 1) true p : ℕ) = 1 := by
 rw [mergeBitRes_true_fin_one_eq_one] ; rfl
+
+lemma getBit_fin_one : getBit (i : Fin 1) q = decide (q = 1) := by
+rw [Fin.eq_zero i]
+rcases Fin.exists_fin_two.mp ⟨q, rfl⟩ with (rfl | rfl) <;> rfl
 
 @[reducible]
 def getBitResZero : Fin (2^(m + 1)) ≃ Bool × Fin (2^m) :=
@@ -377,14 +428,15 @@ def boolInversion : Bool ≃ Bool where
 def flipBit (i : Fin (m + 1)) : Equiv.Perm (Fin (2^(m + 1))) :=
 (getBitRes i).symm.permCongr <| (boolInversion).prodCongr (Equiv.refl _)
 
+lemma flipBit_fin_one : flipBit (m := 0) i = Equiv.swap 0 1 := by simp_rw [Fin.eq_zero i]
+
 lemma flipBit_apply : flipBit i q = (getBitRes i).symm (!(getBitRes i q).fst, (getBitRes i q).snd) := rfl
 
 lemma flipBit_eq_mergeBitRes_not_getBit_getRes {i : Fin (m + 1)} :
 flipBit i q = mergeBitRes i (!(getBit i q)) (getRes i q) := by
 rw [flipBit_apply, mergeBitRes_apply, getBit_apply, getRes_apply]
 
-@[simp]
-lemma coe_flipBit_zero : (flipBit 0 q : ℕ) =
+lemma coe_flipBit_zero_apply : (flipBit 0 q : ℕ) =
 2 * (getRes 0 q) + bif !(getBit 0 q) then 1 else 0 := by
 simp only [flipBit_eq_mergeBitRes_not_getBit_getRes, getBit_zero, coe_mergeBitRes_zero,
   coe_getresiduum_zero, Bool.cond_not]
@@ -799,6 +851,10 @@ lemma cycleMin_le_self : CycleMin π x ≤ x := cycleMin_le π x ⟨0, rfl⟩
 @[simp]
 lemma cycleMin_bot [OrderBot α] : CycleMin π ⊥ = ⊥ := le_antisymm cycleMin_le_self bot_le
 
+lemma cycleMin_refl : CycleMin (Equiv.refl α) x = x := cycleMin_of_fixed rfl
+
+lemma cycleMin_one : CycleMin (1 : Equiv.Perm α) x = x := cycleMin_refl
+
 lemma le_cycleMin (h : ∀ y, π.SameCycle x y → z ≤ y) : z ≤ CycleMin π x  := by
 simp_rw [cycleMin_eq_min_CycleFull, Finset.le_min'_iff, mem_cycleFull_iff] ; exact h
 
@@ -876,22 +932,27 @@ end Fin
 
 end CycleMin
 
-
-
-
-
 def XBackXForth (π : Equiv.Perm (Fin (2^(m + 1)))) := π * (flipBit 0) * π⁻¹ * (flipBit 0)
 
 lemma xBXF_def : XBackXForth π = π * (flipBit 0) * π⁻¹ * (flipBit 0) := rfl
 
+lemma xBXF_apply : (XBackXForth π) q = π ((flipBit 0) (π⁻¹ (flipBit 0 q))) := rfl
+
+lemma xBXF_refl : XBackXForth (Equiv.refl (Fin (2^(m + 1)))) = Equiv.refl _ := by
+simp_rw [Equiv.ext_iff, xBXF_apply, Equiv.Perm.refl_inv, Equiv.Perm.one_apply, flipBit_flipBit,
+  Equiv.refl_apply, forall_const]
+
+lemma xBXF_one : XBackXForth (1 : Equiv.Perm (Fin (2^(m + 1)))) = 1 := xBXF_refl
+
+lemma xBXF_base : XBackXForth (m := 0) π = 1 := by
+  have h := Fin.perm_fintwo π
+  split_ifs at h <;> simp_rw [Equiv.ext_iff, xBXF_apply, h]
+
 lemma xBXF_inv : (XBackXForth π)⁻¹ = (flipBit 0) * π * (flipBit 0) * π⁻¹ := by
 rw [xBXF_def] ; simp only [mul_assoc, mul_inv_rev, flipBit_inv, inv_inv]
 
-lemma xBXF_apply : (XBackXForth π) q = π ((flipBit 0) (π⁻¹ (flipBit 0 q))) := rfl
-
 lemma xBXF_inv_apply : (XBackXForth π)⁻¹ q = (flipBit 0) (π ((flipBit 0) (π⁻¹ q))) := by
 rw [xBXF_inv] ; rfl
-
 
 lemma flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit : flipBit 0 * XBackXForth π =
 (XBackXForth π)⁻¹ * flipBit 0 := by simp_rw [xBXF_inv, xBXF_def, mul_assoc]
@@ -899,20 +960,6 @@ lemma flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit : flipBit 0 * XBackXForth π =
 lemma flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit : XBackXForth π * flipBit 0 =
 flipBit 0 * (XBackXForth π)⁻¹ := by rw [eq_mul_inv_iff_mul_eq, mul_assoc,
   flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit, mul_inv_cancel_left]
-
-/-
-lemma xBXF_eq_xBXF_inv_conj_flipBit : (XBackXForth π) = flipBit 0 * (XBackXForth π)⁻¹ * flipBit 0 := by
-rw [← flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit, flipBit_mul_cancel_right]
-
-lemma xBXF_inv_eq_xBXF_conj_flipBit : (XBackXForth π)⁻¹ = flipBit 0 * XBackXForth π * flipBit 0 := by
-rw [flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit, flipBit_mul_cancel_right]
-
-lemma flipBit_eq_xBXF_mul_flipBit_mul_xBXF : flipBit 0 = (XBackXForth π) * (flipBit 0) *
-  (XBackXForth π) := by rw [flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit, inv_mul_cancel_right]
-
-lemma flipBit_eq_xBXF_inv_mul_flipBit_mul_xBXF_inv : flipBit 0 = (XBackXForth π)⁻¹ * (flipBit 0) *
-  (XBackXForth π)⁻¹ := by rw [← flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit, mul_inv_cancel_right]
--/
 
 @[simp]
 lemma xBXF_apply_flipBit_eq_flipBit_eq_mergeBitRes_not_getBit_getRes_xBXF_inv : XBackXForth π (flipBit 0 q) =
@@ -937,25 +984,6 @@ flipBit 0 * ((XBackXForth π)^k)⁻¹ := by
 rw [eq_mul_inv_iff_mul_eq, mul_assoc, flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit,
   mul_inv_cancel_left]
 
-/-
-lemma xBXF_pow_eq_conj_flipBit_xBXF_pow_inv {k : ℕ} :
-(XBackXForth π)^k = (flipBit 0) * ((XBackXForth π)^k)⁻¹ * (flipBit 0) := by
-rw [← xBXF_pow_mul_flipBit_eq_flipBit_mul_xBXF_pow, flipBit_mul_cancel_right]
-
-lemma xBXF_pow_inv_eq_conj_flipBit_xBXF_pow {k : ℕ} :
-((XBackXForth π)^k)⁻¹ = (flipBit 0) * (XBackXForth π)^k * (flipBit 0) := by
-rw [flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit, flipBit_mul_cancel_right]
-
-
-lemma flipBit_eq_xBXF_pow_mul_flipBit_mul_xBXF_pow {k : ℕ} :
-flipBit 0 = (XBackXForth π)^k * (flipBit 0) * (XBackXForth π)^k := by
-rw [xBXF_pow_mul_flipBit_eq_flipBit_mul_xBXF_pow, inv_mul_cancel_right]
-
-lemma flipBit_eq_xBXF_pow_inv_mul_flipBit_mul_xBXF_pow_inv {k : ℕ} :
-flipBit 0 = ((XBackXForth π)^k)⁻¹ * (flipBit 0) * ((XBackXForth π)^k)⁻¹ := by
-rw [← flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit, mul_inv_cancel_right]
--/
-
 @[simp]
 lemma xBXF_pow_apply_flipBit_eq_flipBit_eq_mergeBitRes_not_getBit_getRes_xBXF_pow {k : ℕ} : ((XBackXForth π)^k) (flipBit 0 q) =
 flipBit 0 (((XBackXForth π)^k)⁻¹ q) := by
@@ -978,24 +1006,6 @@ cases k
 lemma flipBit_mul_xBXF_zpow_eq_xBXR_zpow_inv_mul_flipBit {k : ℤ} :
 (flipBit 0) * (XBackXForth π)^k = ((XBackXForth π)^k)⁻¹ * (flipBit 0) := by
 rw [← zpow_neg, xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv, zpow_neg, inv_inv]
-
-/-
-lemma xBXF_zpow_eq_conj_flipBit_xBXF_zpow_inv {k : ℤ} :
-(XBackXForth π)^k = (flipBit 0) * ((XBackXForth π)^k)⁻¹ * (flipBit 0) := by
-rw [← xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv, flipBit_mul_cancel_right]
-
-lemma xBXF_zpow_neg_eq_conj_flipBit_xBXF_zpow {k : ℤ} :
-((XBackXForth π)^k)⁻¹ = (flipBit 0) * (XBackXForth π)^k * (flipBit 0) := by
-rw [flipBit_mul_xBXF_zpow_eq_xBXR_zpow_inv_mul_flipBit, flipBit_mul_cancel_right]
-
-lemma flipBit_eq_xBXF_zpow_mul_flipBit_mul_xBXF_zpow {k : ℤ} :
-flipBit 0 = (XBackXForth π)^k * (flipBit 0) * (XBackXForth π)^k := by
-rw [xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv, inv_mul_cancel_right]
-
-lemma flipBit_eq_xBXF_zpow_inv_mul_flipBit_mul_xBXF_zpow_inv {k : ℤ} :
-flipBit 0 = ((XBackXForth π)^k)⁻¹ * (flipBit 0) * ((XBackXForth π)^k)⁻¹ := by
-rw [← flipBit_mul_xBXF_zpow_eq_xBXR_zpow_inv_mul_flipBit, mul_inv_cancel_right]
--/
 
 -- Theorem 4.3 (a) (ish)
 
@@ -1110,21 +1120,26 @@ rw [cycleMin_apply_flipBit_zero_eq_cycleMin_flipBit_zero_apply,
   cycleMin_flipBit_zero_eq_flipBit_zero_cycleMin]
 
 def FirstControlBits (π) (p : Fin (2^m)) :=
-getBit 0 (CycleMin (XBackXForth π) (mergeBitRes 0 false p))
+getBit 0 (FastCycleMin m (XBackXForth π) (mergeBitRes 0 false p))
 
-lemma FirstControlBits_apply : FirstControlBits π p = getBit 0 (CycleMin (XBackXForth π) (mergeBitRes 0 false p)) := rfl
+lemma FirstControlBits_def : FirstControlBits (m := m) π p =
+getBit 0 (FastCycleMin m (XBackXForth π) (mergeBitRes 0 false p)) := by
+rfl
+
+lemma FirstControlBits_apply : FirstControlBits π p = getBit 0 (CycleMin (XBackXForth π) (mergeBitRes 0 false p)) := by
+rw [FirstControlBits_def, cycleMin_eq_fastCycleMin cycleFull_xBXF_card_le_two_pow]
 
 def FirstControl (π : Equiv.Perm (Fin (2^(m + 1)))) := resCondFlip 0 (FirstControlBits π)
 
 lemma FirstControl_def : FirstControl π = resCondFlip 0 (FirstControlBits π) := rfl
 
 lemma FirstControl_apply : FirstControl π q =
-bif getBit 0 (CycleMin (XBackXForth π) (mergeBitRes 0 false (getRes 0 q))) then flipBit 0 q else q :=
-rfl
+bif getBit 0 (CycleMin (XBackXForth π) (mergeBitRes 0 false (getRes 0 q))) then flipBit 0 q else q := by
+rw [FirstControl_def, resCondFlip_apply, FirstControlBits_apply]
 
 -- Theorem 5.2
 lemma firstControlBit_false {π : Equiv.Perm (Fin (2^(m + 1)))} : FirstControlBits π 0 = false := by
-simp_rw [FirstControlBits,  getBit_zero, mergeBitRes_apply_false_zero, Fin.cycleMin_zero, Fin.val_zero']
+simp_rw [FirstControlBits_apply,  getBit_zero, mergeBitRes_apply_false_zero, Fin.cycleMin_zero, Fin.val_zero']
 
 -- Theorem 5.3
 lemma getBit_zero_firstControl_apply_eq_getBit_zero_cycleMin :
@@ -1136,11 +1151,11 @@ simp_rw [forall_iff_forall_mergeBitRes 0, FirstControl_def, getBit_resCondFlip',
 def LastControlBits (π) (p : Fin (2^m)) :=
 getBit 0 ((FirstControl π) (π (mergeBitRes 0 false p)))
 
-lemma LastControlBits_apply : LastControlBits π p = getBit 0 ((FirstControl π) (π (mergeBitRes 0 false p))) := rfl
+lemma LastControlBits_def : LastControlBits π p = getBit 0 ((FirstControl π) (π (mergeBitRes 0 false p))) := rfl
 
-lemma LastControlBits_apply_eq_getBit_zero_cycleMin_apply : LastControlBits π p =
+lemma LastControlBits_apply : LastControlBits π p =
 getBit 0 (CycleMin (XBackXForth π) (π (mergeBitRes 0 false p))) := by
-rw [LastControlBits_apply, getBit_zero_firstControl_apply_eq_getBit_zero_cycleMin]
+rw [LastControlBits_def, getBit_zero_firstControl_apply_eq_getBit_zero_cycleMin]
 
 def LastControl (π : Equiv.Perm (Fin (2^(m + 1)))) := resCondFlip 0 (LastControlBits π)
 
@@ -1148,7 +1163,7 @@ lemma LastControl_def : LastControl π = resCondFlip 0 (LastControlBits π) := r
 
 lemma LastControl_apply : LastControl π q =
 bif getBit 0 (CycleMin (XBackXForth π) (π (mergeBitRes 0 false (getRes 0 q)))) then flipBit 0 q else q := by
-simp_rw [LastControl_def, resCondFlip_apply, LastControlBits_apply_eq_getBit_zero_cycleMin_apply]
+simp_rw [LastControl_def, resCondFlip_apply, LastControlBits_apply]
 
 def MiddlePerm (π : Equiv.Perm (Fin (2^(m + 1)))) := (FirstControl π) * π * (LastControl π)
 
@@ -1245,11 +1260,16 @@ def indCBitsToPerm (m : ℕ) (cb : InductiveControlBits m) : Equiv.Perm (Fin (2^
 
 lemma indCBitsToPerm_zero_def : indCBitsToPerm 0 (cb : InductiveControlBits 0) = resCondFlip 0 cb := rfl
 
+lemma indCBitsToPerm_zero_apply : indCBitsToPerm 0 (cb : InductiveControlBits 0) q = resCondFlip 0 cb q := rfl
+
 @[simp]
 lemma indCBitsToPerm_zero_eq_cond_swap : indCBitsToPerm 0 (cb : InductiveControlBits 0) =
-bif cb 0 then Equiv.swap 0 1 else Equiv.refl _ := by
-rcases (cb 0).dichotomy with (h | h) <;>
-simp_rw [indCBitsToPerm_zero_def, Equiv.ext_iff, resCondFlip_apply, Fin.eq_zero, h]
+bif cb 0 then Equiv.swap 0 1 else 1 := by
+  rw [Bool.cond_eq_ite]
+  convert Fin.perm_fintwo (indCBitsToPerm 0 cb)
+  rw [indCBitsToPerm_zero_apply]
+  simp_rw [resCondFlip_apply, getRes_apply_zero, flipBit_fin_one, Equiv.swap_apply_left,
+    Bool.cond_eq_ite, ite_eq_left_iff, imp_false, Bool.not_eq_true, Bool.not_eq_false]
 
 lemma indCBitsToPerm_succ_def : indCBitsToPerm (m + 1) (cb : InductiveControlBits (m + 1)) =
 (resCondFlip 0 cb.fst.fst) *
@@ -1265,35 +1285,21 @@ def permToIndCBits (m : ℕ) (π : Equiv.Perm (Fin (2^(m + 1)))) : InductiveCont
 lemma permToIndCBits_zero_def : permToIndCBits 0 π = LastControlBits π := rfl
 
 lemma permToIndCBits_zero_eq : permToIndCBits 0 π = fun _ => decide (π 0 = 1) := by
-have h : π 0 = 0 ∨ π 0 = 1 := Fin.exists_fin_two.mp ⟨π 0, rfl⟩
-ext ; rcases h with (h | h) <;>
-rw [permToIndCBits_zero_def, LastControlBits_apply, FirstControl_apply,
-  mergeBitRes_false_fin_one_eq_zero, mergeBitRes_false_fin_one_eq_zero,
-  Fin.cycleMin_zero, getBit_apply_zero, cond_false, getBit_zero, h] <;>
-rfl
+ext
+rw [permToIndCBits_zero_def, LastControlBits_apply, xBXF_base,
+  mergeBitRes_false_fin_one_eq_zero, cycleMin_one, getBit_fin_one]
 
-lemma Fin.perm_fintwo {π : Equiv.Perm (Fin 2)} :
-(bif decide (π 0 = 1) then Equiv.swap 0 1 else Equiv.refl (Fin 2)) = π := by
-rw [Equiv.ext_iff, Fin.forall_fin_two, Bool.cond_decide]
-rcases (Fin.exists_fin_two.mp ⟨π 0, rfl⟩) with (h0 | h0) <;>
-rcases (Fin.exists_fin_two.mp ⟨π 1, rfl⟩) with (h1 | h1) <;>
-simp only [h0, h1, ite_false, Equiv.refl_apply, true_and,
-    ite_true, Equiv.swap_apply_left, Equiv.swap_apply_right]
-· rw [← h0, Equiv.apply_eq_iff_eq] at h1
-  simp only at h1
-· rw [← h1, Equiv.apply_eq_iff_eq] at h0
-  simp only at h0
+lemma permToIndCBits_succ_def : permToIndCBits (m + 1) π  = ((FirstControlBits π, LastControlBits π),
+      (equivBitInvar 0 ⟨_, MiddlePerm_invar π⟩).map (permToIndCBits m) (permToIndCBits m)) := rfl
 
 lemma indToPermLeftInverse (π : Equiv.Perm (Fin (2 ^ (m + 1)))): indCBitsToPerm m (permToIndCBits m π) = π := by
 induction' m with m IH
-· rw [permToIndCBits_zero_eq, indCBitsToPerm_zero_eq_cond_swap]
-  exact Fin.perm_fintwo
-· simp_rw [ indCBitsToPerm , permToIndCBits]
-  ext ;
-  simp_rw [Nat.add_eq, Nat.add_zero, Prod_map, IH,
-    Equiv.Perm.coe_mul, Function.comp_apply, getRes_resCondFlip,
-    Bool.not_true, Bool.not_false, Prod.eta, Equiv.symm_apply_apply]
-  simp_rw [MiddlePerm_apply, FirstControl_def, LastControl_def, resCondFlip_resCondFlip]
+· nth_rewrite 2 [Fin.perm_fintwo π]
+  simp_rw [permToIndCBits_zero_eq, indCBitsToPerm_zero_eq_cond_swap, Bool.cond_eq_ite, decide_eq_true_eq]
+· simp_rw [indCBitsToPerm_succ_def, permToIndCBits_succ_def, Equiv.ext_iff, Nat.add_eq, Nat.add_zero,
+    Prod_map, IH, Equiv.Perm.coe_mul, Function.comp_apply, getRes_resCondFlip, Bool.not_true,
+    Bool.not_false, Prod.eta, Equiv.symm_apply_apply, MiddlePerm_apply, FirstControl_def,
+    LastControl_def, resCondFlip_resCondFlip, forall_const]
 
 def weaveControlBits :  ControlBitsLayer (m + 1) ≃ (ControlBitsLayer m × ControlBitsLayer m) :=
 calc
@@ -1357,7 +1363,7 @@ def bitTupleToPerm' (cb : BitTupleControlBits m) : Equiv.Perm (Fin (2^(m + 1))) 
 (List.ofFn (fun k => resCondFlip (foldFin k) (bitTupleEquivLayerTuple cb k))).prod
 
 
-def splitFoo : (Fin (2*(n + 1) + 1) → α) ≃ α × (Fin (2*n + 1) → α) × α :=
+def splitFirstLast : (Fin (2*(n + 1) + 1) → α) ≃ α × (Fin (2*n + 1) → α) × α :=
 calc
   _ ≃ _ := Equiv.piFinSucc _ _
   _ ≃ _ := Equiv.prodCongr (Equiv.refl _) (calc
@@ -1370,7 +1376,7 @@ example (n : ℕ) : n < n.succ := by exact Nat.lt.base n
 def partialLayerTupleToPerm (m : ℕ) (n : ℕ) (h : n < m + 1) (cb : Fin (2*n + 1) → ControlBitsLayer m) : Equiv.Perm (Fin (2^(m + 1))) :=
 match n with
 | 0 => resCondFlip ⟨m, m.lt_succ_self⟩ (cb 0)
-| (k + 1) =>  match splitFoo cb with
+| (k + 1) =>  match splitFirstLast cb with
               | ⟨a, ⟨b, c⟩⟩ => (resCondFlip (m - (k + 1))  a) *
                 (partialLayerTupleToPerm m k (lt_trans k.lt_succ_self h) b) *
                 (resCondFlip (m - (k + 1)) c)
@@ -1395,7 +1401,7 @@ end ControlBits
 -- Testing
 
 
-def myControlBits69 := (![true, false, false, false, false, false, false, false, false, false, false, false,
+def myControlBits69 := (![true, false, false, false, true, false, false, false, false, false, false, false,
   false, false, false, false, false, false, false, false] : BitTupleControlBits 2)
 
 
@@ -1409,19 +1415,67 @@ def myControlBits4 : LayerTupleControlBits 0 := ![![false]]
 #eval [0, 1, 2, 3].map (layerTupleToPerm' (myControlBits2))
 #eval [0, 1, 2, 3].map (layerTupleToPerm'' (myControlBits2))
 #eval [0, 1, 2, 3].map (layerTupleToPerm''' (myControlBits2))
-
+#eval [0, 1, 2, 3, 4, 5, 6, 7].map (bitTupleToPerm (m := 2) (myControlBits69))
 /-
 #eval bitTupleToPerm <| permToBitTuple (m := 4) (Equiv.refl _)
 #eval permToLayerTuple <| (layerTupleToPerm (myControlBits1))
 #eval permToLayerTuple <| (layerTupleToPerm' (myControlBits1))
 #eval permToBitTuple <| (layerTupleToPerm (myControlBits1))
-#eval permToBitTuple <| (bitTupleToPerm (myControlBits2a))
+
 
 #eval [0, 1, 2, 3, 4, 5, 6, 7].map (bitTupleToPerm (m := 2) (myControlBits69))
 -/
 
 
 -- HELL
+/-
+lemma xBXF_eq_xBXF_inv_conj_flipBit : (XBackXForth π) = flipBit 0 * (XBackXForth π)⁻¹ * flipBit 0 := by
+rw [← flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit, flipBit_mul_cancel_right]
+
+lemma xBXF_inv_eq_xBXF_conj_flipBit : (XBackXForth π)⁻¹ = flipBit 0 * XBackXForth π * flipBit 0 := by
+rw [flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit, flipBit_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_mul_flipBit_mul_xBXF : flipBit 0 = (XBackXForth π) * (flipBit 0) *
+  (XBackXForth π) := by rw [flipBit_mul_xBXF_inv_eq_xBXF_mul_flipBit, inv_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_inv_mul_flipBit_mul_xBXF_inv : flipBit 0 = (XBackXForth π)⁻¹ * (flipBit 0) *
+  (XBackXForth π)⁻¹ := by rw [← flipBit_mul_xBXF_eq_xBXF_inv_mul_flipBit, mul_inv_cancel_right]
+-/
+/-
+lemma xBXF_pow_eq_conj_flipBit_xBXF_pow_inv {k : ℕ} :
+(XBackXForth π)^k = (flipBit 0) * ((XBackXForth π)^k)⁻¹ * (flipBit 0) := by
+rw [← xBXF_pow_mul_flipBit_eq_flipBit_mul_xBXF_pow, flipBit_mul_cancel_right]
+
+lemma xBXF_pow_inv_eq_conj_flipBit_xBXF_pow {k : ℕ} :
+((XBackXForth π)^k)⁻¹ = (flipBit 0) * (XBackXForth π)^k * (flipBit 0) := by
+rw [flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit, flipBit_mul_cancel_right]
+
+
+lemma flipBit_eq_xBXF_pow_mul_flipBit_mul_xBXF_pow {k : ℕ} :
+flipBit 0 = (XBackXForth π)^k * (flipBit 0) * (XBackXForth π)^k := by
+rw [xBXF_pow_mul_flipBit_eq_flipBit_mul_xBXF_pow, inv_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_pow_inv_mul_flipBit_mul_xBXF_pow_inv {k : ℕ} :
+flipBit 0 = ((XBackXForth π)^k)⁻¹ * (flipBit 0) * ((XBackXForth π)^k)⁻¹ := by
+rw [← flipBit_mul_xBXF_pow_eq_xBXF_pow_inv_mul_flipBit, mul_inv_cancel_right]
+-/
+/-
+lemma xBXF_zpow_eq_conj_flipBit_xBXF_zpow_inv {k : ℤ} :
+(XBackXForth π)^k = (flipBit 0) * ((XBackXForth π)^k)⁻¹ * (flipBit 0) := by
+rw [← xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv, flipBit_mul_cancel_right]
+
+lemma xBXF_zpow_neg_eq_conj_flipBit_xBXF_zpow {k : ℤ} :
+((XBackXForth π)^k)⁻¹ = (flipBit 0) * (XBackXForth π)^k * (flipBit 0) := by
+rw [flipBit_mul_xBXF_zpow_eq_xBXR_zpow_inv_mul_flipBit, flipBit_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_zpow_mul_flipBit_mul_xBXF_zpow {k : ℤ} :
+flipBit 0 = (XBackXForth π)^k * (flipBit 0) * (XBackXForth π)^k := by
+rw [xBXF_zpow_mul_flipBit_eq_flipBit_mul_xBXF_zpow_inv, inv_mul_cancel_right]
+
+lemma flipBit_eq_xBXF_zpow_inv_mul_flipBit_mul_xBXF_zpow_inv {k : ℤ} :
+flipBit 0 = ((XBackXForth π)^k)⁻¹ * (flipBit 0) * ((XBackXForth π)^k)⁻¹ := by
+rw [← flipBit_mul_xBXF_zpow_eq_xBXR_zpow_inv_mul_flipBit, mul_inv_cancel_right]
+-/
 
 /-
 lemma getBit_cycleMin_not_comm_and_getRes_cycleMin_not_eq_getRes_cycleMin :
