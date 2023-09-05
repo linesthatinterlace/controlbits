@@ -15,7 +15,7 @@ lemma left_getLeft! : ∀ (ab : α ⊕ β) (h : ab.isLeft), inl (ab.getLeft! h) 
 lemma getLeft!_left (a : α) (h : (inl a : α ⊕ β).isLeft) : (inl a).getLeft! h = a := rfl
 
 lemma eq_left_iff_getLeft!_eq {ab : α ⊕ β} {a : α} : ab = inl a ↔ ∃ h, ab.getLeft! h = a := by
-  cases ab <;> simp?
+  cases ab <;> simp
 
 lemma eq_left_of_isLeft : ∀ {ab : α ⊕ β} (h : ab.isLeft), ab = inl (ab.getLeft! h)
   | inl _, _ => rfl
