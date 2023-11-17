@@ -14,27 +14,16 @@ induction' a with a IH generalizing y
   · simp only [h, ite_true, sameCycle_apply_right]
   · simp only [h, ite_false]
 
-lemma eq_of_apply_pow_eq_of_lt_lt_orderOf_cycleOf (ha : a < orderOf (π.cycleOf x))
-  (hb : b < orderOf (π.cycleOf x)) (hab: (π^a) x = (π^b) x) : a = b := by
-  refine' pow_injective_of_lt_orderOf _ ha hb _
-  ext y
-  simp_rw [Equiv.Perm.cycleOf_pow_apply]
-  by_cases h : Equiv.Perm.SameCycle π x y
+lemma pow_apply_injOn_Iio_orderOf_cycleOf [DecidableEq α] [Fintype α] {π : Equiv.Perm α}
+  {x : α} : (Set.Iio $ orderOf (π.cycleOf x)).InjOn (fun t => (π ^ t) x) := by
+  rintro a ha b hb hab
+  refine' pow_injOn_Iio_orderOf ha hb (ext (fun y => _))
+  simp_rw [cycleOf_pow_apply]
+  by_cases h : SameCycle π x y
   · simp_rw [h, ite_true]
     rcases h with ⟨c, rfl⟩
-    simp_rw [← Perm.mul_apply, ← zpow_coe_nat, zpow_mul_comm, Perm.mul_apply, zpow_coe_nat, hab]
+    simp_rw [← zpow_coe_nat, zpow_apply_comm, zpow_coe_nat, hab]
   · simp_rw [h, ite_false]
-
-lemma zero_of_apply_pow_eq_self_of_lt_orderOf_cycleOf (ha : a < orderOf (π.cycleOf x))
-  (hab: (π^a) x = x) : a = 0 :=
-eq_of_apply_pow_eq_of_lt_lt_orderOf_cycleOf ha (orderOf_pos _) hab
-
-lemma zero_of_apply_zpow_eq_self_of_lt_orderOf_cycleOf_of_nonneg (a : ℤ)
-  (ha : a < orderOf (π.cycleOf x)) (hab: (π^a) x = x) (hn : 0 ≤ a) : a = 0 := by
-  rcases Int.eq_ofNat_of_zero_le hn with ⟨a, rfl⟩
-  rw [Nat.cast_eq_zero]
-  rw [Nat.cast_lt] at ha
-  exact zero_of_apply_pow_eq_self_of_lt_orderOf_cycleOf ha hab
 
 end Equiv.Perm
 
@@ -117,7 +106,7 @@ lemma mem_cycleAt_iff_lt : y ∈ CycleAt π x ↔ ∃ b, b < orderOf (π.cycleOf
   · rintro hb
     rcases (hb.exists_pow_eq π) with ⟨b, _, _, rfl⟩
     refine ⟨b % orderOf (π.cycleOf x), Nat.mod_lt _ (orderOf_pos _),
-      (π.pow_apply_eq_pow_mod_orderOf_cycleOf_apply _ _).symm⟩
+      (π.pow_mod_orderOf_cycleOf_apply _ _)⟩
   · rintro ⟨b, _, rfl⟩
     exact ⟨b, rfl⟩
 
@@ -175,7 +164,7 @@ lemma cycleAtTo_card_eq_of_le_orderOf_cycleOf (h : a ≤ orderOf (π.cycleOf x))
   apply Finset.card_image_iff.mpr
   intros b hb c hc hbc
   simp_rw [coe_Iio, Set.mem_Iio] at hb hc
-  exact π.eq_of_apply_pow_eq_of_lt_lt_orderOf_cycleOf (lt_of_lt_of_le hb h) (lt_of_lt_of_le hc h) hbc
+  exact π.pow_apply_injOn_Iio_orderOf_cycleOf (lt_of_lt_of_le hb h) (lt_of_lt_of_le hc h) hbc
 
 lemma cycleAtTo_subset_cycleAt : CycleAtTo π x a ⊆ CycleAt π x := by
   rintro y hy
@@ -217,7 +206,7 @@ lemma pow_apply_not_mem_cycleAtTo_of_lt_orderOf_cycleOf (h : a < orderOf (π.cyc
   intro h
   rw [mem_cycleAtTo_iff] at h
   rcases h with ⟨b, hb, hbx⟩
-  exact hb.ne (π.eq_of_apply_pow_eq_of_lt_lt_orderOf_cycleOf (hb.trans h) h hbx)
+  exact hb.ne (π.pow_apply_injOn_Iio_orderOf_cycleOf (hb.trans h) h hbx)
 
 lemma cycleAtTo_strict_mono (ha : a < orderOf (π.cycleOf x)) (hab : a < b) :
 CycleAtTo π x a ⊂ CycleAtTo π x b := by
@@ -327,7 +316,7 @@ end LinearOrder
 section CanonicallyLinearOrderedMonoid
 
 @[simp]
-lemma cycleMin_zero [CanonicallyLinearOrderedAddMonoid α] : CycleMin π 0 = 0 :=
+lemma cycleMin_zero [CanonicallyLinearOrderedAddCommMonoid α] : CycleMin π 0 = 0 :=
 le_antisymm cycleMin_le_self (zero_le _)
 
 end CanonicallyLinearOrderedMonoid

@@ -577,7 +577,7 @@ lemma resCondFlip_base : resCondFlip (m := 0) i c = bif c 0 then Equiv.swap 0 1 
 lemma resCondFlip_eq_mergeBitRes_xor_residuum : resCondFlip i c q =
 mergeBitRes i (xor (c (getRes i q)) (getBit i q)) (getRes i q) := by
 rcases (c (getRes i q)).dichotomy with h | h <;> rw [resCondFlip_apply, h]
-· rw [cond_false, Bool.xor_false_left, mergeBitRes_getBit_getRes]
+· rw [cond_false, Bool.false_xor, mergeBitRes_getBit_getRes]
 · rw [cond_true, Bool.true_xor, flipBit_apply]
 
 lemma resCondFlip_mergeBitRes : resCondFlip i c (mergeBitRes i b p) =
@@ -653,12 +653,12 @@ lemma getBit_resCondFlip' : getBit i (resCondFlip i c q) =
 xor (c (getRes i q)) (getBit i q) := by
 rcases (c (getRes i q)).dichotomy with hc | hc <;>
 simp only [resCondFlip_apply, hc, cond_false, cond_true,
-  Bool.xor_false_left, Bool.true_xor, getBit_flipBit]
+  Bool.false_xor, Bool.true_xor, getBit_flipBit]
 
 lemma getBit_resCondFlip'' : getBit i (resCondFlip i c q) =
 bif (getBit i q) then !(c (getRes i q)) else c (getRes i q) := by
 rcases (getBit i q).dichotomy with hc | hc <;>
-simp only [getBit_resCondFlip', hc, Bool.xor_false_right, Bool.xor_true, cond_true, cond_false]
+simp only [getBit_resCondFlip', hc, Bool.xor_false, Bool.xor_true, cond_true, cond_false]
 
 lemma getBit_resCondFlip_ne {i : Fin (m + 1)} (hij : i ≠ j) : getBit i (resCondFlip j c q) = getBit i q := by
   rw [resCondFlip_apply]
