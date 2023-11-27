@@ -5,6 +5,7 @@ import Mathlib.Algebra.BigOperators.Order
 import Mathlib.Tactic
 import Controlbits.Bool
 import Controlbits.FinNatLemmas
+import Controlbits.Equivs
 section BitRes
 
 section GetMerge
@@ -736,6 +737,11 @@ lemma resCondFlip_succ_apply {i : Fin (m + 1)} :
 resCondFlip (Fin.succ i) c q = mergeBitRes 0 (getBit 0 q) ((resCondFlip i fun p =>
   c (mergeBitRes 0 (getBit 0 q) p)) (getRes 0 q)) := resCondFlip_succAbove (j := 0)
 
+lemma resCondFlip_last_succ_apply {i : ℕ} {q : Fin (2 ^ (i + 1 + 1))} {c : Fin (2 ^ (i + 1)) → Bool}:
+resCondFlip (Fin.last (i.succ)) c q = mergeBitRes 0 (getBit 0 q) ((resCondFlip (Fin.last i) fun p =>
+  c (mergeBitRes 0 (getBit 0 q) p)) (getRes 0 q)) := by
+  exact Fin.succ_last _ ▸ resCondFlip_succ_apply
+
 lemma resCondFlip_zero_apply :
 resCondFlip 0 c q = bif c (q.divNat) then
   finProdFinEquiv (q.divNat, q.modNat.rev) else q := by
@@ -926,26 +932,37 @@ unweavePowTwoTuple i c = fun b p => c (mergeBitRes i b p) := by
   ext b p
   cases b <;> rfl
 
-lemma unweavePowTwoTuple_zero_apply {c : Fin (2^(m + 1)) → α} :
-unweavePowTwoTuple 0 c = fun b p => c (finProdFinEquiv (p, bif b then 1 else 0)) := by
-  simp_rw [unweavePowTwoTuple_apply, mergeBitRes_zero]
-  rfl
-
 def unweaveOddTuplePowTwoTuple (i : Fin (m + 1)) :
   (Fin (2*n + 1) → Fin (2 ^ (m + 1)) → α) ≃ (Bool → Fin (2*n + 1) → Fin (2^m) → α) :=
 calc
   _ ≃ _ := Equiv.arrowCongr (Equiv.refl _) (unweavePowTwoTuple i)
   _ ≃ _ := Equiv.piComm _
 
+@[simp]
 lemma unweaveOddTuplePowTwoTuple_apply :
   unweaveOddTuplePowTwoTuple i cb = fun b t p => cb t (mergeBitRes i b p) := by
   ext b t p
   cases b <;> rfl
 
-lemma unweaveOddTuplePowTwoTuple_zero_apply :
-  unweaveOddTuplePowTwoTuple 0 cb = fun b t p => cb t (finProdFinEquiv (p, bif b then 1 else 0)) := by
-  simp_rw [unweaveOddTuplePowTwoTuple_apply, mergeBitRes_zero]
-  rfl
+@[simp]
+lemma unweaveOddTuplePowTwoTuple_symm_apply { cb : (Bool → Fin (2*n + 1) → Fin (2^m) → α)}:
+  (unweaveOddTuplePowTwoTuple i).symm cb = fun t q => cb (getBit i q) t (getRes i q) := by
+  simp_rw [Equiv.symm_apply_eq, unweaveOddTuplePowTwoTuple_apply, getBit_mergeBitRes, getRes_mergeBitRes]
+
+lemma splitOffFirstLast_unweaveOddTuplePowTwoTuple_snd
+(cb : Fin (2*(n + 1) + 1) → Fin (2^(m + 1)) → α) (b) :
+  (splitOffFirstLast ((unweaveOddTuplePowTwoTuple i) cb b)).2 =
+  unweaveOddTuplePowTwoTuple i ((splitOffFirstLast cb).2) b := rfl
+
+lemma splitOffFirstLast_unweaveOddTuplePowTwoTuple_fst_snd (cb : Fin (2*(n + 1) + 1) → Fin (2^(m + 1)) → α) (b) :
+(splitOffFirstLast ((unweaveOddTuplePowTwoTuple i) cb b)).1.2 =
+  fun p => (splitOffFirstLast cb).1.2 (mergeBitRes i b p) := by
+  simp_rw [unweaveOddTuplePowTwoTuple_apply, splitOffFirstLast_apply]
+
+lemma splitOffFirstLast_unweaveOddTuplePowTwoTuple_fst_fst (cb : Fin (2*(n + 1) + 1) → Fin (2^(m + 1)) → α) (b) :
+(splitOffFirstLast ((unweaveOddTuplePowTwoTuple i) cb b)).1.1 =
+  fun p => (splitOffFirstLast cb).1.1 (mergeBitRes i b p) := by
+  simp_rw [unweaveOddTuplePowTwoTuple_apply, splitOffFirstLast_apply]
 
 end Equivs
 
