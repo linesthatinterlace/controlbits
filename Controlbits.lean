@@ -154,21 +154,28 @@ simp_rw [MiddlePerm, bitInvar_iff_getBit_apply_eq_getBit, Equiv.Perm.mul_apply,
   getBit_zero_lastControl_apply_eq_getBit_zero_firstControl_perm_apply, ← Equiv.Perm.mul_apply,
   lastControl_mul_self, Equiv.Perm.one_apply, forall_const]
 
+lemma MiddlePerm_mem_bitInvarSubgroup_zero : MiddlePerm π ∈ bitInvarSubgroup 0 :=
+MiddlePerm_bitInvar_zero
+
+/-
 def MiddlePermInvar (π : Equiv.Perm (Fin (2^(m + 1)))) :
 {π : Equiv.Perm (Fin (2^(m + 1))) // bitInvar 0 π} :=
 ⟨MiddlePerm π, MiddlePerm_bitInvar_zero⟩
+-/
 
-lemma MiddlePerm_coe : (MiddlePerm π : Equiv.Perm (Fin (2^(m + 1)))) =
+lemma MiddlePerm_def : (MiddlePerm π : Equiv.Perm (Fin (2^(m + 1)))) =
   (FirstControl π) * π * (LastControl π) := rfl
 
 lemma FirstControl_mul_MiddlePerm_mul_LastControl_eq_self :
   FirstControl π * (MiddlePerm π) * LastControl π = π := by
-  simp_rw [MiddlePerm_coe, mul_assoc (a := FirstControl π),
+  simp_rw [MiddlePerm_def, mul_assoc (a := FirstControl π),
     firstControl_mul_cancel_left, lastControl_mul_cancel_right]
 
+/-
 lemma FirstControl_mul_MiddlePermInvar_mul_LastControl_eq_self :
   (FirstControl π) * (MiddlePermInvar π).1 * (LastControl π) = π :=
   FirstControl_mul_MiddlePerm_mul_LastControl_eq_self
+-/
 
 -- SECTION
 
@@ -200,12 +207,12 @@ lemma ControlBitsWeave_apply (cb : ControlBits (m + 1)) :
 def permToControlBits (m : ℕ) : Equiv.Perm (Fin (2^(m + 1))) → ControlBits m :=
 m.recOn (fun π => (ControlBitsZero.symm (LastControlBits π)))
 (fun _ re π => (ControlBitsWeave.symm) (((FirstControlBits π), (LastControlBits π)),
-  (re ∘ ((equivBitInvar 0).symm (MiddlePermInvar π)))))
+  (re ∘ ((bitInvarMulEquiv 0).symm ⟨MiddlePerm π, MiddlePerm_mem_bitInvarSubgroup_zero⟩))))
 
 def controlBitsToPermInductive (m : ℕ) : ControlBits m → Equiv.Perm (Fin (2^(m + 1))) :=
 m.recOn (fun cb => resCondFlip 0 (ControlBitsZero cb))
   (fun _ re cb => (resCondFlip 0 (ControlBitsWeave cb).fst.fst) *
-                  ((equivBitInvar 0) (re ∘ (ControlBitsWeave cb).snd)) *
+                  ((bitInvarMulEquiv 0) (re ∘ (ControlBitsWeave cb).snd)) *
                   (resCondFlip 0 ((ControlBitsWeave cb).fst.snd)))
 
 lemma permToControlBits_zero :
@@ -216,11 +223,11 @@ lemma controlBitsToPermInductive_zero :
 
 lemma permToControlBits_succ : permToControlBits (m + 1) = fun π =>
   ControlBitsWeave.symm (((FirstControlBits π), (LastControlBits π)),
-    (permToControlBits m) ∘ ((equivBitInvar 0).symm (MiddlePermInvar π))) := rfl
+    (permToControlBits m) ∘ ((bitInvarMulEquiv 0).symm ⟨MiddlePerm π, MiddlePerm_mem_bitInvarSubgroup_zero⟩)) := rfl
 
 lemma controlBitsToPermInductive_succ :
   controlBitsToPermInductive (m + 1) cb = ((resCondFlip 0 (ControlBitsWeave cb).fst.fst) *
-    ((equivBitInvar 0) ((controlBitsToPermInductive m) ∘ (ControlBitsWeave cb).snd)) *
+    ((bitInvarMulEquiv 0) ((controlBitsToPermInductive m) ∘ (ControlBitsWeave cb).snd)) *
       (resCondFlip 0 ((ControlBitsWeave cb).fst.snd))) := rfl
 
 lemma controlBitsToPermInductive_leftInverse :
@@ -233,9 +240,9 @@ lemma controlBitsToPermInductive_leftInverse :
     exact lastControl_base
   · intro π
     simp_rw [permToControlBits_succ, controlBitsToPermInductive_succ, Equiv.apply_symm_apply,
-      resCondFlip_firstControlBits, resCondFlip_lastControlBits, ← Function.comp.assoc,
-      IH.comp_eq_id, Function.comp.left_id, Equiv.apply_symm_apply,
-      FirstControl_mul_MiddlePermInvar_mul_LastControl_eq_self]
+      resCondFlip_firstControlBits, ← Function.comp.assoc, IH.comp_eq_id, Function.comp.left_id,
+      MulEquiv.apply_symm_apply, resCondFlip_lastControlBits,
+      FirstControl_mul_MiddlePerm_mul_LastControl_eq_self]
 
 -- SECTION
 
@@ -317,17 +324,26 @@ lemma partialControlBitsToPerm_last_succ :
   simp_rw [← Fin.succ_last, partialControlBitsToPerm_succ, Fin.succ_last,
     Fin.rev_last, Fin.val_last]
 
-lemma bitInvar_partialControlBitsToPerm (n t : Fin (m + 1)) :
-(htn : t < Fin.rev n) → ∀ cb, bitInvar t (partialControlBitsToPerm m n cb) :=
+lemma bitInvar_partialControlBitsToPerm {n t : Fin (m + 1)} :
+(htn : t < Fin.rev n) → ∀ {cb}, bitInvar t (partialControlBitsToPerm m n cb) :=
   n.inductionOn
   (fun htn _ => resCondFlip_bitInvar htn.ne)
   (fun n IH htn _ => (mul_bitInvar_of_bitInvar (mul_bitInvar_of_bitInvar
     (resCondFlip_bitInvar htn.ne)
-    (IH (htn.trans (Fin.rev_lt_rev.mpr (n.castSucc_lt_succ))) _)) <| resCondFlip_bitInvar htn.ne))
+    (IH (htn.trans (Fin.rev_lt_rev.mpr (n.castSucc_lt_succ))))) <| resCondFlip_bitInvar htn.ne))
 
-lemma bitInvar_zero_partialControlBitsToPerm (m : ℕ) (n : Fin (m + 1)) (hmn : n < Fin.last m)
-  : ∀ cb, bitInvar 0 (partialControlBitsToPerm m n cb) :=
-  bitInvar_partialControlBitsToPerm n 0 (Fin.rev_pos_iff_lt_last.mpr hmn)
+lemma partialControlBitsToPerm_mem_bitInvarSubgroup {n t : Fin (m + 1)}
+  (htn : t < Fin.rev n) {cb} :
+  partialControlBitsToPerm m n cb ∈ bitInvarSubgroup t :=
+  bitInvar_partialControlBitsToPerm htn
+
+lemma bitInvar_zero_partialControlBitsToPerm {m : ℕ} {n : Fin (m + 1)} (hmn : n < Fin.last m) {cb} :
+bitInvar 0 (partialControlBitsToPerm m n cb) :=
+  bitInvar_partialControlBitsToPerm (Fin.rev_pos_iff_lt_last.mpr hmn)
+
+lemma partialControlBitsToPerm_mem_bitInvarSubgroup_zero {m : ℕ} {n : Fin (m + 1)} (hmn : n < Fin.last m)
+  {cb} : partialControlBitsToPerm m n cb ∈ bitInvarSubgroup 0  :=
+  bitInvar_zero_partialControlBitsToPerm hmn
 
 lemma PartialLayerTupleWeave_PartialLayerTupleUnweave_snd (cb : PartialLayerTuple (m + 1) (n + 1))
   (b) : (PartialLayerTupleWeave (PartialLayerTupleUnweave cb b)).2 =
@@ -344,35 +360,24 @@ lemma PartialLayerTupleWeave_PartialLayerTupleUnweave_fst_snd :
     (fun p => (PartialLayerTupleWeave cb).1.2 (mergeBitRes 0 b p)) :=
     splitOffFirstLast_unweaveOddTuplePowTwoTuple_fst_snd _ _
 
-lemma equivBitInvar_map_pi_mul (π ρ : Bool → Equiv.Perm (Fin (2 ^ m))) :
-((equivBitInvar 0) (fun b => π b * ρ b)).val =
-  ((equivBitInvar 0) (fun b => π b)).val * ((equivBitInvar 0) (fun b => ρ b)).val := by
-  ext q : 1
-  simp only [equivBitInvar_apply, boolArrowPermsToBitInvarPerm_coe_apply, Equiv.Perm.coe_mul,
-    Function.comp_apply, getBit_mergeBitRes, getRes_mergeBitRes]
-
-lemma equivBitInvar_map_mul (π ρ : Bool → Equiv.Perm (Fin (2 ^ m))) :
-(equivBitInvar 0) (π * ρ) = ((equivBitInvar 0) π).val * ((equivBitInvar 0) ρ).val := by
-  simp_rw [Pi.mul_def, equivBitInvar_map_pi_mul]
-
-lemma partialControlBitsToPerm_equivBitInvar
+lemma partialControlBitsToPerm_bitInvarMulEquiv
 (m : ℕ) (n : Fin (m + 1)) : (cb : PartialLayerTuple (m + 1) (n.castSucc)) →
-partialControlBitsToPerm (m + 1) (n.castSucc) cb = (equivBitInvar 0)
+partialControlBitsToPerm (m + 1) (n.castSucc) cb = (bitInvarMulEquiv 0)
 (fun b => partialControlBitsToPerm m n (PartialLayerTupleUnweave cb b)) := by
   refine' n.inductionOn (fun _ => _) (fun i IH cb => _)
   · simp_rw [partialControlBitsToPerm_castSucc_zero, partialControlBitsToPerm_zero,
-      ← Nat.succ_eq_add_one, ← Fin.succ_last, resCondFlip_succ_eq_equivBitInvar_apply,
+      ← Nat.succ_eq_add_one, ← Fin.succ_last, resCondFlip_succ_eq_bitInvarMulEquiv_apply,
       PartialLayerTupleZero_apply, PartialLayerTupleUnweave_apply]
   · simp_rw [Fin.coe_castSucc] at IH
     simp_rw [partialControlBitsToPerm_succ_castSucc,
     partialControlBitsToPerm_succ, Fin.val_succ,
       PartialLayerTupleWeave_PartialLayerTupleUnweave_snd,
-      Fin.rev_castSucc_eq_succ_rev, resCondFlip_succ_eq_equivBitInvar_apply,
+      Fin.rev_castSucc_eq_succ_rev, resCondFlip_succ_eq_bitInvarMulEquiv_apply,
       PartialLayerTupleWeave_PartialLayerTupleUnweave_fst_fst,
-      PartialLayerTupleWeave_PartialLayerTupleUnweave_fst_snd,
-      equivBitInvar_map_pi_mul, IH]
+      PartialLayerTupleWeave_PartialLayerTupleUnweave_fst_snd, ← Pi.mul_def, MulEquiv.map_mul,
+      Submonoid.coe_mul, IH]
 
-def controlBitsToPermLeftRightMul (m : ℕ) := partialControlBitsToPerm m (Fin.last m)
+abbrev controlBitsToPermLeftRightMul (m : ℕ) := partialControlBitsToPerm m (Fin.last m)
 
 lemma controlBitsToPermLeftRightMul_zero :
   controlBitsToPermLeftRightMul 0 cb = resCondFlip 0 (PartialLayerTupleZero cb) :=
@@ -396,20 +401,20 @@ lemma controlBitsToPerm_eq : controlBitsToPermInductive = controlBitsToPermLeftR
     rcases m with (_ | m)
     · simp_rw [Function.comp_def, Fin.last_zero, Fin.castSucc_zero,
       partialControlBitsToPerm_zero_zero, partialControlBitsToPerm_zero, Fin.last_zero_add_one,
-      PartialLayerTupleZero_apply, resCondFlip_one_succ_eq_equivBitInvar_apply]
-    · simp_rw [partialControlBitsToPerm_equivBitInvar, PartialLayerTupleUnweave_apply,
+      PartialLayerTupleZero_apply, resCondFlip_one_succ_eq_bitInvarMulEquiv_apply]
+    · simp_rw [partialControlBitsToPerm_bitInvarMulEquiv, PartialLayerTupleUnweave_apply,
         Fin.val_last, Function.comp_def]
 
 lemma controlBitsToPermLeftRightMul_leftInverse :
   (controlBitsToPermLeftRightMul m).LeftInverse (permToControlBits m) :=
   controlBitsToPerm_eq ▸ controlBitsToPermInductive_leftInverse
 
-def controlBitsToPermLiteral (m : ℕ) (cb : ControlBits m) : Equiv.Perm (Fin (2^(m + 1))) :=
+abbrev controlBitsToPermLiteral (m : ℕ) (cb : ControlBits m) : Equiv.Perm (Fin (2^(m + 1))) :=
 (List.ofFn (fun k => resCondFlip (foldFin k) (cb k))).prod
 
 --SECTION
 
-def BitTupleControlBits (m : ℕ) := Fin ((2*m + 1)*(2^m)) → Bool
+abbrev BitTupleControlBits (m : ℕ) := Fin ((2*m + 1)*(2^m)) → Bool
 
 def layerTupleEquivBitTuple {m : ℕ} : ControlBits m ≃ BitTupleControlBits m := finArrowFinEquiv
 
