@@ -1,10 +1,9 @@
-import Mathlib.Data.Fin.Basic
 import Mathlib.GroupTheory.Perm.Basic
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Algebra.BigOperators.Order
 import Mathlib.Tactic
 import Controlbits.Bool
-import Controlbits.FinNatLemmas
+import Controlbits.Fin
 import Controlbits.Equivs
 section BitRes
 
@@ -161,7 +160,7 @@ lemma mergeBitRes_zero : mergeBitRes 0 b p = finProdFinEquiv (p, bif b then 1 el
 
 lemma coe_mergeBitRes_zero : (mergeBitRes 0 b p : ℕ) = 2 * p + (bif b then 1 else 0) := by
   simp_rw [mergeBitRes_zero, finProdFinEquiv_apply_val, add_comm (2 * (p : ℕ)),
-  apply_cond (Fin.val), Fin.val_one, Fin.val_zero]
+  Bool.apply_cond (Fin.val), Fin.val_one, Fin.val_zero]
 
 lemma mergeBitRes_zero_true : mergeBitRes 0 true p = finProdFinEquiv (p, 1) := by
   simp_rw [mergeBitRes_zero]
@@ -212,7 +211,7 @@ simp only [getBit_succAbove_eq_getBit_getRes, getRes_mergeBitRes]
 lemma getBit_eq_getBit_predAbove_getRes_succAbove (i : Fin (m + 1)) :
 getBit j q = getBit (i.predAbove j) (getRes (j.succAbove i) q) := by
   simp_rw [getBit_apply, getRes_apply, getBitRes_apply]
-  simp [succAbove_succAbove_predAbove]
+  simp [Fin.succAbove_succAbove_predAbove]
 
 lemma exists_getBit_eq_getBit_getRes {j : Fin (m + 2)} (h : i ≠ j) :
 ∃ k, j.succAbove k = i ∧ ∀ {q}, getBit i q = getBit k (getRes j q) := by
@@ -225,7 +224,7 @@ simp_rw [getRes_apply, mergeBitRes_apply, getBit_apply, Prod.mk.eta, Equiv.symm_
 lemma getRes_getRes_eq_getRes_predAbove_getRes_succAbove :
 getRes i (getRes j q) = getRes (i.predAbove j) (getRes (j.succAbove i) q) := by
   simp_rw [getRes_apply, getBitRes_apply, Equiv.symm_apply_apply, EmbeddingLike.apply_eq_iff_eq,
-  succAbove_succAbove_predAbove_succAbove_eq_succAbove_succAbove]
+  Fin.succAbove_succAbove_predAbove_succAbove_eq_succAbove_succAbove]
 
 lemma getRes_succAbove_eq_mergeBitRes_predAbove_getBit_getRes_getRes :
 getRes (j.succAbove i) q = mergeBitRes (i.predAbove j) (getBit j q) (getRes i (getRes j q)) := by
@@ -244,7 +243,7 @@ mergeBitRes (j.succAbove i) b₂ (mergeBitRes (i.predAbove j) b₁ p) := by
   simp only [Equiv.instTransSortSortSortEquivEquivEquiv_trans, Equiv.symm_trans_apply,
     Equiv.prodCongr_symm, Equiv.prodCongr_apply, Prod_map, Equiv.symm_symm,
     Equiv.piFinSuccAboveEquiv_symm_apply, Equiv.symm_apply_apply, EmbeddingLike.apply_eq_iff_eq]
-  rw [insertNth_insertNth_eq_insertNth_succAbove_insertNth_predAbove]
+  rw [Fin.insertNth_insertNth_eq_insertNth_succAbove_insertNth_predAbove]
 
 @[simp]
 lemma mergeBitRes_getRes_of_getBit_eq (h : getBit i q = b) : mergeBitRes i b (getRes i q) = q := by
@@ -495,7 +494,7 @@ flipBit_mergeBitRes (b := true)
 
 lemma flipBit_mergeBitRes_zero : flipBit 0 (mergeBitRes 0 b p) =
   finProdFinEquiv (p, bif b then 0 else 1) := by
-  simp_rw [flipBit_zero_apply, mergeBitRes_zero_divNat, mergeBitRes_zero_modNat, apply_cond (Fin.rev)]
+  simp_rw [flipBit_zero_apply, mergeBitRes_zero_divNat, mergeBitRes_zero_modNat, Bool.apply_cond (Fin.rev)]
   rfl
 
 lemma flipBit_mergeBitRes_zero_true : flipBit 0 (mergeBitRes 0 true p) = finProdFinEquiv (p, 0) :=
@@ -594,7 +593,7 @@ getBit 0 r = false ∧ getBit 0 q = true ∧ getRes 0 r = getRes 0 q := by
 rcases mergeBitRes_surj 0 q with ⟨bq, pq, rfl⟩; rcases mergeBitRes_surj 0 r with ⟨br, pr, rfl⟩
 simp_rw [flipBit_mergeBitRes, getBit_mergeBitRes, getRes_mergeBitRes,
   Fin.lt_iff_val_lt_val, Fin.ext_iff, coe_mergeBitRes_zero, Bool.cond_not] at hf h ⊢
-rcases eq_false_true_of_cond_succ_lt_of_cond_succ_lt h hf with ⟨hr, hq, he⟩
+rcases Nat.eq_false_true_of_cond_succ_lt_of_cond_succ_lt h hf with ⟨hr, hq, he⟩
 exact ⟨hr, hq, Nat.eq_of_mul_eq_mul_left zero_lt_two he⟩
 
 lemma eq_flipBit_of_lt_of_flipBit_gt (h : r < q)
@@ -749,7 +748,7 @@ resCondFlip 0 c q = bif c (q.divNat) then
 
 lemma coe_resCondFlip_zero_apply :
 (resCondFlip 0 c q : ℕ) = bif c (q.divNat) then ((2 * q.divNat + q.modNat.rev) : ℕ) else q := by
-  simp_rw [resCondFlip_apply, apply_cond (Fin.val), coe_flipBit_zero_apply, getRes_zero]
+  simp_rw [resCondFlip_apply, Bool.apply_cond (Fin.val), coe_flipBit_zero_apply, getRes_zero]
 
 lemma resCondFlip_zero_mergeBitRes :
 resCondFlip 0 c (mergeBitRes 0 b p) = finProdFinEquiv (p, bif xor (c p) b then 1 else 0) := by

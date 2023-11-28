@@ -5,36 +5,6 @@ import Mathlib.GroupTheory.Perm.Basic
 namespace Sum
 variable {α : Type u} {β: Type v}
 
-/-- Get the data from a sum type given a proof that it is of the left constructor. -/
-def getLeft! : (ab : α ⊕ β) → ab.isLeft → α | inl a, _ => a
-
-@[simp]
-lemma left_getLeft! : ∀ (ab : α ⊕ β) (h : ab.isLeft), inl (ab.getLeft! h) = ab | inl _, _ => rfl
-
-@[simp]
-lemma getLeft!_left (a : α) (h : (inl a : α ⊕ β).isLeft) : (inl a).getLeft! h = a := rfl
-
-lemma eq_left_iff_getLeft!_eq {ab : α ⊕ β} {a : α} : ab = inl a ↔ ∃ h, ab.getLeft! h = a := by
-  cases ab <;> simp
-
-lemma eq_left_of_isLeft : ∀ {ab : α ⊕ β} (h : ab.isLeft), ab = inl (ab.getLeft! h)
-  | inl _, _ => rfl
-
-/-- Get the data from a sum type given a proof that it is of the right constructor. -/
-def getRight! : (ab : α ⊕ β) → ab.isRight → β | inr b, _ => b
-
-@[simp]
-lemma right_getRight! : ∀ (ab : α ⊕ β) (h : ab.isRight), inr (ab.getRight! h) = ab | inr _, _ => rfl
-
-@[simp]
-lemma getRight!_right (b : β) (h : (inr b : α ⊕ β).isRight) : (inr b).getRight! h = b := rfl
-
-lemma eq_right_iff_getRight!_eq {ab : α ⊕ β} {b : β} : ab = inr b ↔ ∃ h, ab.getRight! h = b := by
-  cases ab <;> simp
-
-lemma eq_right_of_isRight : ∀ {ab : α ⊕ β} (h : ab.isRight), ab = inr (ab.getRight! h)
-  | inr _, _ => rfl
-
 @[simp]
 lemma isLeft_eq_of_liftRel_inl_right (h : LiftRel ra rb ab (inl c)) : ab.isLeft  := by
   cases h ; simp
@@ -67,15 +37,15 @@ lemma liftRel_equiv_right_iff_symm_left {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂
 by convert liftRel_equiv_left_iff_symm_right.symm ; exact e.symm_symm
 
 def shouldExistLeft (α β) : {x : Sum α β // x.isLeft} ≃ α where
-  toFun := fun ⟨x, hx⟩ => x.getLeft! hx
+  toFun := fun ⟨x, hx⟩ => x.getLeft hx
   invFun := fun x => ⟨Sum.inl x, rfl⟩
-  left_inv := by intro _; ext ; dsimp ; exact left_getLeft! _ _
+  left_inv := by intro _; ext ; dsimp ; exact inl_getLeft _ _
   right_inv := fun x => rfl
 
 def shouldExistRight (α β): {x : Sum α β // x.isRight} ≃ β where
-  toFun := fun ⟨x, hx⟩ => x.getRight! hx
+  toFun := fun ⟨x, hx⟩ => x.getRight hx
   invFun := fun x => ⟨Sum.inr x, rfl⟩
-  left_inv := by intro _; ext ; dsimp ; exact right_getRight! _ _
+  left_inv := by intro _; ext ; dsimp ; exact inr_getRight _ _
   right_inv := fun x => rfl
 
 end Sum
@@ -85,40 +55,39 @@ open Sum
 variable {e : α₁ ⊕ β₁ ≃ α₂ ⊕ β₂} {ra : α₂ → α₁ → Prop} {rb : β₂ → β₁ → Prop}
 {ea : α₁ ≃ α₂} {eb : β₁ ≃ β₂}
 
-
 /-- Given an equiv is compatible with the lifted relation, induce an equivalence between first
 types of a sum type. -/
 @[simps]
 def equivOfLiftRelToEquivLeft (he : ∀ ab, LiftRel ra rb (e ab) ab) : α₁ ≃ α₂ where
-  toFun := fun a₁ => (e (inl a₁)).getLeft! (
+  toFun := fun a₁ => (e (inl a₁)).getLeft (
     isLeft_eq_of_liftRel_inl_right (he (inl _)))
-  invFun := fun a₂ => (e.symm (inl a₂)).getLeft! (by
+  invFun := fun a₂ => (e.symm (inl a₂)).getLeft (by
     rw [liftRel_equiv_left_iff_symm_right] at he ;
     exact isLeft_eq_of_liftRel_inl_left (he (inl a₂)))
-  left_inv := fun a₁ => (by simp_rw [left_getLeft!, Equiv.symm_apply_apply, getLeft!_left])
-  right_inv := fun a₂ => (by simp_rw [left_getLeft!, Equiv.apply_symm_apply, getLeft!_left])
+  left_inv := fun a₁ => (by simp_rw [inl_getLeft, Equiv.symm_apply_apply, getLeft_inl])
+  right_inv := fun a₂ => (by simp_rw [inl_getLeft, Equiv.apply_symm_apply, getLeft_inl])
 
 /-- Given an equiv is compatible with the lifted relation, induce an equivalence between second
 types of a sum type. -/
 @[simps]
 def equivOfLiftRelToEquivRight (he : ∀ ab, LiftRel ra rb (e ab) ab) : β₁ ≃ β₂ where
-  toFun := fun b₁ => (e (inr b₁)).getRight! (
+  toFun := fun b₁ => (e (inr b₁)).getRight (
     isRight_eq_of_liftRel_inr_right (he (inr _)))
-  invFun := fun b₂ => (e.symm (inr b₂)).getRight! (by
+  invFun := fun b₂ => (e.symm (inr b₂)).getRight (by
     rw [liftRel_equiv_left_iff_symm_right] at he ;
     exact isRight_eq_of_liftRel_inr_left (he (inr b₂)))
-  left_inv := fun b₁ => (by simp_rw [right_getRight!, Equiv.symm_apply_apply, getRight!_right])
-  right_inv := fun b₂ => (by simp_rw [right_getRight!, Equiv.apply_symm_apply, getRight!_right])
+  left_inv := fun b₁ => (by simp_rw [inr_getRight, Equiv.symm_apply_apply, getRight_inr])
+  right_inv := fun b₂ => (by simp_rw [inr_getRight, Equiv.apply_symm_apply, getRight_inr])
 
 lemma equivOfLiftRelToEquivLeft_rel_left {he : ∀ ab, LiftRel ra rb (e ab) ab} (a : α₁) :
 ra (equivOfLiftRelToEquivLeft he a) a := by
   simp only [equivOfLiftRelToEquivLeft_apply, ← liftRel_inl_inl (r := ra) (s := rb),
-    left_getLeft!, he]
+    inl_getLeft, he]
 
 lemma equivOfLiftRelToEquivRight_rel_right {he : ∀ ab, LiftRel ra rb (e ab) ab} (b : β₁):
 rb (equivOfLiftRelToEquivRight he b) b := by
   simp only [equivOfLiftRelToEquivRight_apply, ← liftRel_inr_inr (r := ra) (s := rb),
-    right_getRight!, he]
+    inr_getRight, he]
 
 lemma liftRelSumCongr_of_rel_left_rel_right (hea : ∀ a, ra (ea a) a) (heb : ∀ b, rb (eb b) b) (ab) :
 LiftRel ra rb (ea.sumCongr eb ab) ab := by

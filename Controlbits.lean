@@ -6,6 +6,50 @@ import Mathlib.GroupTheory.GroupAction.DomAct.Basic
 
 section ControlBits
 
+-- FACTOR THESE
+
+lemma Fin.rev_last {m : ℕ} : (last m).rev = 0 := by
+  simp_rw [← top_eq_last, ← OrderDual.ofDual_bot, ← revOrderIso_apply, map_bot,
+  bot_eq_zero]
+
+lemma Fin.rev_zero {m : ℕ} : (0 : Fin (m + 1)).rev = (last m) := rfl
+
+lemma Fin.lt_last_iff_ne_last {i : Fin (m + 1)} : i < last m ↔ i ≠ last m := lt_top_iff_ne_top
+
+lemma Fin.rev_eq_zero_iff_last {i : Fin (m + 1)} : i.rev = 0 ↔ i = last m := by
+  convert rev_inj
+  exact rev_last.symm
+
+lemma Fin.rev_ne_zero_iff_ne_last {i : Fin (m + 1)} : i.rev ≠ 0 ↔ i ≠ last m := by
+  simp_rw [ne_eq, rev_eq_zero_iff_last]
+
+lemma Fin.rev_pos_iff_lt_last {i : Fin (m + 1)} : 0 < i.rev ↔ i < last m := by
+  simp_rw [lt_last_iff_ne_last, Fin.pos_iff_ne_zero]
+  exact rev_ne_zero_iff_ne_last
+
+lemma Fin.eq_zero_iff_rev_eq_last {i : Fin (m + 1)} : i = 0 ↔ i.rev = last m := by
+  convert rev_rev i ▸ rev_eq_zero_iff_last
+
+lemma Fin.ne_zero_iff_rev_ne_last {i : Fin (m + 1)} : i ≠ 0 ↔ i.rev ≠ last m := by
+  convert rev_rev i ▸ rev_ne_zero_iff_ne_last
+
+lemma Fin.pos_iff_rev_lt_last {i : Fin (m + 1)} : 0 < i ↔ i.rev < last m := by
+  convert rev_rev i ▸ rev_pos_iff_lt_last
+
+lemma Fin.rev_castSucc_eq_succ_rev {i : Fin m}: Fin.rev (Fin.castSucc i) = Fin.succ (Fin.rev i) := by
+  rcases m with (_ | m)
+  · exact i.elim0
+  · simp only [Fin.ext_iff, val_rev, coe_castSucc, val_succ, Nat.succ_sub_succ_eq_sub,
+      add_le_add_iff_right, tsub_add_eq_add_tsub (Nat.le_of_lt_succ i.isLt)]
+
+lemma Fin.last_zero : Fin.last 0 = 0 := rfl
+
+lemma Fin.last_one : Fin.last 1 = 1 := rfl
+
+lemma Fin.last_zero_add_one : Fin.last (0 + 1) = 1 := rfl
+
+-- FACTOR TO HERE
+
 def XBackXForth (π : Equiv.Perm (Fin (2^(m + 1)))) := ⁅π, (flipBit (0 : Fin (m + 1)))⁆
 
 lemma XBackXForth_def {π : Equiv.Perm (Fin (2^(m + 1)))} :
@@ -133,7 +177,7 @@ rcases mergeBitRes_getRes_cases_flipBit 0 (π q) false with (⟨h₃, h₄⟩ | 
 rcases mergeBitRes_getRes_cases_flipBit 0 q false with (⟨h₁, h₂⟩ | ⟨h₁, h₂⟩) <;>
 simp only [firstControl_apply, lastControl_apply, h₁, h₂, h₃, h₄, Bool.not_not, getBit_flipBit,
   Bool.cond_not, cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply,
-  apply_cond (getBit 0), cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF]
+  Bool.apply_cond (getBit 0), cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF]
 
 def MiddlePerm (π : Equiv.Perm (Fin (2^(m + 1)))) : Equiv.Perm (Fin (2^(m + 1))) :=
 (FirstControl π) * π * (LastControl π)
@@ -289,11 +333,6 @@ lemma partialControlBitsToPerm_succ_castSucc {n : Fin m} {cb : PartialLayerTuple
   partialControlBitsToPerm (m + 1) n.castSucc.castSucc (PartialLayerTupleWeave cb).2 *
   resCondFlip n.succ.castSucc.rev (PartialLayerTupleWeave cb).1.2 := rfl
 
--- FACTOR OUT
-lemma Fin.rev_last {m : ℕ} : (Fin.last m).rev = 0 := by
-  simp_rw [← Fin.top_eq_last, ← OrderDual.ofDual_bot, ← Fin.revOrderIso_apply, map_bot,
-  Fin.bot_eq_zero]
-
 lemma partialControlBitsToPerm_last_succ :
   partialControlBitsToPerm (m + 1) (Fin.last (m + 1)) cb = (
   resCondFlip 0 (PartialLayerTupleWeave cb).1.1 *
@@ -301,39 +340,17 @@ lemma partialControlBitsToPerm_last_succ :
   resCondFlip 0 (PartialLayerTupleWeave cb).1.2) := by
   simp_rw [← Fin.succ_last, partialControlBitsToPerm_succ, Fin.succ_last, Fin.rev_last, Fin.val_last]
 
--- FACTOR
+lemma bitInvar_partialControlBitsToPerm (n t : Fin (m + 1)) :
+(htn : t < Fin.rev n) → ∀ cb, bitInvar t (partialControlBitsToPerm m n cb) :=
+  n.inductionOn
+  (fun htn _ => resCondFlip_bitInvar htn.ne)
+  (fun n IH htn _ => (mul_bitInvar_of_bitInvar (mul_bitInvar_of_bitInvar
+    (resCondFlip_bitInvar htn.ne)
+    (IH (htn.trans (Fin.rev_lt_rev.mpr (n.castSucc_lt_succ))) _)) <| resCondFlip_bitInvar htn.ne))
 
-/-
-
-lemma Fin.self_add_rev_eq_last {i : Fin (m + 1)} :  i + i.rev = Fin.last m := by
-  sorry
-
-lemma Fin.rev_add_self_eq_last {i : Fin (m + 1)} : i.rev + i = Fin.last m := by
-  simp_rw [add_comm, Fin.self_add_rev_eq_last]
-
-lemma bitInvar_partialControlBitsToPerm (n t : Fin (m + 1)) : (cb : PartialLayerTuple m n) → (htn : t < Fin.rev n) →
-bitInvar t (partialControlBitsToPerm m n cb) := by
-refine n.inductionOn ?_ (fun n IH => ?_)
-· simp_rw [add_zero]
-  exact fun _ htn => resCondFlip_bitInvar (Fin.ne_of_lt htn)
-· simp_rw [partialControlBitsToPerm_succ]
-  intros cb htn
-  --have hmn : n + 1 < m + 1 := (lt_of_le_of_lt ((n + 1).le_add_left _) htn).trans (Nat.lt_succ_self _)
-  --rw [Fin.lt_def, Fin.val_add, Fin.val_succ, Fin.val_last] at htn
-  have H : t ≠ Fin.rev (Fin.succ n)
-  · intro H
-    rw [H, Fin.rev_add_self_eq_last] at htn
-    exact lt_irrefl _ htn
-  refine' mul_bitInvar_of_bitInvar (mul_bitInvar_of_bitInvar (resCondFlip_bitInvar H) (IH _ (lt_trans _ htn))) (resCondFlip_bitInvar H)
-
-
-lemma bitInvar_zero_partialControlBitsToPerm (m : ℕ) (n : Fin (m + 1))
-(cb : PartialLayerTuple m n) (hmn : n < Fin.last m) :
-  bitInvar 0 (partialControlBitsToPerm m n  cb) := by
-  refine' bitInvar_partialControlBitsToPerm n 0 cb _
-  rw [zero_add]
-  exact hmn
--/
+lemma bitInvar_zero_partialControlBitsToPerm (m : ℕ) (n : Fin (m + 1)) (hmn : n < Fin.last m)
+  : ∀ cb, bitInvar 0 (partialControlBitsToPerm m n cb) :=
+  bitInvar_partialControlBitsToPerm n 0 (Fin.rev_pos_iff_lt_last.mpr hmn)
 
 lemma PartialLayerTupleWeave_PartialLayerTupleUnweave_snd (cb : PartialLayerTuple (m + 1) (n + 1)) (b) :
 (PartialLayerTupleWeave (PartialLayerTupleUnweave cb b)).2 =
@@ -349,22 +366,6 @@ lemma PartialLayerTupleWeave_PartialLayerTupleUnweave_fst_snd :
   (PartialLayerTupleWeave (PartialLayerTupleUnweave cb b)).1.2 =
     (fun p => (PartialLayerTupleWeave cb).1.2 (mergeBitRes 0 b p)) :=
     splitOffFirstLast_unweaveOddTuplePowTwoTuple_fst_snd _ _
-
--- FACTOR THIS
-
-lemma Fin.rev_castSucc_eq_succ_rev {i : Fin m}: Fin.rev (Fin.castSucc i) = Fin.succ (Fin.rev i) := by
-  rcases m with (_ | m)
-  · exact i.elim0
-  · simp only [Fin.ext_iff, val_rev, coe_castSucc, val_succ, Nat.succ_sub_succ_eq_sub,
-      add_le_add_iff_right, tsub_add_eq_add_tsub (Nat.le_of_lt_succ i.isLt)]
-
--- FACTOR THIS
-
-lemma Fin.last_zero : Fin.last 0 = 0 := rfl
-
-lemma Fin.last_one : Fin.last 1 = 1 := rfl
-
-lemma Fin.last_zero_add_one : Fin.last (0 + 1) = 1 := rfl
 
 lemma equivBitInvar_map_pi_mul (π ρ : Bool → Equiv.Perm (Fin (2 ^ m))) :
 ((equivBitInvar 0) (fun b => π b * ρ b)).val =
