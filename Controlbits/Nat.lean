@@ -4,7 +4,10 @@ import Controlbits.Order
 namespace Nat
 
 theorem lt_sub_one_of_lt_of_lt {a b c : ℕ} (hab : a < b) (hbc : b < c) : a < c - 1 :=
-Order.lt_sub_one_of_lt_of_lt hab hbc
+Order.lt_pred_of_lt_of_lt hab hbc
+
+theorem lt_add_one_of_lt_of_lt {a b c : ℕ} (hab : a < b) (hbc : b < c) : a + 1 < c :=
+Order.succ_lt_of_lt_of_lt hab hbc
 
 lemma eq_false_true_of_cond_succ_lt_of_cond_succ_lt
 (hmn : (m + bif bm then 1 else 0) < n + bif bn then 1 else 0)

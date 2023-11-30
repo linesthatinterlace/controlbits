@@ -374,8 +374,8 @@ partialControlBitsToPerm (m + 1) (n.castSucc) cb = (bitInvarMulEquiv 0)
       PartialLayerTupleWeave_PartialLayerTupleUnweave_snd,
       Fin.rev_castSucc_eq_succ_rev, resCondFlip_succ_eq_bitInvarMulEquiv_apply,
       PartialLayerTupleWeave_PartialLayerTupleUnweave_fst_fst,
-      PartialLayerTupleWeave_PartialLayerTupleUnweave_fst_snd, ← Pi.mul_def, MulEquiv.map_mul,
-      Submonoid.coe_mul, IH]
+      PartialLayerTupleWeave_PartialLayerTupleUnweave_fst_snd, ← Pi.mul_def,
+      MulEquiv.map_mul, Submonoid.coe_mul, IH]
 
 abbrev controlBitsToPermLeftRightMul (m : ℕ) := partialControlBitsToPerm m (Fin.last m)
 
@@ -410,13 +410,14 @@ lemma controlBitsToPermLeftRightMul_leftInverse :
   controlBitsToPerm_eq ▸ controlBitsToPermInductive_leftInverse
 
 abbrev controlBitsToPermLiteral (m : ℕ) (cb : ControlBits m) : Equiv.Perm (Fin (2^(m + 1))) :=
-(List.ofFn (fun k => resCondFlip (foldFin k) (cb k))).prod
+(List.ofFn (fun k => resCondFlip (foldFin m k) (cb k))).prod
 
 --SECTION
 
 abbrev BitTupleControlBits (m : ℕ) := Fin ((2*m + 1)*(2^m)) → Bool
 
-def layerTupleEquivBitTuple {m : ℕ} : ControlBits m ≃ BitTupleControlBits m := finArrowFinEquiv
+def layerTupleEquivBitTuple {m : ℕ} : ControlBits m ≃ BitTupleControlBits m :=
+(Equiv.curry _ _ _).symm.trans (finProdFinEquiv.arrowCongr <| Equiv.refl _)
 
 def bitTupleControlBitsToPerm (m : ℕ) :=
 (controlBitsToPermLeftRightMul m) ∘ layerTupleEquivBitTuple.symm

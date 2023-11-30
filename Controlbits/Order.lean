@@ -2,9 +2,11 @@ import Mathlib.Order.SuccPred.Basic
 
 namespace Order
 
-theorem lt_sub_one_of_lt_of_lt {α : Type*} [Preorder α] [PredOrder α]
-{a b c : α} (hab : a < b) (hbc : b < c) : a < pred c :=
-lt_of_le_of_lt (le_pred_of_lt hab) (pred_lt_pred_of_not_isMin hbc (not_isMin_iff.mpr ⟨_, hab⟩))
+theorem lt_pred_of_lt_of_lt {α : Type*} [Preorder α] [PredOrder α]
+{a b c : α} (hab : a < b) (hbc : b < c) : a < pred c := lt_of_lt_of_le hab (le_pred_of_lt hbc)
+
+theorem succ_lt_of_lt_of_lt {α : Type*} [Preorder α] [SuccOrder α]
+{a b c : α} (hab : a < b) (hbc : b < c) : succ a < c := lt_of_le_of_lt (succ_le_of_lt hab) hbc
 
 lemma eq_false_true_of_cond_succ_lt_of_cond_succ_lt {α : Type*} [PartialOrder α] [SuccOrder α]
   [NoMaxOrder α] {m n : α} {bm bn : Bool}

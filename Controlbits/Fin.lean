@@ -10,104 +10,30 @@ lemma succAbove_succAbove_predAbove {i : Fin (m + 1)} {j : Fin (m + 2)} :
 (j.succAbove i).succAbove (i.predAbove j) = j := by
 rcases j.succAbove_lt_ge i with (h | h)
 · rw [succAbove_below _ _ h, succAbove_predAbove (ne_of_lt h).symm]
-· have h₂ : j = castSucc (castPred j) :=
-    (castSucc_castPred (lt_of_le_of_lt h (castSucc_lt_last _))).symm
-  rw [succAbove_above _ _ h, predAbove_below _ _ h]
-  rw [h₂, le_castSucc_iff] at h
-  rw [succAbove_below _ _ h, ← h₂]
+· rw [succAbove_above _ _ h, predAbove, dif_neg h.not_lt,
+    succAbove_below _ _ (castSucc_castLT _ _ ▸ le_castSucc_iff.mp h), castSucc_castLT]
 
 lemma succAbove_succAbove_predAbove_succAbove_eq_succAbove_succAbove {j : Fin (m + 2)} :
 (j.succAbove i).succAbove ((i.predAbove j).succAbove k) = j.succAbove (i.succAbove k) := by
-  ext
-  dsimp [succAbove, predAbove]
-  rcases j.succAbove_lt_ge i with (h | h) <;>
-  [ simp only [h, dite_true, coe_pred, ge_iff_le, lt_tsub_iff_right, dite_val,
-    coe_castSucc, val_succ] ;
-    simp only [h.not_lt, dite_false, coe_castLT, dite_val, coe_castSucc, val_succ]] <;>
-  rcases i.succAbove_lt_ge k with (h₂ | h₂) <;>
-  simp only [lt_def, le_def, coe_castSucc] at h h₂
-  · simp only [h, ite_true, h₂]
-    by_cases h₃ : (k + 1 : ℕ) < (j : ℕ)
-    · simp only [Nat.lt_of_succ_lt, h₃, ite_true, h₂]
-    · exfalso
-      rw [not_lt] at h₃
-      exact (Nat.le_of_lt_succ (lt_of_lt_of_le h h₃)).not_lt h₂
-  · simp only [h, ite_true, ite_false, h₂.not_lt]
-    by_cases h₃ : (k + 1 : ℕ) < (j : ℕ) <;>
-    simp only [h₃, ite_true, ite_false, ite_eq_right_iff, self_eq_add_right]
-    · exact h₂.not_lt
-    · rw [not_lt] at h₃
-      exact (lt_of_lt_of_le h h₃).le.not_lt
-  · simp only [h₂, ite_true, ite_false, h.not_lt]
-    by_cases h₃ : (k : ℕ) < (j : ℕ) <;>
-    simp only [h₃, ite_true, ite_false, ite_eq_left_iff, not_lt, add_right_eq_self]
-    · exact h₂.le.not_lt
-    · rw [Nat.succ_le_succ_iff]
-      exact h₂.not_le
-  · simp only [h.not_lt, ite_false]
-    by_cases h₃ : (k : ℕ) < (j : ℕ) <;>
-    simp only [h₃, Nat.succ_lt_succ_iff, h₂.not_lt, ite_false, ite_true]
-    · exfalso
-      exact h₃.not_le (h.trans h₂)
-    · rw [not_lt] at h₃
-      simp only [(h₃.trans (Nat.le_succ _)).not_lt, ite_false]
+  ext ; simp only [succAbove, predAbove, lt_def, coe_castSucc, ite_val, coe_pred,
+    coe_castLT, dite_eq_ite, dite_val, val_succ]
+  rcases lt_or_le (i : ℕ) (j : ℕ) with (h | h) <;>
+  rcases lt_or_le (k : ℕ) (i : ℕ) with (h₂ | h₂)
+  · simp_rw [if_pos h, if_pos (Nat.lt_sub_one_of_lt_of_lt h₂ h), if_pos h₂, if_pos (h₂.trans h)]
+  · simp_rw [if_pos h, if_neg h₂.not_lt, ← Nat.pred_eq_sub_one, Nat.lt_pred_iff,
+      apply_ite (fun z => if z < (i : ℕ) then z else z + 1), if_neg h₂.not_lt,
+      if_neg (Nat.le_succ_of_le h₂).not_lt]
+  · simp_rw [if_neg h.not_lt, if_pos h₂, apply_ite (fun z => if z < (i + 1 : ℕ) then z else z + 1),
+      if_pos (lt_of_lt_of_le h₂ (Nat.le_succ _)), Nat.succ_lt_succ_iff, if_pos h₂]
+  · simp_rw [if_neg h.not_lt, if_neg (h.trans h₂).not_lt, Nat.succ_lt_succ_iff, if_neg h₂.not_lt,
+      if_neg ((h.trans h₂).trans (Nat.le_succ _)).not_lt]
 
 lemma insertNth_insertNth_eq_insertNth_succAbove_insertNth_predAbove {p : Fin m → α}
-{j : Fin (m + 2)} : insertNth j x (insertNth i y p) =
-  insertNth (succAbove j i) y (insertNth (predAbove i j) x p) := by
-  ext k
-  simp_rw [succAbove, predAbove]
-  simp_rw [← coe_castSucc i, ← lt_def]
-  rcases lt_or_ge (i.castSucc) j with (h | h)
-  · simp only [h, ite_true, dite_true]
-    rcases lt_trichotomy j k with (h₂ | rfl | h₂)
-    · simp_rw [insertNth_apply_above h₂, insertNth_apply_above (h.trans h₂),
-        insertNth_apply_above (pred_lt_pred_iff.mpr h₂), eq_rec_constant]
-      rw [insertNth_apply_above]
-      · simp_rw [eq_rec_constant]
-      · exact castSucc_lt_castSucc_iff.mp (lt_of_lt_of_le h (le_def.mpr
-          (Nat.le_sub_one_of_lt (lt_def.mpr h₂))))
-    · simp_rw [insertNth_apply_above h, insertNth_apply_same, eq_rec_constant]
-    · simp_rw [insertNth_apply_below h₂, eq_rec_constant]
-      rcases lt_trichotomy (i.castSucc) k with (h₃| rfl | h₃)
-      · simp_rw [insertNth_apply_above h₃, insertNth_apply_below (pred_lt_pred_iff.mpr h₂),
-          eq_rec_constant]
-        rw [insertNth_apply_above]
-        · simp_rw [eq_rec_constant]
-          congr
-        · exact h₃
-      · simp_rw [castLT_castSucc, insertNth_apply_same]
-      · simp_rw [insertNth_apply_below h₃, eq_rec_constant]
-        rw [insertNth_apply_below , insertNth_apply_below (Nat.lt_sub_one_of_lt_of_lt h₃ h)]
-        · simp_rw [eq_rec_constant]
-        · exact (lt_def.mpr (lt_def.mp h₃))
-  · simp only [h.not_lt, ite_false, dite_false]
-    rw [ge_iff_le, le_castSucc_iff] at h
-    rcases lt_trichotomy j k with (h₂ | rfl | h₂)
-    · simp_rw [insertNth_apply_above h₂, eq_rec_constant]
-      rcases lt_trichotomy (i.succ) k with (h₃| rfl | h₃)
-      · simp_rw [insertNth_apply_above h₃]
-        rw [insertNth_apply_above, insertNth_apply_above (Nat.lt_sub_one_of_lt_of_lt h h₃)]
-        · simp_rw [eq_rec_constant]
-        · simp_rw [lt_def, coe_pred]
-          exact Nat.lt_pred_iff.mpr h₃
-      · simp_rw [pred_succ, insertNth_apply_same]
-      · simp_rw [insertNth_apply_below h₃]
-        rw [insertNth_apply_below, insertNth_apply_above]
-        · simp_rw [eq_rec_constant]
-          congr
-        · exact h₂
-        · rw [lt_def, coe_pred]
-          exact Nat.sub_lt_right_of_lt_add (Nat.one_le_of_lt h₂) h₃
-    · simp_rw [insertNth_apply_below h, insertNth_apply_same, eq_rec_constant]
-    · simp_rw [insertNth_apply_below h₂, insertNth_apply_below (h₂.trans h), eq_rec_constant]
-      rw [insertNth_apply_below, insertNth_apply_below]
-      simp_rw [eq_rec_constant]
-      · rw [lt_def] at h₂
-        exact lt_def.mp h₂
-      · rw [← le_castSucc_iff, le_def, coe_castSucc] at h
-        rw [lt_def] at h₂
-        exact lt_def.mpr (lt_of_lt_of_le h₂ h)
+{j : Fin (m + 2)} : j.insertNth x (insertNth i y p) =
+  (succAbove j i).insertNth y ((predAbove i j).insertNth  x p) := by
+  simp_rw [eq_insertNth_iff, insertNth_eq_iff, succAbove_succAbove_predAbove,
+    insertNth_apply_succAbove, insertNth_apply_same, true_and,
+    succAbove_succAbove_predAbove_succAbove_eq_succAbove_succAbove, insertNth_apply_succAbove]
 
 lemma rev_last {m : ℕ} : (last m).rev = 0 := by
   rw [ext_iff, val_rev, val_last, val_zero, tsub_self]
