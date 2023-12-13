@@ -13,3 +13,17 @@ lemma splitOffFirstLast_apply_fst (cb : (Fin (2*(n + 1) + 1) → α)) :
 lemma splitOffFirstLast_apply_snd (cb : (Fin (2*(n + 1) + 1) → α)) :
   (splitOffFirstLast cb).2 = fun j => cb (j.castSucc.succ) := by
   simp_rw [splitOffFirstLast_apply]
+
+@[simp]
+lemma finTwoEquiv_apply : ∀ j, finTwoEquiv j = decide (j = 1) := (Fin.forall_fin_two).mpr ⟨rfl, rfl⟩
+
+@[simp]
+lemma finTwoEquiv_symm_apply : ∀ j, finTwoEquiv.symm j = bif j then 1 else 0 :=
+  (Bool.forall_bool).mpr ⟨rfl, rfl⟩
+
+@[simps!]
+def boolInversion : Equiv.Perm Bool where
+  toFun := not
+  invFun := not
+  left_inv := Bool.not_not
+  right_inv := Bool.not_not

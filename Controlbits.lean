@@ -39,8 +39,9 @@ lemma firstControlBits_apply : FirstControlBits π p =
 
 -- Theorem 5.2
 lemma firstControlBits_apply_zero {π : Equiv.Perm (Fin (2^(m + 1)))} :
-FirstControlBits π 0 = false := by
-simp_rw [firstControlBits_apply, mergeBitRes_apply_false_zero, Fin.cycleMin_zero, getBit_apply_zero]
+  FirstControlBits π 0 = false := by
+  simp_rw [firstControlBits_apply, mergeBitRes_apply_false_zero,
+    Fin.cycleMin_zero, getBit_apply_zero]
 
 lemma firstControlBits_base : FirstControlBits (m := 0) π = ![false] := by
   ext
@@ -149,18 +150,21 @@ simp only [firstControl_apply, lastControl_apply, h₁, h₂, h₃, h₄, Bool.n
 def MiddlePerm (π : Equiv.Perm (Fin (2^(m + 1)))) : Equiv.Perm (Fin (2^(m + 1))) :=
 (FirstControl π) * π * (LastControl π)
 
-lemma MiddlePerm_bitInvar_zero : bitInvar 0 (MiddlePerm π) := by
+lemma MiddlePerm_bitInvar_zero : bitInvar 0 ⇑(MiddlePerm π) := by
 simp_rw [MiddlePerm, bitInvar_iff_getBit_apply_eq_getBit, Equiv.Perm.mul_apply,
   getBit_zero_lastControl_apply_eq_getBit_zero_firstControl_perm_apply, ← Equiv.Perm.mul_apply,
   lastControl_mul_self, Equiv.Perm.one_apply, forall_const]
 
+lemma MiddlePerm_mem_bitInvarSubmonoid_zero : ⇑(MiddlePerm π) ∈ bitInvarSubmonoid 0 :=
+  MiddlePerm_bitInvar_zero
+
+
 lemma MiddlePerm_mem_bitInvarSubgroup_zero : MiddlePerm π ∈ bitInvarSubgroup 0 :=
-MiddlePerm_bitInvar_zero
+  MiddlePerm_mem_bitInvarSubmonoid_zero
 
 /-
-def MiddlePermInvar (π : Equiv.Perm (Fin (2^(m + 1)))) :
-{π : Equiv.Perm (Fin (2^(m + 1))) // bitInvar 0 π} :=
-⟨MiddlePerm π, MiddlePerm_bitInvar_zero⟩
+def MiddlePermBitInvar (π : Equiv.Perm (Fin (2^(m + 1)))) : bitInvarSubgroup 0 :=
+⟨MiddlePerm π, MiddlePerm_mem_bitInvarSubgroup_zero⟩
 -/
 
 lemma MiddlePerm_def : (MiddlePerm π : Equiv.Perm (Fin (2^(m + 1)))) =
@@ -170,12 +174,6 @@ lemma FirstControl_mul_MiddlePerm_mul_LastControl_eq_self :
   FirstControl π * (MiddlePerm π) * LastControl π = π := by
   simp_rw [MiddlePerm_def, mul_assoc (a := FirstControl π),
     firstControl_mul_cancel_left, lastControl_mul_cancel_right]
-
-/-
-lemma FirstControl_mul_MiddlePermInvar_mul_LastControl_eq_self :
-  (FirstControl π) * (MiddlePermInvar π).1 * (LastControl π) = π :=
-  FirstControl_mul_MiddlePerm_mul_LastControl_eq_self
--/
 
 -- SECTION
 
@@ -223,7 +221,8 @@ lemma controlBitsToPermInductive_zero :
 
 lemma permToControlBits_succ : permToControlBits (m + 1) = fun π =>
   ControlBitsWeave.symm (((FirstControlBits π), (LastControlBits π)),
-    (permToControlBits m) ∘ ((bitInvarMulEquiv 0).symm ⟨MiddlePerm π, MiddlePerm_mem_bitInvarSubgroup_zero⟩)) := rfl
+    (permToControlBits m) ∘ ((bitInvarMulEquiv 0).symm ⟨MiddlePerm π,
+      MiddlePerm_mem_bitInvarSubgroup_zero⟩)) := rfl
 
 lemma controlBitsToPermInductive_succ :
   controlBitsToPermInductive (m + 1) cb = ((resCondFlip 0 (ControlBitsWeave cb).fst.fst) *
@@ -325,25 +324,20 @@ lemma partialControlBitsToPerm_last_succ :
     Fin.rev_last, Fin.val_last]
 
 lemma bitInvar_partialControlBitsToPerm {n t : Fin (m + 1)} :
-(htn : t < Fin.rev n) → ∀ {cb}, bitInvar t (partialControlBitsToPerm m n cb) :=
+(htn : t < Fin.rev n) → ∀ {cb}, bitInvar t ⇑(partialControlBitsToPerm m n cb) :=
   n.inductionOn
   (fun htn _ => resCondFlip_bitInvar htn.ne)
-  (fun n IH htn _ => (mul_bitInvar_of_bitInvar (mul_bitInvar_of_bitInvar
-    (resCondFlip_bitInvar htn.ne)
-    (IH (htn.trans (Fin.rev_lt_rev.mpr (n.castSucc_lt_succ))))) <| resCondFlip_bitInvar htn.ne))
+  (fun n IH htn _ => (bitInvar_mulPerm_of_bitInvar
+    (bitInvar_mulPerm_of_bitInvar (resCondFlip_bitInvar htn.ne)
+    (IH (htn.trans (Fin.rev_lt_rev.mpr (n.castSucc_lt_succ))))) (resCondFlip_bitInvar htn.ne)))
 
-lemma partialControlBitsToPerm_mem_bitInvarSubgroup {n t : Fin (m + 1)}
-  (htn : t < Fin.rev n) {cb} :
-  partialControlBitsToPerm m n cb ∈ bitInvarSubgroup t :=
+lemma partialControlBitsToPerm_mem_bitInvarSubmonoid {n t : Fin (m + 1)}
+  (htn : t < Fin.rev n) {cb} : ⇑(partialControlBitsToPerm m n cb) ∈ bitInvarSubmonoid t :=
   bitInvar_partialControlBitsToPerm htn
 
-lemma bitInvar_zero_partialControlBitsToPerm {m : ℕ} {n : Fin (m + 1)} (hmn : n < Fin.last m) {cb} :
-bitInvar 0 (partialControlBitsToPerm m n cb) :=
-  bitInvar_partialControlBitsToPerm (Fin.rev_pos_iff_lt_last.mpr hmn)
-
-lemma partialControlBitsToPerm_mem_bitInvarSubgroup_zero {m : ℕ} {n : Fin (m + 1)} (hmn : n < Fin.last m)
-  {cb} : partialControlBitsToPerm m n cb ∈ bitInvarSubgroup 0  :=
-  bitInvar_zero_partialControlBitsToPerm hmn
+lemma partialControlBitsToPerm_mem_bitInvarSubgroup {n t : Fin (m + 1)}
+  (htn : t < Fin.rev n) {cb} : partialControlBitsToPerm m n cb ∈ bitInvarSubgroup t :=
+  partialControlBitsToPerm_mem_bitInvarSubmonoid htn
 
 lemma PartialLayerTupleWeave_PartialLayerTupleUnweave_snd (cb : PartialLayerTuple (m + 1) (n + 1))
   (b) : (PartialLayerTupleWeave (PartialLayerTupleUnweave cb b)).2 =
@@ -433,8 +427,8 @@ end ControlBits
 
 -- Testing
 
-def myControlBits69 := (![true, false, true, false, true, false, false, false, false, false, false, false,
-  false, false, false, false, false, false, false, false] : BitTupleControlBits 2)
+def myControlBits69 := (![true, false, true, false, true, false, false, false, false, false,
+  false, false, false, false, false, false, false, false, false, false] : BitTupleControlBits 2)
 def myControlBits69' := (![![true, false, true, false], ![true, false, false, false],
   ![false, false, false, false], ![false, false, false, false], ![false, false, false, false]]
   : ControlBits 2)
