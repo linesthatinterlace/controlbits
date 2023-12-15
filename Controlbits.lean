@@ -86,7 +86,7 @@ resCondFlip_mul_cancel_left
 -- Theorem 5.3
 lemma getBit_zero_firstControl_apply_eq_getBit_zero_cycleMin :
 ∀ {q}, getBit 0 (FirstControl π q) = getBit 0 (CycleMin (XBackXForth π) q) := by
-simp_rw [forall_iff_forall_mergeBitRes 0, ← resCondFlip_firstControlBits, getBit_resCondFlip',
+simp_rw [forall_iff_forall_mergeBitRes_bool 0, ← resCondFlip_firstControlBits, getBit_resCondFlip',
   getRes_mergeBitRes, getBit_mergeBitRes, Bool.xor_false, Bool.xor_true, ← Bool.not_false,
   ← flipBit_mergeBitRes, cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF, getBit_flipBit,
   firstControlBits_apply, forall_const, and_self]
