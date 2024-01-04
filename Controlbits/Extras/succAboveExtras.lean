@@ -213,29 +213,6 @@ lemma predAbove_gt {i : Fin (m + 1)} {j : Fin (m + 2)} : i < predAbove i j ↔ s
   · simp_rw [dif_pos ((Nat.lt_succ_self _).trans h)]
     exact Nat.lt_sub_of_add_lt h
 
-lemma succAbove_succAbove_predAbove {i : Fin (m + 1)} {j : Fin (m + 2)} :
-(j.succAbove i).succAbove (i.predAbove j) = j := by
-  simp_rw [succAbove_succAbove_left, predAbove_eq, predAbove_lt,
-    castSucc_predAbove_lt_iff_castSucc_lt, ite_eq_iff', succ_predAbove_eq_iff_castSucc_lt, imp_self,
-    castSucc_predAbove_eq_iff_le_castSucc, not_lt, true_and, imp_self, implies_true, true_and,
-    not_or, and_imp]
-  exact fun H _ => ⟨le_of_lt, fun H2 => lt_of_le_of_ne H2 (Ne.symm H)⟩
-
-lemma succAbove_succAbove_predAbove_succAbove {j : Fin (m + 2)} :
-(j.succAbove i).succAbove ((i.predAbove j).succAbove k) = j.succAbove (i.succAbove k) := by
-  ext ; simp only [succAbove, predAbove, lt_def, coe_castSucc, ite_val, coe_pred,
-    coe_castLT, dite_eq_ite, dite_val, val_succ]
-  rcases lt_or_le (i : ℕ) (j : ℕ) with (h | h) <;>
-  rcases lt_or_le (k : ℕ) (i : ℕ) with (h₂ | h₂)
-  · simp_rw [if_pos h, if_pos (Nat.lt_sub_one_of_lt_of_lt h₂ h), if_pos h₂, if_pos (h₂.trans h)]
-  · simp_rw [if_pos h, if_neg h₂.not_lt, ← Nat.pred_eq_sub_one, Nat.lt_pred_iff,
-      apply_ite (fun z => if z < (i : ℕ) then z else z + 1), if_neg h₂.not_lt,
-      if_neg (Nat.le_succ_of_le h₂).not_lt]
-  · simp_rw [if_neg h.not_lt, if_pos h₂, apply_ite (fun z => if z < (i + 1 : ℕ) then z else z + 1),
-      if_pos (lt_of_lt_of_le h₂ (Nat.le_succ _)), Nat.succ_lt_succ_iff, if_pos h₂]
-  · simp_rw [if_neg h.not_lt, if_neg (h.trans h₂).not_lt, Nat.succ_lt_succ_iff, if_neg h₂.not_lt,
-      if_neg ((h.trans h₂).trans (Nat.le_succ _)).not_lt]
-
 lemma insertNth_succAbove_insertNth_predAbove {p : Fin m → α} {j : Fin (m + 2)} :
 (succAbove j i).insertNth y ((predAbove i j).insertNth x p)  =
   j.insertNth x (insertNth i y p) := by
