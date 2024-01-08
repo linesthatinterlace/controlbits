@@ -326,18 +326,10 @@ lemma partialControlBitsToPerm_last_succ :
 lemma bitInvar_partialControlBitsToPerm {n t : Fin (m + 1)} :
 (htn : t < Fin.rev n) → ∀ {cb}, bitInvar t ⇑(partialControlBitsToPerm m n cb) :=
   n.inductionOn
-  (fun htn _ => resCondFlip_bitInvar htn.ne)
+  (fun htn _ => resCondFlip_bitInvar_of_ne htn.ne)
   (fun n IH htn _ => (bitInvar_mulPerm_of_bitInvar
-    (bitInvar_mulPerm_of_bitInvar (resCondFlip_bitInvar htn.ne)
-    (IH (htn.trans (Fin.rev_lt_rev.mpr (n.castSucc_lt_succ))))) (resCondFlip_bitInvar htn.ne)))
-
-lemma partialControlBitsToPerm_mem_bitInvarSubmonoid {n t : Fin (m + 1)}
-  (htn : t < Fin.rev n) {cb} : ⇑(partialControlBitsToPerm m n cb) ∈ bitInvarSubmonoid t :=
-  bitInvar_partialControlBitsToPerm htn
-
-lemma partialControlBitsToPerm_mem_bitInvarSubgroup {n t : Fin (m + 1)}
-  (htn : t < Fin.rev n) {cb} : partialControlBitsToPerm m n cb ∈ bitInvarSubgroup t :=
-  partialControlBitsToPerm_mem_bitInvarSubmonoid htn
+    (bitInvar_mulPerm_of_bitInvar (resCondFlip_bitInvar_of_ne htn.ne)
+    (IH (htn.trans (Fin.rev_lt_rev.mpr (n.castSucc_lt_succ))))) (resCondFlip_bitInvar_of_ne htn.ne)))
 
 lemma PartialLayerTupleWeave_PartialLayerTupleUnweave_snd (cb : PartialLayerTuple (m + 1) (n + 1))
   (b) : (PartialLayerTupleWeave (PartialLayerTupleUnweave cb b)).2 =
