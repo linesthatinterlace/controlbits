@@ -34,13 +34,22 @@ lemma ne_zero_iff_rev_ne_last {i : Fin (m + 1)} : i ≠ 0 ↔ i.rev ≠ last m :
 lemma pos_iff_rev_lt_last {i : Fin (m + 1)} : 0 < i ↔ i.rev < last m := by
   convert rev_rev i ▸ rev_pos_iff_lt_last
 
-lemma rev_castSucc_eq_succ_rev {i : Fin m} : i.castSucc.rev = i.rev.succ := by
+lemma rev_castSucc {i : Fin m} : i.castSucc.rev = i.rev.succ := by
   simp_rw [ext_iff, val_rev, coe_castSucc, val_succ, val_rev,
     tsub_add_eq_add_tsub (Nat.succ_le_of_lt i.isLt)]
 
-lemma rev_succ_eq_csucc_rev {i : Fin m}: i.succ.rev = i.rev.castSucc := by
+lemma rev_succ {i : Fin m}: i.succ.rev = i.rev.castSucc := by
   simp_rw [ext_iff, val_rev, coe_castSucc, val_succ, val_rev,
     Nat.succ_sub_succ_eq_sub]
+
+lemma rev_castSucc_succ {i : Fin m}: i.castSucc.succ.rev = i.rev.castSucc.succ := by
+  simp_rw [rev_succ, rev_castSucc, succ_castSucc]
+
+lemma rev_succ_castSucc {i : Fin m}: i.succ.castSucc.rev = i.rev.succ.castSucc := by
+  simp_rw [← succ_castSucc, rev_castSucc_succ]
+
+lemma castSucc_rev_castSucc {i : Fin m}: i.castSucc.rev.castSucc = i.succ.rev.succ := by
+  simp_rw [rev_succ, rev_castSucc, succ_castSucc]
 
 lemma last_zero : last 0 = 0 := rfl
 

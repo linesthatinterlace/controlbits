@@ -38,7 +38,20 @@ lemma foldFinCastLT (i : Fin m) : foldFin m (i.castLT (i.isLt.trans lt_bit1)) = 
 
 lemma foldFin_zero : foldFin m 0 = 0 := Fin.castLE_zero _ ▸ foldFinCastLE _
 
-
+lemma foldFin_last : foldFin m (Fin.last _) = 0 := by
+  cases' m with m
+  · rfl
+  · rw [foldFin]
+    rw [dif_neg]
+    ext
+    simp
+    rw [two_mul]
+    simp
+    simp
+    rw [two_mul]
+    simp [Nat.succ]
+    rw [succ_eq_add_one]
+    simp
 /-
 
 

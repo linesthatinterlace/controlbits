@@ -419,57 +419,6 @@ q₁ ≠ q₂ := (ne_iff_getBit_ne_or_getRes_ne i).mp (Or.inr h)
 
 end GetMerge
 
-
-section Equivs
-
-def unweavePowTwoTuple (i : Fin (m + 1)) : (Fin (2^(m + 1)) → α) ≃ (Bool → (Fin (2^m) → α)) :=
-calc
-  _ ≃ _ := Equiv.arrowCongr ((getBitRes i).trans (Equiv.boolProdEquivSum _)) (Equiv.refl _)
-  _ ≃ _ := Equiv.sumArrowEquivProdArrow _ _ _
-  _ ≃ _ := (Equiv.boolArrowEquivProd _).symm
-
-lemma unweavePowTwoTuple_apply {c : Fin (2^(m + 1)) → α} :
-unweavePowTwoTuple i c = fun b p => c (mergeBitRes i b p) := by
-  ext b p
-  cases b <;> rfl
-
-def unweaveOddTuplePowTwoTuple (i : Fin (m + 1)) :
-  (Fin (2*n + 1) → Fin (2 ^ (m + 1)) → α) ≃ (Bool → Fin (2*n + 1) → Fin (2^m) → α) :=
-calc
-  _ ≃ _ := Equiv.arrowCongr (Equiv.refl _) (unweavePowTwoTuple i)
-  _ ≃ _ := Equiv.piComm _
-
-@[simp]
-lemma unweaveOddTuplePowTwoTuple_apply :
-  unweaveOddTuplePowTwoTuple i cb = fun b t p => cb t (mergeBitRes i b p) := by
-  ext b t p
-  cases b <;> rfl
-
-@[simp]
-lemma unweaveOddTuplePowTwoTuple_symm_apply {cb : (Bool → Fin (2*n + 1) → Fin (2^m) → α)}:
-  (unweaveOddTuplePowTwoTuple i).symm cb = fun t q => cb (getBit i q) t (getRes i q) := by
-  simp_rw [Equiv.symm_apply_eq, unweaveOddTuplePowTwoTuple_apply,
-    getBit_mergeBitRes, getRes_mergeBitRes]
-
-lemma splitOffFirstLast_unweaveOddTuplePowTwoTuple_snd
-  (cb : Fin (2*(n + 1) + 1) → Fin (2^(m + 1)) → α) (b) :
-  (splitOffFirstLast ((unweaveOddTuplePowTwoTuple i) cb b)).2 =
-  unweaveOddTuplePowTwoTuple i ((splitOffFirstLast cb).2) b := rfl
-
-lemma splitOffFirstLast_unweaveOddTuplePowTwoTuple_fst_snd
-  (cb : Fin (2*(n + 1) + 1) → Fin (2^(m + 1)) → α) (b) :
-  (splitOffFirstLast ((unweaveOddTuplePowTwoTuple i) cb b)).1.2 =
-    fun p => (splitOffFirstLast cb).1.2 (mergeBitRes i b p) := by
-    simp_rw [unweaveOddTuplePowTwoTuple_apply, splitOffFirstLast_apply]
-
-lemma splitOffFirstLast_unweaveOddTuplePowTwoTuple_fst_fst
-  (cb : Fin (2*(n + 1) + 1) → Fin (2^(m + 1)) → α) (b) :
-  (splitOffFirstLast ((unweaveOddTuplePowTwoTuple i) cb b)).1.1 =
-    fun p => (splitOffFirstLast cb).1.1 (mergeBitRes i b p) := by
-    simp_rw [unweaveOddTuplePowTwoTuple_apply, splitOffFirstLast_apply]
-
-end Equivs
-
 section bitInvar
 
 def bitInvar (i : Fin (m + 1)) (f : Function.End (Fin (2^(m + 1)))) : Prop :=
