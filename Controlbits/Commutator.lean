@@ -36,6 +36,12 @@ lemma cmtr_zpow_mul_eq_mul_inv_cmtr_zpow_inv {k : ℤ} :
 (⁅x, y⁆)^k * y = y * ((⁅x, y⁻¹⁆)^k)⁻¹ := by
 rw [← zpow_neg, ← cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow, zpow_neg, inv_inv]
 
+lemma cmtr_inv_eq_cmtr_iff_cmtr_square_id : (⁅x, y⁆ = ⁅x, y⁻¹⁆) ↔ (⁅x, y^2⁆ = 1) := by
+  simp_rw [pow_two, commutatorElement_eq_one_iff_mul_comm, eq_comm (a := (x * (y * y))),
+  commutatorElement_def, mul_assoc, mul_left_cancel_iff, ← inv_mul_eq_one (a := y * (x⁻¹ * y⁻¹)),
+  mul_eq_one_iff_eq_inv, mul_inv_rev, inv_inv, mul_assoc, ← eq_inv_mul_iff_mul_eq (b := y),
+  mul_inv_eq_iff_eq_mul, mul_assoc]
+
 end Group
 
 section Perm
@@ -46,7 +52,7 @@ universe u
 
 variable {α : Type u} {x y : Perm α} {q : α}
 
-lemma cmtr_apply : ⁅x, y⁆ q = x (y (x⁻¹ (y⁻¹ (q)))) := rfl
+lemma cmtr_apply : ⁅x, y⁆ q = x (y (x⁻¹ (y⁻¹ q))) := rfl
 
 lemma mul_cmtr_unfix_of_unfix (hy : ∀ q : α, y q ≠ q) :
 ∀ q : α, (y * ⁅x, y⁆) q ≠ q:= by
@@ -71,8 +77,7 @@ lemma cmtr_inv_apply_ne_apply_of_unfix (hy : ∀ q : α, y q ≠ q) :
   exact Ne.symm (cmtr_mul_unfix_of_unfix (x := x) hy q)
 
 lemma mul_cmtr_pow_unfix {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
-(hy : ∀ q : α, y q ≠ q) :
-∀ q : α, (y * ⁅x, y⁆^k) q ≠ q:= by
+(hy : ∀ q : α, y q ≠ q) : ∀ q : α, (y * ⁅x, y⁆^k) q ≠ q := by
   induction' k using Nat.twoStepInduction with k IH
   · rw [pow_zero, mul_one]
     exact hy

@@ -12,7 +12,7 @@ lemma perm_fin_two (π : Equiv.Perm (Fin 2)) :
     OfNat.ofNat_ne_one, and_false, zero_eq_one_iff, ite_false, Equiv.Perm.coe_one,  and_self] <;>
   exact (zero_ne_one ((EmbeddingLike.apply_eq_iff_eq _).mp (h0.trans (h1.symm)))).elim
 
-lemma perm_fin_two_mul_self (π : Equiv.Perm (Fin 2)) : π * π  = 1 := by
+lemma perm_fin_two_mul_self (π : Equiv.Perm (Fin 2)) : π * π = 1 := by
   rw [perm_fin_two π]
   split_ifs
   · rw [Equiv.swap_mul_self]
@@ -39,7 +39,10 @@ lemma perm_fin_two_of_unfix_one {π : Equiv.Perm (Fin 2)} (h : π 1 = 0) : π = 
 
 lemma cmtr_fin_two {x y : Equiv.Perm (Fin 2)} : ⁅x, y⁆ = 1 := by
   rw [perm_fin_two x, perm_fin_two y]
-  split_ifs <;> simp only [commutatorElement_def, one_mul, inv_one, mul_one, Equiv.swap_inv,
-    Equiv.swap_mul_self]
+  by_cases h : (x 0 = 1)
+  · by_cases h₂ : (y 0 = 1)
+    · rw [if_pos h, if_pos h₂, commutatorElement_self]
+    · rw [if_neg h₂, commutatorElement_one_right]
+  · rw [if_neg h, commutatorElement_one_left]
 
 end Fin
