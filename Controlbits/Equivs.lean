@@ -4,7 +4,7 @@ import Mathlib.Logic.Equiv.Fin
 def piFinSuccCastSucc : (Fin (n + 2) → α) ≃ (α × α) × (Fin n → α) :=
 calc
   _ ≃ _ := Equiv.piFinSucc _ _
-  _ ≃ _ := Equiv.prodCongr (Equiv.refl _) (Equiv.piFinSuccAboveEquiv _ (Fin.last _))
+  _ ≃ _ := Equiv.prodCongr (Equiv.refl _) (Equiv.piFinSuccAbove _ (Fin.last _))
   _ ≃ _ := (Equiv.prodAssoc _ _ _).symm
 
 @[simp]
