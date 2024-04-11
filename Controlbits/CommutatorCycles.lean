@@ -27,8 +27,8 @@ lemma cycleAt_cmtr_card_le_card_univ_div_two
   orderOf ((⁅x, y⁆).cycleOf q) ≤ (Finset.univ (α := α).card)/2 := by
   rw [cycleAt_card_eq_orderOf_cycleOf, Nat.le_div_iff_mul_le (zero_lt_two), mul_comm, two_mul]
   nth_rewrite 2 [← Finset.card_image_of_injective _ (y.injective)]
-  rw [← Finset.card_disjoint_union (cycleAt_cmtr_disjoint_image hxy hy)]
-  exact Finset.card_le_of_subset (Finset.subset_univ _)
+  rw [← Finset.card_union_of_disjoint (cycleAt_cmtr_disjoint_image hxy hy)]
+  exact Finset.card_le_card (Finset.subset_univ _)
 
 lemma cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr [LinearOrder α]
 (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q)

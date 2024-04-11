@@ -15,7 +15,7 @@ lemma xBXF_base : XBackXForth (m := 0) π = 1 := Fin.cmtr_fin_two
 lemma orderOf_xBXF_cycleOf {q : Fin (2 ^ (m + 1))} :
   orderOf ((XBackXForth π).cycleOf q) ≤ 2^m := by
 refine' le_of_le_of_eq (cycleAt_cmtr_card_le_card_univ_div_two rfl flipBit_ne_self) _
-· rw [Finset.card_fin, pow_succ, Nat.mul_div_right _ (zero_lt_two)]
+· rw [Finset.card_fin, pow_succ, Nat.mul_div_left _ Nat.ofNat_pos]
 
 -- Theorem 4.4
 lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF :
@@ -281,7 +281,7 @@ lemma controlBitsToPermInductive_leftInverse :
     exact lastControl_base
   · intro _
     simp_rw [permToControlBits_succ, controlBitsToPermInductive_succ, Equiv.apply_symm_apply,
-      ← Function.comp.assoc, IH.comp_eq_id, Function.comp.left_id, MulEquiv.apply_symm_apply]
+      ← Function.comp.assoc, IH.comp_eq_id, Function.id_comp, MulEquiv.apply_symm_apply]
     exact FirstControl_mul_MiddlePerm_mul_LastControl_eq_self
 
 abbrev controlBitsToPermLeftRightMul (m : ℕ) := partialControlBitsToPerm m (Fin.last m)

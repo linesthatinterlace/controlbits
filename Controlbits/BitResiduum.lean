@@ -7,7 +7,6 @@ import Controlbits.Equivs
 import Controlbits.Submonoid
 import Controlbits.FunctionEnd
 
-
 section BitRes
 
 section GetMerge
@@ -836,7 +835,6 @@ section CondFlipBit
 def condFlipBitCore (i : Fin (m + 1)) (c : Fin (2^m) → Bool) : Function.End (Fin (2^(m + 1))) :=
   fun q => bif c (getRes i q) then flipBit i q else q
 
-
 lemma condFlipBitCore_condFlipBitCore : condFlipBitCore i c (condFlipBitCore i c q) = q := by
 rcases (c (getRes i q)).dichotomy with h | h <;>
 simp only [condFlipBitCore, h, cond_true, cond_false, getRes_flipBit, flipBit_flipBit]
@@ -861,7 +859,7 @@ rw [condFlipBit_apply] ; cases (c (getRes i q))
 
 lemma condFlipBit_base : condFlipBit (m := 0) i c = bif c 0 then Equiv.swap 0 1 else 1 := by
   ext q : 1
-  rw [condFlipBit_apply, flipBit_base]
+  rw [condFlipBit_apply, Fin.eq_zero (getRes i q), flipBit_base]
   cases (c 0) <;> rfl
 
 lemma condFlipBit_mergeBitRes : condFlipBit i c (mergeBitRes i b p) =

@@ -1,4 +1,4 @@
-import Mathlib.GroupTheory.GroupAction.Defs
+import Mathlib.Tactic
 
 instance Function.End.instFunLikeEnd {α : Type u} : FunLike (Function.End α) α α where
   coe := id

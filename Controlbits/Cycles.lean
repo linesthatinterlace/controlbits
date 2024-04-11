@@ -11,8 +11,8 @@ induction' a with a IH generalizing y
 · simp_rw [pow_zero, one_apply, ite_self]
 · simp_rw [pow_succ', mul_apply, IH, cycleOf_apply]
   by_cases h : f.SameCycle x y
-  · simp only [h, ite_true, sameCycle_apply_right]
-  · simp only [h, ite_false]
+  · simp only [h, ↓reduceIte, sameCycle_pow_right]
+  · simp only [h, ↓reduceIte]
 
 lemma pow_apply_injOn_Iio_orderOf_cycleOf [DecidableEq α] [Fintype α] {π : Equiv.Perm α}
   {x : α} : (Set.Iio $ orderOf (π.cycleOf x)).InjOn (fun t => (π ^ t) x) := by
@@ -22,7 +22,7 @@ lemma pow_apply_injOn_Iio_orderOf_cycleOf [DecidableEq α] [Fintype α] {π : Eq
   by_cases h : SameCycle π x y
   · simp_rw [h, ite_true]
     rcases h with ⟨c, rfl⟩
-    simp_rw [← zpow_coe_nat, zpow_apply_comm, zpow_coe_nat, hab]
+    simp_rw [← zpow_natCast, zpow_apply_comm, zpow_natCast, hab]
   · simp_rw [h, ite_false]
 
 end Equiv.Perm
