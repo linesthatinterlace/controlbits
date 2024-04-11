@@ -116,7 +116,7 @@ lemma cmtr_pow_inv_apply_ne_apply {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
 lemma cmtr_zpow_apply_ne_apply {k : ℤ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
   (hy : ∀ q : α, y q ≠ q) : ((⁅x, y⁆)^k) q ≠ y q := by
   cases k
-  · simp only [Int.ofNat_eq_coe, zpow_coe_nat, ne_eq, hxy, hy, not_false_eq_true, implies_true,
+  · simp only [Int.ofNat_eq_coe, zpow_natCast, ne_eq, hxy, hy, not_false_eq_true, implies_true,
       cmtr_pow_apply_ne_apply]
   · simp only [zpow_negSucc, ne_eq, hxy, hy, not_false_eq_true, implies_true,
       cmtr_pow_inv_apply_ne_apply]
