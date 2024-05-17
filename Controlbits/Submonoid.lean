@@ -1,4 +1,4 @@
-import Mathlib.GroupTheory.Submonoid.Units
+import Mathlib.Algebra.Group.Submonoid.Units
 
 namespace MulEquiv
 

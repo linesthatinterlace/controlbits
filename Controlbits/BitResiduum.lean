@@ -98,7 +98,7 @@ lemma getBitRes_zero : getBitRes (0 : Fin (m + 1)) = getBitResZero := by
   ext q : 1
   simp_rw [getBitRes_apply, getBitResZero_apply, Fin.zero_succAbove, finFunctionFinEquiv,
     Equiv.ofRightInverseOfCardLE_symm_apply, Fin.val_zero, pow_zero, Nat.div_one,
-    finTwoEquiv_apply, Fin.val_succ, Equiv.ofRightInverseOfCardLE_apply, Nat.add_eq, Nat.add_zero,
+    finTwoEquiv_apply, Fin.val_succ, Equiv.ofRightInverseOfCardLE_apply,
     Nat.pow_eq, Prod.mk.injEq, decide_eq_decide, Fin.ext_iff, Fin.val_one, Fin.coe_modNat,
     Finset.sum_fin_eq_sum_range, dite_eq_ite, Fin.coe_divNat, true_and]
   rw [Finset.sum_ite_of_true (h := fun _ H => (Finset.mem_range.mp H))]
@@ -350,7 +350,7 @@ lemma eq_mergeBitRes_iff :
 
 lemma mergeBitRes_ne_iff :
     mergeBitRes i b p ≠ q ↔ (getBit i q ≠ b) ∨ (getRes i q ≠ p) := by
-    simp_rw [Ne.def, mergeBitRes_eq_iff, Decidable.not_and_iff_or_not]
+    simp_rw [ne_eq, mergeBitRes_eq_iff, Decidable.not_and_iff_or_not]
 
 lemma ne_mergeBitRes_iff :
     q ≠ mergeBitRes i b p ↔ (getBit i q ≠ b) ∨ (getRes i q ≠ p) := by
@@ -690,7 +690,7 @@ lemma flipBit_base : flipBit (m := 0) i = Equiv.swap 0 1 := by
   exact Fin.forall_fin_two.mpr ⟨rfl, rfl⟩
 
 lemma flipBit_zero_apply : flipBit 0 q = finProdFinEquiv (q.divNat, q.modNat.rev) := by
-  simp_rw [flipBit_apply, getBit_zero, Nat.add_eq, Nat.add_zero, Nat.pow_eq, finTwoEquiv_apply,
+  simp_rw [flipBit_apply, getBit_zero, Nat.pow_eq, finTwoEquiv_apply,
     getRes_zero, mergeBitRes_zero, Bool.cond_not, Bool.cond_decide]
   rcases Fin.modNat_two_eq_zero_or_one q with (h | h) <;> simp_rw [h] <;> rfl
 

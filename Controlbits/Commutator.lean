@@ -19,7 +19,7 @@ simp_rw [commutatorElement_inv, commutatorElement_def, inv_mul_cancel_right,
 
 lemma cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow {k : ℕ} : ((⁅x, y⁆)^k)⁻¹ * y = y * ((⁅x, y⁻¹⁆)^k) := by
 induction' k with n hn
-· simp_rw [Nat.zero_eq, pow_zero, inv_one, mul_one, one_mul]
+· simp_rw [pow_zero, inv_one, mul_one, one_mul]
 · simp_rw [pow_succ ⁅x, y⁻¹⁆, pow_succ' ⁅x, y⁆, ← mul_assoc, hn.symm, mul_inv_rev, mul_assoc,
     cmtr_inv_mul_eq_mul_inv_cmtr]
 
