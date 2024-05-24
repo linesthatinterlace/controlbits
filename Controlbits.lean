@@ -3,9 +3,15 @@ import Controlbits.BitResiduum
 import Controlbits.CommutatorCycles
 import Paperproof
 
+section Decomposition
+
 abbrev XBackXForth (π : Equiv.Perm (Fin (2^(m + 1)))) := ⁅π, flipBit (0 : Fin (m + 1))⁆
 
+lemma xBXF_def {π : Equiv.Perm (Fin (2^(m + 1)))} :
+    XBackXForth π = ⁅π, flipBit (0 : Fin (m + 1))⁆ := rfl
+
 lemma xBXF_base : XBackXForth (m := 0) π = 1 := Fin.cmtr_fin_two
+
 
 -- Theorem 4.3 (c)
 lemma orderOf_xBXF_cycleOf {q : Fin (2 ^ (m + 1))} :
@@ -62,7 +68,7 @@ lemma firstLayerPerm_base : FirstLayerPerm (m := 0) π = 1 := by
 lemma firstLayerPerm_symm : (FirstLayerPerm π).symm = FirstLayerPerm π := rfl
 
 @[simp]
-lemma firstLayerPerm_inv : (FirstLayerPerm π)⁻¹ = FirstLayerPerm π := rfl
+lemma inv_firstLayerPerm : (FirstLayerPerm π)⁻¹ = FirstLayerPerm π := rfl
 
 @[simp]
 lemma firstLayerPerm_firstLayerPerm : FirstLayerPerm π (FirstLayerPerm π q) = q :=
@@ -167,12 +173,12 @@ lemma MiddlePerm_bitInvar_zero : bitInvar 0 ⇑(MiddlePerm π).val :=
 lemma MiddlePerm_val : (MiddlePerm π : Equiv.Perm (Fin (2^(m + 1)))) =
   FirstLayerPerm π * π * LastLayerPerm π := rfl
 
-@[simp]
-lemma firstLayerPerm_mul_middlePerm_mul_lastLayerPerm_eq_self :
-  FirstLayerPerm π * MiddlePerm π * LastLayerPerm π = π := by
+lemma firstMiddleLast_decomposition {π : Equiv.Perm (Fin (2^(m + 1)))} :
+  π = FirstLayerPerm π * MiddlePerm π * LastLayerPerm π := by
   simp_rw [MiddlePerm_val, mul_assoc (a := FirstLayerPerm π),
     firstLayerPerm_mul_cancel_left, lastLayerPerm_mul_cancel_right]
 
+end Decomposition
 
 abbrev PartialControlBits (m n : ℕ) := Fin (2*n + 1) → ControlBitsLayer m
 
@@ -287,19 +293,23 @@ lemma ofPerm_succ_apply_succ_castSucc : ofPerm π i.succ.castSucc =
     (MiddlePerm π) (getBit 0 p)) i (getRes 0 p) :=
   ofPerm_succ_apply_castSucc_succ
 
-lemma ofPerm_succ_apply_mergeBitRes : ofPerm π i.castSucc.succ (mergeBitRes 0 b k) =
-    ofPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) b) i k := by
+lemma ofPerm_succ_apply_mergeBitRes {π : Equiv.Perm (Fin (2^(m + 2)))} :
+    (fun i k => ofPerm π i.castSucc.succ (mergeBitRes 0 b k)) =
+    ofPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) b) := by
   simp_rw [ofPerm_succ_apply_castSucc_succ, getBit_mergeBitRes, getRes_mergeBitRes]
 
-lemma toPerm_leftInverse : (toPerm (m := m)).LeftInverse (ofPerm) := by
-  unfold Function.LeftInverse ; induction' m with m IH
-  · simp_rw [ofPerm_zero, toPerm_zero, condFlipBit_lastLayer, lastLayerPerm_base, implies_true]
-  · simp_rw [toPerm_succ, ofPerm_succ_apply_zero, ofPerm_succ_apply_last,
-    ofPerm_succ_apply_mergeBitRes, condFlipBit_firstLayer,
-    condFlipBit_lastLayer, IH, MulEquiv.apply_symm_apply,
-    firstLayerPerm_mul_middlePerm_mul_lastLayerPerm_eq_self, implies_true]
+lemma toPerm_leftInverse : (toPerm (m := m)).LeftInverse ofPerm := by
+  unfold Function.LeftInverse ; induction' m with m IH <;> intro π
+  · exact lastLayerPerm_base
+  · trans FirstLayerPerm π * MiddlePerm π * LastLayerPerm π
+    · refine' toPerm_succ.trans _
+      refine' congrArg₂ _ (congrArg₂ _ _ (congrArg _ _)) _
+      · rw [ofPerm_succ_apply_zero, condFlipBit_firstLayer]
+      · simp_rw [ofPerm_succ_apply_mergeBitRes, IH, (bitInvarMulEquiv 0).apply_symm_apply]
+      · rw [ofPerm_succ_apply_last, condFlipBit_lastLayer]
+    · exact firstMiddleLast_decomposition.symm
 
-lemma ofPerm_rightInverse : (ofPerm (m := m)).RightInverse (toPerm) := toPerm_leftInverse
+lemma ofPerm_rightInverse : (ofPerm (m := m)).RightInverse toPerm := toPerm_leftInverse
 
 def unweave : ControlBits (m + 1) ≃
 (ControlBitsLayer (m + 1) × ControlBitsLayer (m + 1)) × (Bool → ControlBits m) :=
