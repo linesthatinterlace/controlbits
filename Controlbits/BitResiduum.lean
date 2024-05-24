@@ -423,7 +423,6 @@ section bitInvar
 def bitInvar (i : Fin (m + 1)) (f : Function.End (Fin (2^(m + 1)))) : Prop :=
 ∀ q, getBit i (f q) = getBit i q
 
-@[simp]
 lemma bitInvar_iff_getBit_apply_eq_getBit :
   bitInvar i f ↔ ∀ q, getBit i (f q) = getBit i q := Iff.rfl
 
@@ -520,6 +519,9 @@ def bitInvarSubgroup (i : Fin (m + 1)) : Subgroup (Equiv.Perm (Fin (2^(m + 1))))
   mul_mem' ha hb := bitInvar_mulPerm_of_bitInvar ha hb
   one_mem' := one_bitInvar
   inv_mem' ha := inv_bitInvar_of_bitInvar ha
+
+@[simp]
+lemma mem_bitInvarSubgroup {i : Fin (m + 1)} : π ∈ bitInvarSubgroup i ↔ bitInvar i ⇑π := Iff.rfl
 
 @[simp]
 lemma mem_bitInvarSubgroup_iff_coe_mem_bitInvarSubmonoid {i : Fin (m + 1)} :
@@ -988,19 +990,26 @@ end CondFlipBit
 
 section Equivs
 
-lemma condFlipBit_succ_eq_bitInvarMulEquiv_apply (i : Fin (m + 1)) (c :  Fin (2 ^ (m + 1)) → Bool) :
-condFlipBit (i.succ) c = (bitInvarMulEquiv 0)
-  (fun b => condFlipBit i (fun p => c (mergeBitRes 0 b p))) :=
+lemma bitInvarMulEquiv_zero_apply_condFlipBits (c : Fin (2 ^ (m + 1)) → Bool) (i : Fin (m + 1)) :
+    (bitInvarMulEquiv 0) (fun b => condFlipBit i (fun p => c (mergeBitRes 0 b p))) =
+    condFlipBit (i.succ) c :=
   Equiv.ext (fun _ => condFlipBit_succ_apply ▸ rfl)
 
-lemma condFlipBit_one_succ_eq_bitInvarMulEquiv_apply (c :  Fin (2 ^ (m + 1)) → Bool) :
-condFlipBit 1 c = (bitInvarMulEquiv 0) (fun b => condFlipBit 0 (fun p => c (mergeBitRes 0 b p))) :=
-  condFlipBit_succ_eq_bitInvarMulEquiv_apply 0 c
+lemma bitInvarMulEquiv_zero_apply_condFlipBits_one (c : Fin (2 ^ (m + 1)) → Bool) :
+    (bitInvarMulEquiv 0) (fun b => condFlipBit 0 (fun p => c (mergeBitRes 0 b p))) =
+    condFlipBit 1 c :=
+  bitInvarMulEquiv_zero_apply_condFlipBits _ 0
 
-lemma condFlipBit_succAbove_eq_bitInvarMulEquiv_apply (c) (j : Fin (m + 2)) (i : Fin (m + 1)) :
-condFlipBit (j.succAbove i) c = (bitInvarMulEquiv j)
-  (fun b => condFlipBit i (fun p => c (mergeBitRes (i.predAbove j) b p))) :=
+lemma bitInvarMulEquiv_apply_condFlipBits (c) (i : Fin (m + 1)) (j : Fin (m + 2)) :
+    (bitInvarMulEquiv j) (fun b => condFlipBit i (fun p => c (mergeBitRes (i.predAbove j) b p))) =
+    condFlipBit (j.succAbove i) c :=
   Equiv.ext (fun _ => condFlipBit_succAbove_apply ▸ rfl)
+
+lemma bitInvarMulEquiv_last_apply_condFlipBits (c) (i : Fin (m + 1)) :
+    (bitInvarMulEquiv (Fin.last _)) (fun b => condFlipBit i
+    (fun p => c (mergeBitRes (Fin.last _) b p))) =
+    condFlipBit (i.castSucc) c := by
+  rw [← Fin.predAbove_right_last (i := i), bitInvarMulEquiv_apply_condFlipBits, Fin.succAbove_last]
 
 end Equivs
 

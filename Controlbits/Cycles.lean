@@ -61,7 +61,6 @@ lemma self_mem_cycleAt : x ∈ CycleAt π x := pow_apply_mem_cycleAt 0
 
 lemma apply_mem_cycleAt : π x ∈ CycleAt π x := pow_apply_mem_cycleAt 1
 
-
 lemma cycleAt_nonempty : Finset.Nonempty (CycleAt π x) := ⟨x, self_mem_cycleAt⟩
 
 lemma singleton_subset_cycleAt : {x} ⊆ CycleAt π x :=
@@ -103,66 +102,69 @@ lemma mem_cycleAt_iff_lt : y ∈ CycleAt π x ↔ ∃ b, b < orderOf (π.cycleOf
 lemma mem_cycleAt_iff_le : y ∈ CycleAt π x ↔ ∃ b, b ≤ orderOf (π.cycleOf x) - 1 ∧ (π ^ b) x = y := by
   simp_rw [mem_cycleAt_iff_lt, Nat.lt_iff_le_pred (orderOf_pos _)]
 
-def CycleAtTo (π : Equiv.Perm α) (x : α) (a : ℕ) : Finset α :=
+def CycleAtTo (π : Equiv.Perm α) (a : ℕ) (x : α) : Finset α :=
 (Finset.Iio a).image fun k => (π ^ k) x
 
 @[simp]
-lemma mem_cycleAtTo_iff : y ∈ CycleAtTo π x a ↔ ∃ b < a, (π ^ b) x = y := by
+lemma mem_cycleAtTo_iff : y ∈ CycleAtTo π a x ↔ ∃ b < a, (π ^ b) x = y := by
 simp_rw [CycleAtTo, Finset.mem_image, Finset.mem_Iio]
 
-lemma apply_pow_mem_cycleAtTo_of_lt (hba : b < a) : (π^b) x ∈ CycleAtTo π x a :=
+lemma apply_pow_mem_cycleAtTo_of_lt (hba : b < a) : (π^b) x ∈ CycleAtTo π a x :=
 mem_cycleAtTo_iff.mpr ⟨b, hba, rfl⟩
 
 lemma apply_pow_mem_cycleAtTo_apply_pow_of_ge_of_lt (hba : b < a + c) (hcb : c ≤ b)  :
-  (π^b) x ∈ CycleAtTo π ((π^c) x) a := by
+  (π^b) x ∈ CycleAtTo π a ((π^c) x) := by
 rw [← tsub_add_cancel_of_le hcb, pow_add, Perm.mul_apply]
 exact apply_pow_mem_cycleAtTo_of_lt (Nat.sub_lt_right_of_lt_add hcb hba)
 
-lemma self_mem_cycleAtTo_iff (ha : 0 < a) : x ∈ CycleAtTo π x a :=
+lemma self_mem_cycleAtTo_iff (ha : 0 < a) : x ∈ CycleAtTo π a x :=
 apply_pow_mem_cycleAtTo_of_lt ha
 
-lemma cycleAtTo_nonempty_of_pos (ha : 0 < a) : Finset.Nonempty (CycleAtTo π x a) :=
+lemma cycleAtTo_nonempty_of_pos (ha : 0 < a) : Finset.Nonempty (CycleAtTo π a x) :=
 ⟨x, self_mem_cycleAtTo_iff ha⟩
 
-lemma cycleAtTo_zero : CycleAtTo π x 0 = ∅ := by
+lemma cycleAtTo_zero : CycleAtTo π 0 x = ∅ := by
   simp_rw [Finset.ext_iff, mem_cycleAtTo_iff, not_lt_zero', false_and, exists_false,
     not_mem_empty, implies_true]
 
-lemma cycleAtTo_one : CycleAtTo π x 1 = {x} := by
+lemma cycleAtTo_one : CycleAtTo π 1 x = {x} := by
   simp_rw [Finset.ext_iff, mem_cycleAtTo_iff, Nat.lt_one_iff, exists_eq_left, pow_zero,
     Perm.one_apply, mem_singleton, eq_comm, implies_true]
 
 lemma cycleAtTo_singleton_of_fixedPt (ha : 0 < a) (h : Function.IsFixedPt π x) :
-CycleAtTo π x a = {x} := by
+CycleAtTo π a x = {x} := by
   simp_rw [Finset.ext_iff, mem_singleton, mem_cycleAtTo_iff,
     π.pow_apply_eq_self_of_apply_eq_self h, eq_comm (a := x)]
   exact fun _ => ⟨fun ⟨_, _, h⟩ => h, fun h => ⟨0, ha, h⟩⟩
 
-lemma cycleAtTo_mono : Monotone (CycleAtTo π x) := by
-  intros a b hab y h
+lemma cycleAtTo_mono : Monotone (CycleAtTo π ·) := by
+  intros a b hab x y h
   rw [mem_cycleAtTo_iff] at h ⊢
   rcases h with ⟨c, hca, hc⟩
   exact ⟨c, lt_of_lt_of_le hca hab, hc⟩
 
-lemma card_cycleAtTo_le : (CycleAtTo π x a).card ≤ a := by
+lemma cycleAtTo_of_mono : Monotone (CycleAtTo π · x) :=
+  fun _ _ hab _ h => cycleAtTo_mono hab _ h
+
+lemma card_cycleAtTo_le : (CycleAtTo π a x).card ≤ a := by
   convert Finset.card_image_le
   exact (Nat.card_Iio _).symm
 
 lemma cycleAtTo_card_eq_of_le_orderOf_cycleOf (h : a ≤ orderOf (π.cycleOf x)) :
-  (CycleAtTo π x a).card = a := by
+  (CycleAtTo π a x).card = a := by
   nth_rewrite 2 [← Nat.card_Iio a]
   apply Finset.card_image_iff.mpr
   intros b hb c hc hbc
   simp_rw [coe_Iio, Set.mem_Iio] at hb hc
   exact π.pow_apply_injOn_Iio_orderOf_cycleOf (lt_of_lt_of_le hb h) (lt_of_lt_of_le hc h) hbc
 
-lemma cycleAtTo_subset_cycleAt : CycleAtTo π x a ⊆ CycleAt π x := by
+lemma cycleAtTo_subset_cycleAt : CycleAtTo π a x ⊆ CycleAt π x := by
   rintro y hy
   rcases (mem_cycleAtTo_iff.mp hy) with ⟨b, _, hb⟩
   exact mem_cycleAt_iff.mpr ⟨b, hb⟩
 
 lemma cycleAt_eq_cycleAtTo_orderOf_cycleOf :
-CycleAt π x = CycleAtTo π x (orderOf (π.cycleOf x)) := by
+CycleAt π x = CycleAtTo π (orderOf (π.cycleOf x)) x := by
   simp_rw [Finset.ext_iff, mem_cycleAtTo_iff, mem_cycleAt_iff_lt, implies_true]
 
 lemma cycleAt_card_eq_orderOf_cycleOf :
@@ -170,47 +172,47 @@ orderOf (π.cycleOf x) = (CycleAt π x).card := by
   simp_rw [cycleAt_eq_cycleAtTo_orderOf_cycleOf, cycleAtTo_card_eq_of_le_orderOf_cycleOf (le_refl _)]
 
 lemma cycleAt_eq_cycleAtTo_ge_orderOf_cycleOf (ha : orderOf (π.cycleOf x) ≤ a) :
-CycleAt π x = CycleAtTo π x a := by
+CycleAt π x = CycleAtTo π a x := by
 refine le_antisymm ?_ ?_
 · rw [cycleAt_eq_cycleAtTo_orderOf_cycleOf]
-  exact cycleAtTo_mono ha
+  exact cycleAtTo_of_mono ha
 · exact cycleAtTo_subset_cycleAt
 
-lemma insert_cycleAtTo_eq_succ (a : ℕ) (x) : insert ((π ^ a) x) (CycleAtTo π x a) =
-  (CycleAtTo π x (a + 1)) := by
+lemma insert_cycleAtTo_eq_succ (a : ℕ) (x) : insert ((π ^ a) x) (CycleAtTo π a x) =
+  (CycleAtTo π (a + 1) x) := by
   ext y
   simp_rw [mem_insert, mem_cycleAtTo_iff, Nat.lt_succ_iff_lt_or_eq, or_and_right, exists_or,
     exists_eq_left, or_comm (a := y = (π ^ a) x), eq_comm (b := (π^a) x)]
 
 lemma insert_cycleAtTo {a : ℕ} (hak : a ≤ k) (hkb : k < b) :
-  insert ((π ^ k) x) (CycleAtTo π x a) ⊆ (CycleAtTo π x b) := by
+  insert ((π ^ k) x) (CycleAtTo π a x) ⊆ (CycleAtTo π b x) := by
   intros y hy
   rw [mem_insert] at hy
   rcases hy with (rfl | hy)
   · rw [mem_cycleAtTo_iff]
     exact ⟨k, hkb, rfl⟩
-  · exact cycleAtTo_mono (lt_of_le_of_lt hak hkb).le hy
+  · exact cycleAtTo_of_mono (lt_of_le_of_lt hak hkb).le hy
 
 lemma pow_apply_not_mem_cycleAtTo_of_lt_orderOf_cycleOf (h : a < orderOf (π.cycleOf x)) :
-(π^a) x ∉ CycleAtTo π x a := by
+(π^a) x ∉ CycleAtTo π a x := by
   intro h
   rw [mem_cycleAtTo_iff] at h
   rcases h with ⟨b, hb, hbx⟩
   exact hb.ne (π.pow_apply_injOn_Iio_orderOf_cycleOf (hb.trans h) h hbx)
 
 lemma cycleAtTo_strict_mono_lt_of_lt_lt_orderOf (ha : a < orderOf (π.cycleOf x)) (hab : a < b) :
-CycleAtTo π x a ⊂ CycleAtTo π x b := by
+CycleAtTo π a x ⊂ CycleAtTo π b x := by
 rw [Finset.ssubset_iff]
 exact ⟨_, pow_apply_not_mem_cycleAtTo_of_lt_orderOf_cycleOf ha, insert_cycleAtTo (le_refl _) hab⟩
 
 lemma cycleAt_gt_cycleAtTo_lt_orderOf_cycleOf (h : a < orderOf (π.cycleOf x)) :
-CycleAtTo π x a ⊂ CycleAt π x := by
+CycleAtTo π a x ⊂ CycleAt π x := by
   rw [cycleAt_eq_cycleAtTo_orderOf_cycleOf]
   exact cycleAtTo_strict_mono_lt_of_lt_lt_orderOf h h
 
 -- Definition 2.3
 
-def CycleMin [LinearOrder α] (π : Equiv.Perm α) (x : α) : α := (CycleAt π x).min' (cycleAt_nonempty)
+def CycleMin [LinearOrder α] (π : Equiv.Perm α) (x : α) : α := (CycleAt π x).min' cycleAt_nonempty
 
 section LinearOrder
 variable [LinearOrder α]
@@ -218,7 +220,7 @@ variable [LinearOrder α]
 lemma cycleMin_def : CycleMin π x = (CycleAt π x).min' cycleAt_nonempty := rfl
 
 lemma cycleMin_eq_min_cycleAtTo :
-CycleMin π x = (CycleAtTo π x (orderOf (π.cycleOf x))).min' (cycleAtTo_nonempty_of_pos (orderOf_pos _)) := by
+CycleMin π x = (CycleAtTo π (orderOf (π.cycleOf x)) x).min' (cycleAtTo_nonempty_of_pos (orderOf_pos _)) := by
   simp_rw [cycleMin_def, cycleAt_eq_cycleAtTo_orderOf_cycleOf]
 
 @[simp]
@@ -228,12 +230,11 @@ lemma cycleMin_of_fixed (h : Function.IsFixedPt π x) : CycleMin π x = x := by
 
 lemma cycleMin_mem_cycleAt (π : Equiv.Perm α) (x : α) : CycleMin π x ∈ CycleAt π x := Finset.min'_mem _ _
 
-lemma cycleMin_exists_pow_apply (π : Equiv.Perm α) (x : α):
-∃ k : ℤ, (π^k) x = CycleMin π x :=
+lemma cycleMin_exists_pow_apply (π : Equiv.Perm α) (x : α) : ∃ k : ℤ, (π^k) x = CycleMin π x :=
 mem_cycleAt_iff.mp (cycleMin_mem_cycleAt π x)
 
-lemma cycleMin_exists_pow_apply'' (π : Equiv.Perm α) (x : α):
-∃ k, k ≤ (orderOf (π.cycleOf x)) - 1 ∧ (π^k) x = CycleMin π x :=
+lemma cycleMin_exists_pow_apply'' (π : Equiv.Perm α) (x : α) :
+    ∃ k, k ≤ (orderOf (π.cycleOf x)) - 1 ∧ (π^k) x = CycleMin π x :=
 mem_cycleAt_iff_le.mp (cycleMin_mem_cycleAt π x)
 
 lemma cycleMin_exists_pow_apply' (π : Equiv.Perm α) (x : α):
@@ -241,7 +242,7 @@ lemma cycleMin_exists_pow_apply' (π : Equiv.Perm α) (x : α):
 mem_cycleAt_iff_lt.mp (cycleMin_mem_cycleAt π x)
 
 lemma cycleMin_eq_min_cycleAtTo_ge (ha : orderOf (π.cycleOf x) ≤ a) :
-CycleMin π x = (CycleAtTo π x a).min' cycleAtTo_nonempty := by
+CycleMin π x = (CycleAtTo π a x).min' cycleAtTo_nonempty := by
 simp_rw [cycleMin_def, cycleAt_eq_cycleAtTo_ge_orderOf_cycleOf ha]
 
 lemma cycleMin_le (π : Equiv.Perm α) (x : α) (h : π.SameCycle x y) : CycleMin π x ≤ y := by
@@ -269,10 +270,10 @@ simp_rw [cycleMin_def, Finset.le_min'_iff, mem_cycleAt_iff] ; exact h
 lemma le_cycleMin_iff : z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y := by
 simp_rw [cycleMin_def, Finset.le_min'_iff, mem_cycleAt_iff]
 
-def FastCycleMin (n : ℕ) (π : Equiv.Perm α) (x : α) : α :=
+def FastCycleMin (n : ℕ) (π : Equiv.Perm α) : α → α :=
   match n with
-  | 0 => x
-  | (i+1) => min (FastCycleMin i π x) (FastCycleMin i π ((π ^ (2^i : ℕ)) x))
+  | 0 => id
+  | (i+1) => fun x => min (FastCycleMin i π x) (FastCycleMin i π ((π ^ (2^i : ℕ)) x))
 
 lemma fastCycleMin_zero_eq : FastCycleMin 0 π x = x := rfl
 
@@ -281,8 +282,8 @@ FastCycleMin (i + 1) π x = min (FastCycleMin i π x) (FastCycleMin i π ((π ^ 
 
 -- Theorem 2.4
 
-lemma fastCycleMin_eq_min_cycleAtTo :
-FastCycleMin i π x = (CycleAtTo π x (2^i)).min' (cycleAtTo_nonempty_of_pos (pow_pos zero_lt_two _)) := by
+lemma fastCycleMin_eq_min_cycleAtTo : FastCycleMin i π x =
+    (CycleAtTo π (2^i) x).min' (cycleAtTo_nonempty_of_pos (pow_pos zero_lt_two _)) := by
   induction' i with i hi generalizing x
   · simp_rw [fastCycleMin_zero_eq, pow_zero, cycleAtTo_one, min'_singleton]
   · simp_rw [fastCycleMin_succ_eq, hi, le_antisymm_iff, le_min_iff, Finset.le_min'_iff, min_le_iff,
@@ -297,7 +298,8 @@ FastCycleMin i π x = (CycleAtTo π x (2^i)).min' (cycleAtTo_nonempty_of_pos (po
 
 -- Theorem 2.5
 
-lemma cycleMin_eq_fastCycleMin (h : orderOf (π.cycleOf x) ≤ 2^i) : FastCycleMin i π x = CycleMin π x := by
+lemma cycleMin_eq_fastCycleMin (h : orderOf (π.cycleOf x) ≤ 2^i) : 
+    FastCycleMin i π x = CycleMin π x := by
   rw [fastCycleMin_eq_min_cycleAtTo, cycleMin_eq_min_cycleAtTo_ge h]
 
 -- Theorem 2.2
