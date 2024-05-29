@@ -298,7 +298,7 @@ lemma fastCycleMin_eq_min_cycleAtTo : FastCycleMin i π x =
 
 -- Theorem 2.5
 
-lemma cycleMin_eq_fastCycleMin (h : orderOf (π.cycleOf x) ≤ 2^i) : 
+lemma cycleMin_eq_fastCycleMin (h : orderOf (π.cycleOf x) ≤ 2^i) :
     FastCycleMin i π x = CycleMin π x := by
   rw [fastCycleMin_eq_min_cycleAtTo, cycleMin_eq_min_cycleAtTo_ge h]
 
