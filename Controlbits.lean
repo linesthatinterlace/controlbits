@@ -267,56 +267,51 @@ lemma toPerm_succ {cb : ControlBits (m + 1)} : toPerm cb = condFlipBit 0 (cb 0) 
     (fun i k => cb i.castSucc.succ (mergeBitRes 0 b k))) * condFlipBit 0 (cb (last _)) :=
   PartialControlBits.toPerm_succ_last
 
-def ofPerm {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
+def fromPerm {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
 match m with
 | 0 => fun π _ => LastLayer π
 | (_ + 1) => fun π => piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π), (fun p =>
-    ofPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) · (getRes 0 p)))
+    fromPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) · (getRes 0 p)))
 
-lemma foobar : (bitInvarMulEquiv 0).symm (MiddlePerm π) b =
-  ⟨fun q => getRes 0 ((MiddlePerm π).val (mergeBitRes 0 b q)),
-  fun q => getRes 0 ((MiddlePerm π)⁻¹.val (mergeBitRes 0 b q)),
-  fun q => by simp, _⟩ := sorry
+lemma fromPerm_zero : fromPerm (m := 0) = fun π _ => LastLayer π := rfl
 
-lemma ofPerm_zero : ofPerm (m := 0) = fun π _ => LastLayer π := rfl
-
-lemma ofPerm_succ {π : Perm (BV (m + 2))} : ofPerm π =
+lemma fromPerm_succ {π : Perm (BV (m + 2))} : fromPerm π =
   piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π), (fun p =>
-  ofPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) · (getRes 0 p))) := rfl
+  fromPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) · (getRes 0 p))) := rfl
 
-lemma ofPerm_succ_apply_zero {π : Perm (BV (m + 2))} :
-  ofPerm π 0 = FirstLayer π := piFinSuccCastSucc_symm_apply_zero _ _ _
+lemma fromPerm_succ_apply_zero {π : Perm (BV (m + 2))} :
+  fromPerm π 0 = FirstLayer π := piFinSuccCastSucc_symm_apply_zero _ _ _
 
-lemma ofPerm_succ_apply_last {π : Perm (BV (m + 2))} :
-    ofPerm π (last _) = LastLayer π := piFinSuccCastSucc_symm_apply_last _ _ _
+lemma fromPerm_succ_apply_last {π : Perm (BV (m + 2))} :
+    fromPerm π (last _) = LastLayer π := piFinSuccCastSucc_symm_apply_last _ _ _
 
-lemma ofPerm_succ_apply_castSucc_succ : ofPerm π i.castSucc.succ =
-    fun p => ofPerm ((bitInvarMulEquiv 0).symm
+lemma fromPerm_succ_apply_castSucc_succ : fromPerm π i.castSucc.succ =
+    fun p => fromPerm ((bitInvarMulEquiv 0).symm
     (MiddlePerm π) (getBit 0 p)) i (getRes 0 p) :=
   piFinSuccCastSucc_symm_apply_castSucc_succ _ _ _ _
 
-lemma ofPerm_succ_apply_succ_castSucc : ofPerm π i.succ.castSucc =
-    fun p => ofPerm ((bitInvarMulEquiv 0).symm
+lemma fromPerm_succ_apply_succ_castSucc : fromPerm π i.succ.castSucc =
+    fun p => fromPerm ((bitInvarMulEquiv 0).symm
     (MiddlePerm π) (getBit 0 p)) i (getRes 0 p) :=
-  ofPerm_succ_apply_castSucc_succ
+  fromPerm_succ_apply_castSucc_succ
 
-lemma ofPerm_succ_apply_mergeBitRes {π : Perm (BV (m + 2))} :
-    (fun i k => ofPerm π i.castSucc.succ (mergeBitRes 0 b k)) =
-    ofPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) b) := by
-  simp_rw [ofPerm_succ_apply_castSucc_succ, getBit_mergeBitRes, getRes_mergeBitRes]
+lemma fromPerm_succ_apply_mergeBitRes {π : Perm (BV (m + 2))} :
+    (fun i k => fromPerm π i.castSucc.succ (mergeBitRes 0 b k)) =
+    fromPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) b) := by
+  simp_rw [fromPerm_succ_apply_castSucc_succ, getBit_mergeBitRes, getRes_mergeBitRes]
 
-lemma toPerm_leftInverse : (toPerm (m := m)).LeftInverse ofPerm := by
+lemma toPerm_leftInverse : (toPerm (m := m)).LeftInverse fromPerm := by
   unfold Function.LeftInverse ; induction' m with m IH <;> intro π
   · exact lastLayerPerm_base
   · trans FirstLayerPerm π * MiddlePerm π * LastLayerPerm π
     · refine' toPerm_succ.trans _
       refine' congrArg₂ _ (congrArg₂ _ _ (congrArg _ _)) _
-      · rw [ofPerm_succ_apply_zero, condFlipBit_firstLayer]
-      · simp_rw [ofPerm_succ_apply_mergeBitRes, IH, (bitInvarMulEquiv 0).apply_symm_apply]
-      · rw [ofPerm_succ_apply_last, condFlipBit_lastLayer]
+      · rw [fromPerm_succ_apply_zero, condFlipBit_firstLayer]
+      · simp_rw [fromPerm_succ_apply_mergeBitRes, IH, (bitInvarMulEquiv 0).apply_symm_apply]
+      · rw [fromPerm_succ_apply_last, condFlipBit_lastLayer]
     · exact firstMiddleLast_decomposition.symm
 
-lemma ofPerm_rightInverse : (ofPerm (m := m)).RightInverse toPerm := toPerm_leftInverse
+lemma fromPerm_rightInverse : (fromPerm (m := m)).RightInverse toPerm := toPerm_leftInverse
 
 def unweave : ControlBits (m + 1) ≃
 (ControlBitsLayer (m + 1) × ControlBitsLayer (m + 1)) × (Bool → ControlBits m) :=
@@ -368,13 +363,13 @@ def equivControlBits {m : ℕ} : SerialControlBits m ≃ ControlBits m :=
 def toPerm (cb : SerialControlBits m) : Perm (BV (m + 1)) :=
   (ControlBits.toPerm (m := m)) (equivControlBits cb)
 
-def ofPerm (π : Perm (BV (m + 1))) : SerialControlBits m :=
-  equivControlBits.symm (ControlBits.ofPerm (m := m) π)
+def fromPerm (π : Perm (BV (m + 1))) : SerialControlBits m :=
+  equivControlBits.symm (ControlBits.fromPerm (m := m) π)
 
-lemma toPerm_leftInverse : (toPerm (m := m)).LeftInverse (ofPerm)  :=
+lemma toPerm_leftInverse : (toPerm (m := m)).LeftInverse (fromPerm)  :=
   Function.LeftInverse.comp equivControlBits.right_inv ControlBits.toPerm_leftInverse
 
-lemma ofPerm_rightInverse : (ofPerm (m := m)).RightInverse (toPerm) := toPerm_leftInverse
+lemma fromPerm_rightInverse : (fromPerm (m := m)).RightInverse (toPerm) := toPerm_leftInverse
 
 end SerialControlBits
 
@@ -409,137 +404,254 @@ def controlBits3_normal : ControlBits 3 :=
   ![false, true, true, false, false, true, true, false],
   ![false, true, false, true, false, true, false, true]]
 
-def Perm.fromArray {n} (a : Array (Fin n)) (b : Array (Fin n))
-    (ha : a.size = n := by rfl)
-    (hb : b.size = n := by rfl)
-    (ab : ∀ i : Fin n, b.get ((a.get (i.cast ha.symm)).cast hb.symm) = i := by decide) :
-    Perm (Fin n) where
-  toFun i := a[i]
-  invFun i := b[i]
-  left_inv := ab
-  right_inv := Function.LeftInverse.rightInverse_of_card_le
-    (f := fun i => b[i]) (g := fun i => a[i]) (ab ·) le_rfl
-
 structure ArrayPerm (n : ℕ) where
   toArray : Array (Fin n)
   invArray : Array (Fin n)
   sizeTo : toArray.size = n := by rfl
   sizeInv : invArray.size = n := by rfl
-  left_inv : ∀ i : Fin n, invArray[(toArray[(i : ℕ)] : ℕ)] = i := by decide
+  left_inv' : ∀ i : Fin n, invArray[(toArray[(i : Fin n)])] = i := by decide
 
-def ArrayPerm.getAt {n} (a : ArrayPerm n) : Fin n → Fin n :=
-  fun i => a.toArray[(i : ℕ)]'(a.sizeTo.symm ▸ i.isLt)
+namespace ArrayPerm
+
+open Function
+
+variable {n : ℕ}
+
+lemma lt_of_lt_toArray_size {a : ArrayPerm n}  {i : ℕ} (h : i < a.toArray.size) :
+    i < n := a.sizeTo ▸ h
+
+lemma coe_lt_toArray_size (a : ArrayPerm n) {i : Fin n} :
+  i < a.toArray.size := a.sizeTo.symm ▸ i.2
+
+lemma lt_of_lt_invArray_size {a : ArrayPerm n} {i : ℕ} (h : i < a.invArray.size) :
+  i < n := a.sizeInv.symm ▸ h
+
+lemma coe_lt_invArray_size (a : ArrayPerm n) {i : Fin n} :
+  i < a.invArray.size := a.sizeInv.symm ▸ i.2
+
+def getAt (a : ArrayPerm n) : Fin n → Fin n :=
+  fun i => a.toArray[(i : ℕ)]'a.coe_lt_toArray_size
+
+lemma getAt_def (a : ArrayPerm n) {i : Fin n} :
+  a.getAt i = a.toArray[(i : ℕ)]'a.coe_lt_toArray_size := rfl
+
+lemma toArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.toArray.size) :
+  a.toArray[i]'h = a.getAt ⟨i, lt_of_lt_toArray_size h⟩ := rfl
+
+lemma getAt_eq_iff {a b : ArrayPerm n} : a.getAt = b.getAt ↔ a.toArray = b.toArray := by
+  refine' ⟨fun h => (Array.ext _ _ (a.sizeTo.trans b.sizeTo.symm) (fun _ _ _ => by
+    simp_rw [toArray_get, h])),
+  fun h => funext (fun i => by
+    simp_rw [getAt_def, h])⟩
+
+def getInv (a : ArrayPerm n) : Fin n → Fin n :=
+  fun i => a.invArray[(i : ℕ)]'a.coe_lt_invArray_size
+
+lemma getInv_def (a : ArrayPerm n) {i : Fin n} :
+  a.getInv i = a.invArray[(i : ℕ)]'a.coe_lt_invArray_size := rfl
+
+lemma invArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.invArray.size) :
+  a.invArray[i]'h = a.getInv ⟨i, lt_of_lt_invArray_size h⟩ := rfl
+
+lemma getInv_eq_iff {a b : ArrayPerm n} : a.getInv = b.getInv ↔ a.invArray = b.invArray := by
+  refine' ⟨fun h => (Array.ext _ _ (a.sizeInv.trans b.sizeInv.symm) (fun _ _ _ => by
+    simp_rw [invArray_get, h])),
+    fun h => funext (fun i => by
+      simp_rw [getInv_def, h])⟩
 
 @[simp]
-lemma ArrayPerm.toArray_getElem_coe {n} (a : ArrayPerm n) (i : Fin n) :
-  a.toArray[(i : ℕ)]'(a.sizeTo.symm ▸ i.isLt) = a.getAt i := rfl
-
-def ArrayPerm.getInv {n} (a : ArrayPerm n) : Fin n → Fin n :=
-  fun i => a.invArray[(i : ℕ)]'(a.sizeInv.symm ▸ i.isLt)
+lemma getInv_getAt (a : ArrayPerm n) : ∀ i, a.getInv (a.getAt i) = i := a.left_inv'
 
 @[simp]
-lemma ArrayPerm.invArray_getElem_coe {n} (a : ArrayPerm n) (i : Fin n) :
-  a.invArray[(i : ℕ)]'(a.sizeInv.symm ▸ i.isLt) = a.getInv i := rfl
+lemma invArray_get_getAt (a : ArrayPerm n) {i : Fin n} :
+    a.invArray[(a.getAt i : ℕ)]'a.coe_lt_invArray_size = i := a.getInv_getAt _
 
 @[simp]
-lemma ArrayPerm.getInv_getAt (a : ArrayPerm n) :
-    ∀ i, a.getInv (a.getAt i) = i := a.left_inv
+lemma getInv_toArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.toArray.size) :
+    a.getInv (a.toArray[i]'h) = ⟨i, lt_of_lt_toArray_size h⟩ :=
+  a.getInv_getAt ⟨i, lt_of_lt_toArray_size h⟩
 
 @[simp]
-lemma ArrayPerm.getAt_leftInverse (a : ArrayPerm n) :
-    Function.LeftInverse a.getInv a.getAt := a.getInv_getAt
+lemma invArray_get_toArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.toArray.size) :
+    a.invArray[(a.toArray[i]'h : ℕ)]'a.coe_lt_invArray_size = ⟨i, lt_of_lt_toArray_size h⟩ :=
+  a.getInv_toArray_get h
 
 @[simp]
-lemma ArrayPerm.getInv_rightInverse (a : ArrayPerm n) :
-    Function.RightInverse a.getAt a.getInv := a.getInv_getAt
+lemma getAt_leftInverse (a : ArrayPerm n) :
+    LeftInverse a.getInv a.getAt := a.getInv_getAt
 
 @[simp]
-lemma ArrayPerm.getAt_getInv (a : ArrayPerm n) :
+lemma getInv_rightInverse (a : ArrayPerm n) :
+    RightInverse a.getAt a.getInv := a.getInv_getAt
+
+@[simp]
+lemma getInv_comp_getAt (a : ArrayPerm n) : a.getInv ∘ a.getAt = id :=
+  a.getInv_rightInverse.comp_eq_id
+
+@[simp]
+lemma getAt_getInv (a : ArrayPerm n) :
     ∀ i, a.getAt (a.getInv i) = i := a.getAt_leftInverse.rightInverse_of_card_le le_rfl
 
 @[simp]
-lemma ArrayPerm.getAt_rightInverse (a : ArrayPerm n) :
-    Function.RightInverse a.getInv a.getAt := a.getAt_getInv
+lemma toArray_get_getInv (a : ArrayPerm n) {i : Fin n} :
+    a.toArray[(a.getInv i : ℕ)]'a.coe_lt_toArray_size = i := a.getAt_getInv _
 
 @[simp]
-lemma ArrayPerm.getInv_leftInverse (a : ArrayPerm n) :
-    Function.LeftInverse a.getAt a.getInv := a.getAt_getInv
+lemma getAt_invArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.invArray.size):
+    a.getAt (a.invArray[i]'h) = ⟨i, lt_of_lt_invArray_size h⟩ :=
+  a.getAt_getInv ⟨_, lt_of_lt_invArray_size h⟩
 
 @[simp]
-lemma ArrayPerm.right_inv (a : ArrayPerm n) :
-    ∀ i : Fin n, a.toArray[(a.invArray[(i : ℕ)]'(a.sizeInv.symm ▸ i.isLt) : ℕ)]'
-    (a.sizeTo.symm ▸ (Fin.isLt _)) = i := a.getAt_getInv
+lemma toArray_get_invArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.invArray.size) :
+    a.toArray[(a.invArray[i]'h : ℕ)]'a.coe_lt_toArray_size = ⟨i, lt_of_lt_invArray_size h⟩ :=
+  a.getAt_invArray_get h
 
-lemma ArrayPerm.ext' {a b : ArrayPerm n} (h : a.toArray = b.toArray) : a = b := by
-  rcases a with ⟨aT, aI, haT, haI, haIT⟩
-  rcases b with ⟨bT, bI, hbT, hbI, hbIT⟩
-  simp_rw [mk.injEq]
+@[simp]
+lemma getAt_rightInverse (a : ArrayPerm n) :
+    RightInverse a.getInv a.getAt := a.getAt_getInv
 
-  refine' ⟨h, Array.ext aI bI (haI.trans hbI.symm) _⟩
-  simp_rw [hbI, haI]
-  intros i hi₁ hi₂
+@[simp]
+lemma getAt_comp_getInv (a : ArrayPerm n) : a.getAt ∘ a.getInv = id :=
+  a.getAt_rightInverse.comp_eq_id
 
-  refine' (Fin.forall_iff ).mp _ i hi₁
+@[simp]
+lemma getInv_leftInverse (a : ArrayPerm n) :
+    LeftInverse a.getAt a.getInv := a.getAt_getInv
 
-  --simp_rw [Fin.forall_iff] at haIT hbIT
-  rw [haI] at hi₁
-  rw [hbI] at hi₂
-  apply (ArrayPerm.getAt_leftInverse ⟨aT, aI, haT, haI, haIT⟩).injective
+lemma getAt_bijective (a : ArrayPerm n) : Bijective a.getAt :=
+  ⟨a.getAt_leftInverse.injective, a.getAt_rightInverse.surjective⟩
 
-  simp_rw [← toArray_getElem_coe]
-  have HH := ArrayPerm.right_inv ⟨aT, aI, haT, haI, haIT⟩ ⟨i, hi₁⟩
-  simp at HH
-  rw [HH]
-  rw [haIT]
-  simp
+lemma getInv_bijective (a : ArrayPerm n) : Bijective a.getInv :=
+  ⟨a.getInv_leftInverse.injective, a.getInv_rightInverse.surjective⟩
 
-  nth_rewrite 1 [← ArrayPerm.getAt_getInv ⟨aT, aI, haT, haI, haIT⟩ ⟨i, hi₁⟩]
-  apply Array.ext _ _ (by trans n <;> assumption)
+lemma getInv_eq_iff_getAt_eq (a b : ArrayPerm n) : a.getInv = b.getInv ↔ a.getAt = b.getAt :=
+  ⟨fun h => a.getInv_leftInverse.eq_rightInverse (h ▸ b.getInv_rightInverse),
+  fun h => a.getAt_leftInverse.eq_rightInverse (h ▸ b.getAt_rightInverse)⟩
 
-instance {n} : Mul (ArrayPerm n) := ⟨fun a b =>
+lemma invArray_eq_iff_toArray_eq (a b : ArrayPerm n) :
+    a.invArray = b.invArray ↔ a.toArray = b.toArray := by
+  rw [← getInv_eq_iff, getInv_eq_iff_getAt_eq, getAt_eq_iff]
+
+lemma ext'_iff (a b : ArrayPerm n) : a = b ↔ a.toArray = b.toArray := by
+  trans (a.toArray = b.toArray ∧ a.invArray = b.invArray)
+  · rcases a ; rcases b ; simp_rw [mk.injEq]
+  · rw [invArray_eq_iff_toArray_eq, and_self]
+
+lemma ext' (a b : ArrayPerm n) (h : a.toArray = b.toArray) : a = b := by rwa [ext'_iff]
+
+instance : EquivLike (ArrayPerm n) (Fin n) (Fin n) where
+  coe a := a.getAt
+  inv a := a.getInv
+  left_inv a := a.getInv_getAt
+  right_inv a := a.getAt_getInv
+  coe_injective' _ _ hAt _ := by rwa [ext'_iff, ← getAt_eq_iff]
+
+lemma coeFn_eq_getAt (a : ArrayPerm n) : a = a.getAt := rfl
+lemma apply_eq_getAt (a : ArrayPerm n) {i : Fin n} : a i = a.getAt i := rfl
+
+@[ext]
+lemma ext (a b : ArrayPerm n) (h : a.getAt = b.getAt) : a = b := DFunLike.ext' h
+
+lemma ext_iff (a b : ArrayPerm n) : a = b ↔ a.getAt = b.getAt := DFunLike.ext'_iff
+
+instance : One (ArrayPerm n) :=
+⟨enum n, enum n, size_enum _, size_enum _, fun h => by simp only [Fin.getElem_fin, getElem_enum]⟩
+
+@[simp]
+lemma one_toArray : (1 : ArrayPerm n).toArray = enum n := rfl
+@[simp]
+lemma one_invArray : (1 : ArrayPerm n).invArray = enum n := rfl
+@[simp]
+lemma one_getAt : (1 : ArrayPerm n).getAt = id := funext fun _ => by
+  simp_rw [id_eq, getAt_def, one_toArray, getElem_enum]
+@[simp]
+lemma one_getInv : (1 : ArrayPerm n).getInv = id := funext fun _ => by
+  simp_rw [id_eq, getInv_def, one_invArray, getElem_enum]
+
+lemma coeFn_one_eq : ((1 : ArrayPerm n) : Fin n → Fin n) = id := by rw [coeFn_eq_getAt, one_getAt]
+lemma apply_one_eq {i : Fin n} : (1 : ArrayPerm n) i = i := by rw [coeFn_one_eq, id_eq]
+
+instance : Inv (ArrayPerm n) :=
+⟨fun a => ⟨a.invArray, a.toArray, a.sizeInv, a.sizeTo, a.getAt_getInv⟩⟩
+
+@[simp]
+lemma inv_toArray (a : ArrayPerm n) : a⁻¹.toArray = a.invArray := rfl
+@[simp]
+lemma inv_invArray (a : ArrayPerm n) : a⁻¹.invArray = a.toArray := rfl
+@[simp]
+lemma inv_getAt (a : ArrayPerm n) : a⁻¹.getAt = a.getInv := rfl
+@[simp]
+lemma inv_getInv (a : ArrayPerm n) : a⁻¹.getInv = a.getAt := rfl
+
+lemma coeFn_inv_eq_getInv (a : ArrayPerm n) : a⁻¹ = a.getInv := by rw [coeFn_eq_getAt, inv_getAt]
+lemma apply_inv_eq_getInv (a : ArrayPerm n) {i : Fin n} : a⁻¹ i = a.getInv i := rfl
+
+instance : Mul (ArrayPerm n) := ⟨fun a b =>
   ⟨b.toArray.map a.getAt,
     a.invArray.map b.getInv,
     (b.toArray.size_map _).trans b.sizeTo,
-    (a.invArray.size_map _).trans a.sizeInv, fun i => by
-      simp_rw [Array.getElem_map, ArrayPerm.toArray_getElem_coe, ArrayPerm.invArray_getElem_coe,
-        ArrayPerm.getInv_getAt]⟩⟩
+    (a.invArray.size_map _).trans a.sizeInv, fun h => by
+      simp_rw [Fin.getElem_fin, Array.getElem_map, invArray_get_getAt, getInv_toArray_get]⟩⟩
 
-instance {n} : One (ArrayPerm n) :=
-⟨enum n, enum n, size_enum _, size_enum _, fun _ => by simp_rw [getElem_enum]⟩
+@[simp]
+lemma mul_toArray (a b : ArrayPerm n) : (a * b).toArray = b.toArray.map a.getAt := rfl
+@[simp]
+lemma mul_invArray (a b : ArrayPerm n) : (a * b).invArray = a.invArray.map b.getInv := rfl
+@[simp]
+lemma mul_getAt (a b : ArrayPerm n) : (a * b).getAt = a.getAt ∘ b.getAt := funext fun _ => by
+  simp_rw [getAt_def, mul_toArray, comp_apply, Array.getElem_map, getAt_def]
+@[simp]
+lemma mul_getInv (a b : ArrayPerm n) : (a * b).getInv = b.getInv ∘ a.getInv := funext fun _ => by
+  simp_rw [getInv_def, mul_invArray, comp_apply, Array.getElem_map, getInv_def]
 
-instance {n} : Inv (ArrayPerm n) :=
-⟨fun a => ⟨a.invArray, a.toArray, a.sizeInv, a.sizeTo, a.getAt_getInv⟩⟩
+lemma coeFn_mul_eq_comp (a b : ArrayPerm n) : (a * b : ArrayPerm n) = a.getAt ∘ b.getAt := by
+  simp_rw [coeFn_eq_getAt, mul_getAt]
+lemma apply_mul_eq (a b : ArrayPerm n) {i : Fin n} : (a * b) i = a.getAt (b.getAt i) := by
+  rw [coeFn_mul_eq_comp, comp_apply]
 
-instance {n} : Group (ArrayPerm n) where
-  mul_assoc f g h := sorry
-  one_mul a := by
-    cases a
-  mul_one := sorry
-  mul_left_inv := sorry
+instance : Group (ArrayPerm n) where
+  mul_assoc f g h := by simp_rw [ext_iff, mul_getAt, comp.assoc]
+  one_mul a := by rw [ext_iff, mul_getAt, one_getAt, id_comp]
+  mul_one a := by rw [ext_iff, mul_getAt, one_getAt, comp_id]
+  mul_left_inv a := by rw [ext_iff, mul_getAt, inv_getAt, getInv_comp_getAt, one_getAt]
 
-def Perm.fromArrayPerm {n} (π : ArrayPerm n) : Perm (Fin n) where
-  toFun i := π.toArray.get (i.cast π.sizeTo.symm)
-  invFun i := π.invArray.get (i.cast π.sizeInv.symm)
-  left_inv := π.left_inv
-  right_inv := Function.LeftInverse.rightInverse_of_card_le (π.left_inv ·) le_rfl
-
-def ArrayPerm.ofPerm {n} (π : Perm (Fin n)) : ArrayPerm n where
+def fromPerm (π : Perm (Fin n)) : ArrayPerm n where
   toArray := Array.ofFn π
-  invArray := Array.ofFn π.invFun
+  invArray := Array.ofFn π.symm
   sizeTo := Array.size_ofFn _
   sizeInv := Array.size_ofFn _
-  left_inv i := by
-    simp only [invFun_as_coe, Array.get_eq_getElem, coe_cast, Array.getElem_ofFn, Fin.eta,
-      symm_apply_apply]
+  left_inv' i := by
+    simp_rw [Fin.getElem_fin, Array.getElem_ofFn, Fin.eta, symm_apply_apply]
 
-def controlBits2_perm : Perm (Fin 8) :=
-  Perm.fromArray (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5])
+@[simp]
+lemma fromPerm_toArray (π : Perm (Fin n)) : (fromPerm π).toArray = Array.ofFn π := rfl
+@[simp]
+lemma fromPerm_invArray (π : Perm (Fin n)) : (fromPerm π).invArray = Array.ofFn π.symm := rfl
+@[simp]
+lemma fromPerm_getAt (π : Perm (Fin n)) : (fromPerm π).getAt = π := funext fun _ => by
+  simp_rw [getAt_def, fromPerm_toArray, Array.getElem_ofFn]
+@[simp]
+lemma fromPerm_getInv (π : Perm (Fin n)) : (fromPerm π).getInv = π.symm := funext fun _ => by
+  simp_rw [getInv_def, fromPerm_invArray, Array.getElem_ofFn]
 
-def controlBits3_perm : Perm (Fin 16) := Perm.fromArray
+def ArrayPermMulEquivPerm : ArrayPerm n ≃* Perm (Fin n) where
+  toFun := EquivLike.toEquiv
+  invFun := fromPerm
+  left_inv a := by rw [ext_iff, fromPerm_getAt, EquivLike.coe_coe, coeFn_eq_getAt]
+  right_inv π := by rw [DFunLike.ext'_iff, EquivLike.coe_coe, coeFn_eq_getAt, fromPerm_getAt]
+  map_mul' a b := by
+    simp_rw [DFunLike.ext'_iff, Equiv.Perm.coe_mul, EquivLike.coe_coe, coeFn_eq_getAt, mul_getAt]
+
+end ArrayPerm
+
+def controlBits2_perm : Perm (Fin 8) := ArrayPerm.mk (n := 8)
+  (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5])
+
+def controlBits3_perm : Perm (Fin 16) := ArrayPerm.mk (n := 16)
   (#[0, 15, 1, 14, 2, 13, 3, 12, 4, 11, 5, 10, 6, 9, 7, 8])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 15, 13, 11, 9, 7, 5, 3, 1])
 
-def controlBits4_perm : Perm (Fin 32) := Perm.fromArray
+def controlBits4_perm : Perm (Fin 32) := ArrayPerm.mk (n := 32)
   (#[0, 31, 1, 30, 2, 29, 3, 28, 4, 27, 5, 26, 6, 25, 7, 24,
       8, 23, 9, 22, 10, 21, 11, 20, 12, 19, 13, 18, 14, 17, 15, 16])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
@@ -564,22 +676,22 @@ instance repr_bool {α : Type u} [Repr α] : Repr (Bool → α) :=
 #eval controlBits1.toPerm
 #eval controlBits1_normal.toPerm
 #eval controlBits1_perm
-#eval (ControlBits.ofPerm (m := 1) controlBits1_perm)
---#eval (ControlBits.ofPerm <| serialControlBits2.toPerm)
+#eval (ControlBits.fromPerm (m := 1) controlBits1_perm)
+--#eval (ControlBits.fromPerm <| serialControlBits2.toPerm)
 
 #eval serialControlBits2.toPerm
 #eval controlBits2.toPerm
 #eval controlBits2_normal.toPerm
 #eval controlBits2_perm
-#eval (ControlBits.ofPerm (m := 2) controlBits2_perm)
---#eval (ControlBits.ofPerm <| serialControlBits2.toPerm)
+#eval (ControlBits.fromPerm (m := 2) controlBits2_perm)
+--#eval (ControlBits.fromPerm <| serialControlBits2.toPerm)
 
 -- #eval MiddlePerm controlBits3_perm
 -- #eval FastCycleMin 1 controlBits4_perm 12
 #eval MiddlePerm (m := 4) controlBits4_perm
 set_option profiler true
-#eval ControlBits.ofPerm (m := 2) controlBits2_perm
---#eval ControlBits.ofPerm (m := 3) controlBits3_perm
-#eval (ControlBits.ofPerm (m := 3) controlBits3_perm)
+#eval ControlBits.fromPerm (m := 2) controlBits2_perm
+--#eval ControlBits.fromPerm (m := 3) controlBits3_perm
+#eval (ControlBits.fromPerm (m := 3) controlBits3_perm)
 #eval controlBits3_normal.toPerm
---#eval ControlBits.ofPerm (m := 4) controlBits4_perm
+--#eval ControlBits.fromPerm (m := 4) controlBits4_perm
