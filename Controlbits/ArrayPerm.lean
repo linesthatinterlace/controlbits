@@ -10,6 +10,15 @@ namespace Fin
 @[simp] theorem cast_comp {n m k : ℕ} (h : n = m) (h' : m = k) :
     cast h' ∘ cast h = cast (Eq.trans h h') := rfl
 
+theorem mk_eq_iff_val_eq {n : ℕ} {a : Fin n} {k : ℕ} {hk : k < n} :
+    ⟨k, hk⟩ = a ↔ k = (a : Nat) := ext_iff
+
+theorem fst_lt_snd_lt_of_mem_map_val {n : ℕ} (bs : List (Fin n × Fin n)) (b : ℕ × ℕ)
+    (hb : b ∈ bs.map fun b => (b.1.val, b.2.val)) : b.1 < n ∧ b.2 < n := by
+  rw [List.mem_map] at hb
+  rcases hb with ⟨⟨_, _⟩, ⟨_, rfl⟩⟩
+  exact ⟨Fin.isLt _, Fin.isLt _⟩
+
 end Fin
 
 namespace Equiv
@@ -18,14 +27,36 @@ open List Function
 
 variable {α : Type*} [DecidableEq α]
 
+theorem swap_coe {n : ℕ} {i j k : Fin n} : swap (i : ℕ) (j : ℕ) (k : ℕ) = swap i j k := by
+  simp_rw [swap_apply_def, apply_ite (Fin.val), Fin.val_eq_val]
+
+theorem swap_prop (p : α → Prop) [DecidablePred p] {i j k : α} (hk : p k) (hi : p i) (hj : p j) :
+    p (swap i j k) := by
+  simp_rw [swap_apply_def, apply_ite p, hi, hj, hk, ite_self]
+
 def swaps (abs : List (α × α)) : Perm α := (abs.map <| uncurry Equiv.swap).prod
 
 @[simp]
 theorem swaps_nil : swaps ([] : List (α × α)) = 1 := rfl
 
 @[simp]
-theorem swaps_cons (b : α × α) (bs : List (α × α)) :
-    swaps (b :: bs) = swap b.1 b.2 * swaps bs := prod_cons
+theorem swaps_cons (b : α × α) (bs : List (α × α)) : swaps (b :: bs) = swap b.1 b.2 * swaps bs :=
+  prod_cons
+
+theorem swaps_coe {n : ℕ} {bs : List (Fin n × Fin n)} {k : Fin n} :
+    swaps (bs.map fun b => (b.1.val, b.2.val)) k = swaps bs k := by
+  induction' bs with b bs IH
+  · rfl
+  · simp_rw [map_cons, swaps_cons, Perm.coe_mul, comp_apply, IH, swap_coe]
+
+theorem swaps_prop (p : α → Prop) [DecidablePred p] {k : α} (bs : List (α × α))
+    (hb : ∀ b ∈ bs, p b.1 ∧ p b.2) (hk : p k) : p (swaps bs k) := by
+  induction' bs with b bs IH
+  · exact hk
+  · simp_rw [mem_cons, forall_eq_or_imp] at hb
+    rw [swaps_cons]
+    exact swap_prop p (IH (hb.2)) hb.1.1 hb.1.2
+
 
 theorem swaps_singleton (b : α × α) : swaps [b] = swap b.1 b.2 := rfl
 
@@ -85,6 +116,22 @@ theorem swaps_comm (bs : List (α × α)) :
   · rfl
   · rw [map_cons, swaps_cons, swaps_cons, Prod.fst_swap, Prod.snd_swap, swap_comm, IH]
 
+theorem swaps_mul_eq_mul_swaps (bs : List (α × α)) (π : Perm α) :
+    swaps bs * π = π * swaps (bs.map fun b => (π⁻¹ b.1, π⁻¹ b.2)) := by
+  induction' bs with b bs IH generalizing π
+  · rfl
+  · rw [swaps_cons, mul_assoc, IH, ← mul_assoc, swap_mul_eq_mul_swap,
+    map_cons, swaps_cons, mul_assoc]
+
+theorem mul_swaps_eq_swaps_mul (bs : List (α × α)) (π : Perm α) :
+    π * swaps bs = swaps (bs.map fun b => (π b.1, π b.2)) * π := by
+  simp_rw [swaps_mul_eq_mul_swaps, map_map, comp_def, Perm.inv_apply_self,
+  Prod.mk.eta, map_id']
+
+theorem swaps_apply_apply (bs : List (α × α)) (π : Perm α) :
+    swaps (bs.map fun b => (π b.1, π b.2)) = π * swaps bs * π⁻¹ := by
+  rw [mul_swaps_eq_swaps_mul, mul_inv_cancel_right]
+
 end Equiv
 
 namespace Array
@@ -108,13 +155,25 @@ theorem swap_self (a : Array α) {i : Fin a.size} : a.swap i i = a := by
   · simp_rw [if_true]
   · simp_rw [hji, if_false]
 
-theorem get_swap_left' (a : Array α) {i j : Fin a.size} (ki kj : ℕ) (hki : ki = i) (hkj : kj = j)
-    (hki' : ki < (a.swap i j).size := hki.trans_lt ((a.size_swap i j).symm.trans_gt i.isLt)) :
-  (a.swap i j)[ki] = a[kj] := by simp_rw [hki, get_swap_left, hkj, getElem_fin]
+theorem get_swap_eq_get_apply_swap (a : Array α) {i j : Fin a.size} (k : ℕ) (h : k < a.size)
+    (h' : k < (a.swap i j).size := (a.size_swap _ _).symm.trans_gt h)
+    (h'' : Equiv.swap i.val j.val k < a.size := swap_prop (fun t => t < a.size) h i.isLt j.isLt) :
+    (a.swap i j)[k] = a[Equiv.swap i.val j.val k] := by
+  simp_rw [get_swap', swap_apply_def]
+  split_ifs <;> rfl
 
-theorem get_swap_right' (a : Array α) {i j : Fin a.size} (ki kj : ℕ) (hki : ki = i) (hkj : kj = j)
-  (hkj' : kj < (a.swap i j).size := hkj.trans_lt ((a.size_swap i j).symm.trans_gt j.isLt)) :
-  (a.swap i j)[kj] = a[ki] := by simp_rw [hkj, get_swap_right, hki, getElem_fin]
+theorem get_swap_eq_get_apply_swap' (a : Array α) {i j : Fin a.size} (k : ℕ)
+    (h : k < (a.swap i j).size) (h' : k < a.size := (a.size_swap _ _).trans_gt h)
+    (h'' : Equiv.swap i.val j.val k < a.size := swap_prop (fun t => t < a.size) h' i.isLt j.isLt) :
+    (a.swap i j)[k] = a[Equiv.swap i.val j.val k] :=
+  a.get_swap_eq_get_apply_swap _ h'
+
+theorem get_swap_fin (a : Array α) {i j k : Fin a.size}
+    (h' : k < (a.swap i j).size := (a.size_swap _ _).symm.trans_gt k.isLt)
+    (h'' : Equiv.swap i.val j.val k.val < a.size :=
+    swap_prop (fun t => t < a.size) k.isLt i.isLt j.isLt) :
+    (a.swap i j)[k] = a[Equiv.swap i.val j.val k] := by
+  simp_rw [Fin.getElem_fin, a.get_swap_eq_get_apply_swap']
 
 def swaps (a : Array α) (bs : List (Fin a.size × Fin a.size)) : Array α :=
   match bs with
@@ -160,11 +219,47 @@ theorem swaps_concat (a : Array α) (b : Fin a.size × Fin a.size)
     (a.swaps bs).swap (b.1.cast (a.size_swaps _).symm) (b.2.cast (a.size_swaps _).symm) := by
   simp only [concat_eq_append, swaps_append, map_cons, map_nil, swaps_cons, swaps_nil]
 
+theorem get_swaps_eq_get_apply_swaps (a : Array α) {bs : List (Fin a.size × Fin a.size)}
+    (k : ℕ) (h : k < a.size)
+    (h' : k < (a.swaps bs).size := (a.size_swaps _).symm.trans_gt h)
+    (h'' : Equiv.swaps (bs.map fun b => (b.1.val, b.2.val)) k < a.size :=
+    swaps_prop (fun k => k < a.size) _ (Fin.fst_lt_snd_lt_of_mem_map_val _) h) :
+    (a.swaps bs)[k] = a[Equiv.swaps (bs.map fun b => (Fin.val b.1, Fin.val b.2)) k] := by
+  induction' bs using list_reverse_induction with bs b IH generalizing k
+  · rfl
+  · simp_rw [← concat_eq_append, swaps_concat, map_concat, Equiv.swaps_concat,
+    (a.swaps bs).get_swap_eq_get_apply_swap', Fin.coe_cast, Perm.coe_mul, comp_apply,
+    IH _ (swap_prop (fun t => t < a.size) h (Fin.isLt _) (Fin.isLt _))]
+
+theorem get_swaps_eq_get_apply_swaps' (a : Array α) {bs : List (Fin a.size × Fin a.size)}
+    (k : ℕ)
+    (h : k < (a.swaps bs).size) (h' : k < a.size := ((size_swaps _ _).trans_gt h))
+    (h'' : Equiv.swaps (bs.map fun b => (b.1.val, b.2.val)) k < a.size :=
+    swaps_prop (fun k => k < a.size) _ (Fin.fst_lt_snd_lt_of_mem_map_val _) h') :
+    (a.swaps bs)[k] = a[Equiv.swaps (bs.map fun b => (Fin.val b.1, Fin.val b.2)) k] :=
+ get_swaps_eq_get_apply_swaps _ _ h'
+
+
+/-
+theorem get_swap_eq_get_apply_swap' (a : Array α) {i j : Fin a.size} (k : ℕ)
+    (h : k < (a.swap i j).size) (h' : k < a.size := (a.size_swap _ _).trans_gt h)
+    (h'' : Equiv.swap i.val j.val k < a.size := swap_prop (fun t => t < a.size) i.isLt j.isLt h') :
+    (a.swap i j)[k] = a[Equiv.swap i.val j.val k] := by
+  simp_rw [get_swap', swap_apply_def]
+  split_ifs <;> rfl
+
+theorem get_swap_fin (a : Array α) {i j k : Fin a.size}
+    (h' : k < (a.swap i j).size := (a.size_swap _ _).symm.trans_gt k.isLt)
+    (h'' : Equiv.swap i.val j.val k.val < a.size :=
+    swap_prop (fun t => t < a.size) i.isLt j.isLt k.isLt) :
+    (a.swap i j)[k] = a[Equiv.swap i.val j.val k] := by
+  simp_rw [Fin.getElem_fin, a.get_swap_eq_get_apply_swap']
+
+
 theorem get_swaps_concat_left (a : Array α) (b : Fin a.size × Fin a.size)
     (bs : List (Fin a.size × Fin a.size)) :
     (a.swaps (bs.concat b))[(b.1 : ℕ)] = (a.swaps bs)[(b.2 : ℕ)] := by
-  simp_rw [swaps_concat]
-  exact (a.swaps bs).get_swap_left' b.1 b.2 rfl rfl
+  simp_rw [swaps_concat, (a.swaps bs).get_swap_eq_get_apply_swap', Fin.coe_cast, swap_apply_left]
 
 theorem get_swaps_concat_left' (a : Array α) (b : Fin a.size × Fin a.size)
     (bs : List (Fin a.size × Fin a.size))
@@ -178,8 +273,7 @@ theorem get_swaps_concat_left' (a : Array α) (b : Fin a.size × Fin a.size)
 theorem get_swaps_concat_right (a : Array α) (b : Fin a.size × Fin a.size)
     (bs : List (Fin a.size × Fin a.size)) :
     (a.swaps (bs.concat b))[(b.2 : ℕ)] = (a.swaps bs)[(b.1 : ℕ)] := by
-  simp_rw [swaps_concat]
-  exact (a.swaps bs).get_swap_right' b.1 b.2 rfl rfl
+  simp_rw [swaps_concat, (a.swaps bs).get_swap_eq_get_apply_swap', Fin.coe_cast, swap_apply_right]
 
 theorem get_swaps_concat_right' (a : Array α) (b : Fin a.size × Fin a.size)
     (bs : List (Fin a.size × Fin a.size))
@@ -214,6 +308,7 @@ theorem get_swaps_concat (a : Array α) (b : Fin a.size × Fin a.size)
       exact get_swaps_concat_right _ _ _
     · simp_rw [hk₂, if_false]
       exact get_swaps_concat_of_ne _ _ _ _ h hk₁ hk₂
+-/
 
 end Array
 
@@ -606,7 +701,6 @@ theorem swap_getAt_apply_of_ne_of_ne (a : ArrayPerm n) (i j : Fin n) {k} :
   rw [swap_getAt, comp_apply, a.getAt_bijective.injective.eq_iff]
   exact swap_apply_of_ne_of_ne
 
-
 theorem swap_inv_eq_one_swap_mul (a : ArrayPerm n) (i j : Fin n) :
     (a.swap i j)⁻¹ = swap 1 i j * a⁻¹ := by
   rw [swap_eq_mul_one_swap, mul_inv_rev, one_swap_inverse]
@@ -658,8 +752,22 @@ theorem swap_swap (a : ArrayPerm n) (i j : Fin n) : (a.swap i j).swap i j = a :=
   ext : 1
   simp_rw [swap_getAt, comp.assoc, ← Equiv.coe_trans, Equiv.swap_swap, coe_refl, comp_id]
 
-def swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : ArrayPerm n :=
-  bs.foldl (fun a => uncurry a.swap) a
+/-def swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : ArrayPerm n :=
+  bs.foldl (fun a => uncurry a.swap) a-/
+
+def swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : ArrayPerm n where
+  toArray := a.toArray.swaps (bs.map (fun b => (b.1.cast a.sizeTo.symm, b.2.cast a.sizeTo.symm)))
+  invArray := a.invArray.swaps (bs.reverse.map fun b => ((a.getAt b.1).cast a.sizeInv.symm,
+    (a.getAt b.2).cast a.sizeInv.symm))
+  sizeTo := (a.toArray.size_swaps _).trans a.sizeTo
+  sizeInv := (a.invArray.size_swaps _).trans a.sizeInv
+  left_inv' := by
+    intro i
+    simp_rw [a.toArray.get_swaps_eq_get_apply_swaps', a.invArray.get_swaps_eq_get_apply_swaps',
+    ← getAt_mk, ← getInv_mk, map_map, comp_def, coe_cast,
+    getInv_apply_eq, mk_eq_iff_val_eq, swaps_coe, Fin.eta, ← mulEquivPerm_apply_apply,
+    ← Perm.mul_apply, mul_swaps_eq_swaps_mul, Perm.mul_apply, ← swaps_coe, map_map, comp_def,
+    map_reverse, Equiv.swaps_reverse, Perm.inv_apply_self]
 
 @[simp]
 theorem swaps_nil (a : ArrayPerm n) : a.swaps [] = a := rfl
@@ -683,11 +791,11 @@ theorem swaps_concat (a : ArrayPerm n) (bs : List (Fin n × Fin n)) (b : Fin n �
 
 theorem swaps_toArray (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
     (a.swaps bs).toArray =
-  a.toArray.swaps (bs.map (Prod.map (Fin.cast a.sizeTo.symm) (Fin.cast a.sizeTo.symm))) := by
+  a.toArray.swaps (bs.map (fun b => (b.1.cast a.sizeTo.symm, b.2.cast a.sizeTo.symm))) := by
   induction' bs using list_reverse_induction with b bs IH generalizing a
   · rfl
-  · simp_rw [← concat_eq_append, swaps_concat, swap_toArray, map_concat, Prod_map,
-    Array.swaps_concat, Fin.cast_trans]
+  · simp_rw [← concat_eq_append, swaps_concat, swap_toArray,
+    map_concat, Array.swaps_concat, Fin.cast_trans]
     exact swap_congr _ _ (IH a) rfl rfl
 
 theorem swaps_getAt (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
@@ -732,7 +840,7 @@ theorem one_swaps_mul_one_swaps_reverse (bs : List (Fin n × Fin n)) :
   simp_rw [map_mul, map_one, mulEquivPerm_one_swaps, swaps_mul_swaps_reverse]
 
 @[simp]
-theorem one_swaps_mul_self (bs : List (Fin n × Fin n)) :
+theorem one_swaps_reverse_mul_one_swaps (bs : List (Fin n × Fin n)) :
     swaps 1 bs.reverse * swaps 1 bs = 1 := by
   apply mulEquivPerm.injective
   simp_rw [map_mul, map_one, mulEquivPerm_one_swaps, swaps_reverse_mul_swaps]
@@ -744,70 +852,47 @@ theorem one_swaps_inverse (bs : List (Fin n × Fin n)) :
   simp_rw [map_inv, mulEquivPerm_one_swaps, swaps_inverse]
 
 theorem swaps_eq_one_swaps_mul (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
-    a.swaps bs = swaps 1 (bs.map <| Prod.map a.getAt a.getAt) * a := by
+    a.swaps bs = swaps 1 (bs.map fun b => (a.getAt b.1, a.getAt b.2)) * a := by
   apply mulEquivPerm.injective
   simp_rw [map_mul, mulEquivPerm_one_swaps, mulEquivPerm_swaps,
-  mul_swap_eq_swap_mul, mulEquivPerm_apply_apply]
+  mul_swaps_eq_swaps_mul, mulEquivPerm_apply_apply]
 
-theorem swaps_invArray (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
-    (a.swaps bs).invArray = a.invArray.swaps
-  (bs.reverse.map (Prod.map (Fin.cast a.sizeInv.symm ∘ a.getAt) (Fin.cast a.sizeInv.symm ∘ a.getAt))) := by
-  induction' bs with b bs IH generalizing a
-  · rfl
-  · simp_rw [swaps_cons]
-    simp only [reverse_cons, map_append, map_cons, Prod_map, comp_apply, map_nil]
-    simp_rw [Array.swaps_append, IH, swap_invArray]
-    simp?
+theorem swaps_getAt' (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
+    (a.swaps bs).getAt = Equiv.swaps (bs.map fun b => (a.getAt b.1, a.getAt b.2)) ∘ a.getAt := by
+  rw [swaps_eq_one_swaps_mul, mul_getAt, one_swaps_getAt]
 
-  --induction' bs using list_reverse_induction with b bs IH generalizing a
-  --· rfl
-  --· simp_rw [← concat_eq_append] ; simp[Array.swaps_concat]
+theorem swaps_inv_eq_one_swaps_mul (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
+    (a.swaps bs)⁻¹ = swaps 1 bs.reverse * a⁻¹ := by
+  rw [swaps_eq_mul_one_swaps, mul_inv_rev, one_swaps_inverse]
 
-/-
-theorem swaps_eq_mul_ofPerm (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
-    a.swaps bs = a * ofPerm (Equiv.swaps bs) := by
-  induction' bs using list_reverse_induction with b bs IH generalizing a
-  · simp_rw [swaps_nil, Equiv.swaps_nil, ofPerm_one, mul_one]
-  · simp_rw [swaps_append, swaps_singleton, (a.swaps b).swap_eq_mul_ofPerm, IH, mul_assoc,
-    Equiv.swaps_append, Equiv.swaps_singleton, ofPerm_mul]-/
+theorem swaps_inv_eq_mul_one_swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
+    (a.swaps bs)⁻¹ = a⁻¹ * swaps 1 (bs.map fun b => (a.getAt b.1, a.getAt b.2)).reverse := by
+  rw [swaps_eq_one_swaps_mul, mul_inv_rev, mul_right_inj, one_swaps_inverse]
 
+theorem swaps_getInv' (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
+    (a.swaps bs).getInv = Equiv.swaps bs.reverse ∘ a.getInv := by
+  rw [swaps_eq_mul_one_swaps, mul_getInv, one_swaps_getInv]
 
+theorem swaps_getInv (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : (a.swaps bs).getInv =
+    a.getInv ∘ Equiv.swaps (bs.map fun b => (a.getAt b.1, a.getAt b.2)).reverse := by
+  rw [swaps_eq_one_swaps_mul, mul_getInv, one_swaps_getInv]
 
-
+theorem swaps_invArray (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : (a.swaps bs).invArray =
+    a.invArray.swaps (bs.reverse.map fun b => ((a.getAt b.1).cast a.sizeInv.symm,
+    (a.getAt b.2).cast a.sizeInv.symm)) := by
+  rw [← inv_inv (a.swaps bs)]
+  simp_rw [swaps_inv_eq_mul_one_swaps, inv_invArray, ← swaps_eq_mul_one_swaps,
+  swaps_toArray, reverse_map, map_map, comp_def, a.inv_toArray]
 
 theorem swaps_swaps_reverse (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
     (a.swaps bs).swaps bs.reverse = a := by
-  simp_rw [swaps_eq_mul_ofPerm, Equiv.swaps_reverse, ofPerm_inv, mul_inv_cancel_right]
+  rw [swaps_eq_mul_one_swaps, swaps_eq_mul_one_swaps, mul_assoc,
+  one_swaps_mul_one_swaps_reverse, mul_one]
 
 theorem swaps_reverse_swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
     (a.swaps bs.reverse).swaps bs = a := by
-  simp_rw [swaps_eq_mul_ofPerm, Equiv.swaps_reverse, ofPerm_inv, inv_mul_cancel_right]
-
-theorem one_swaps (bs : List (Fin n × Fin n)) :
-    (1 : ArrayPerm n).swaps bs = ofPerm (Equiv.swaps bs) := by
-  rw [swaps_eq_mul_ofPerm, one_mul]
-
-theorem swaps_eq_mul_one_swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
-    a.swaps bs = a * (1 : ArrayPerm n).swaps bs := by
-  rw [swaps_eq_mul_ofPerm, one_swaps]
-
-theorem swaps_getAt (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : (a.swaps bs).getAt =
-    a.getAt ∘ Equiv.swaps bs := by
-  rw [swaps_eq_mul_ofPerm, mul_getAt, ofPerm_getAt]
-
-theorem swaps_getInv (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : (a.swaps bs).getInv =
-    Equiv.swaps bs.reverse ∘ a.getInv := by
-  rw [swaps_eq_mul_ofPerm, mul_getInv, ofPerm_getInv, symm_swaps]
-
-
-
-
-  /-induction' bs using list_reverse_induction with b bs IH generalizing a
-  · rfl
-  · simp_rw [← concat_eq_append, swaps_concat, swap_invArray, map_concat, Prod_map,
-    Array.swaps_concat, comp_apply, Fin.cast_trans]
-    exact swap_congr _ _ (IH a) _ _-/
-
+  rw [swaps_eq_mul_one_swaps, swaps_eq_mul_one_swaps, mul_assoc,
+  one_swaps_reverse_mul_one_swaps, mul_one]
 
 def condFlipBit (bs : List Bool) (hbs : bs.length = n) : List (Fin n × Fin n) := _
 
