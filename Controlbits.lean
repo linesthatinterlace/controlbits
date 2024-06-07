@@ -407,18 +407,24 @@ def controlBits3_normal : ControlBits 3 :=
 
 
 
-def controlBits2_perm : Perm (Fin 8) := ArrayPerm.mk (n := 8)
-  (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5])
+def controlBits2_perm : Perm (Fin 8) := ArrayPerm.mulEquivPerm (ArrayPerm.mk (n := 8)
+  (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5]))
 
-def controlBits3_perm : Perm (Fin 16) := ArrayPerm.mk (n := 16)
+def controlBits3_perm : Perm (Fin 16) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 16)
   (#[0, 15, 1, 14, 2, 13, 3, 12, 4, 11, 5, 10, 6, 9, 7, 8])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 15, 13, 11, 9, 7, 5, 3, 1])
 
-def controlBits4_perm : Perm (Fin 32) := ArrayPerm.mk (n := 32)
+def controlBits4_perm : Perm (Fin 32) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 32)
   (#[0, 31, 1, 30, 2, 29, 3, 28, 4, 27, 5, 26, 6, 25, 7, 24,
       8, 23, 9, 22, 10, 21, 11, 20, 12, 19, 13, 18, 14, 17, 15, 16])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
     28, 30, 31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1])
+
+def controlBits3_perm' : Perm (Fin 16) := ArrayPerm.mulEquivPerm <|
+ArrayPerm.blahj #[0, 1, 0, 1, 1, 1, 1, 1]
+
+def controlBits4_perm' : Perm (Fin 32) := ArrayPerm.mulEquivPerm <|
+ArrayPerm.blahj #[0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1]
 
 def foo (n : ℕ) (i : Fin 32) : Fin 32 :=
 match n with
@@ -450,11 +456,11 @@ instance repr_bool {α : Type u} [Repr α] : Repr (Bool → α) :=
 --#eval (ControlBits.fromPerm <| serialControlBits2.toPerm)
 
 -- #eval MiddlePerm controlBits3_perm
--- #eval FastCycleMin 1 controlBits4_perm 12
+#eval FastCycleMin 1 controlBits4_perm 12
 #eval MiddlePerm (m := 4) controlBits4_perm
 set_option profiler true
 #eval ControlBits.fromPerm (m := 2) controlBits2_perm
---#eval ControlBits.fromPerm (m := 3) controlBits3_perm
-#eval (ControlBits.fromPerm (m := 3) controlBits3_perm)
+#eval ControlBits.fromPerm (m := 3) controlBits3_perm
+#eval (ControlBits.fromPerm (m := 3) controlBits3_perm')
 #eval controlBits3_normal.toPerm
---#eval ControlBits.fromPerm (m := 4) controlBits4_perm
+--#eval ControlBits.fromPerm (m := 4) controlBits4_perm'

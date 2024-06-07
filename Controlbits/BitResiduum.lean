@@ -142,11 +142,14 @@ lemma mergeBitRes_zero_apply_true_zero_eq_one : mergeBitRes (0 : Fin (m + 1)) tr
   add_zero, Bool.cond_true, Fin.val_one, Fin.val_one', ← Nat.pow_succ,
   Nat.mod_eq_of_lt (Nat.one_lt_pow' _ _ )]
 
-lemma mergeBitRes_true_base_eq_one : mergeBitRes (m := 0) i true p = 1 := by
+lemma mergeBitRes_base_true : mergeBitRes (m := 0) i true p = 1 := by
 rw [Fin.eq_zero p, Fin.eq_zero i] ; exact mergeBitRes_zero_apply_true_zero_eq_one
 
-lemma mergeBitRes_false_base_eq_zero : mergeBitRes (m := 0) i false p = 0 := by
+lemma mergeBitRes_base_false : mergeBitRes (m := 0) i false p = 0 := by
 rw [Fin.eq_zero p] ; exact mergeBitRes_apply_false_zero
+
+lemma mergeBitRes_base : mergeBitRes (m := 0) i b p = if b then 1 else 0 :=
+  b.rec mergeBitRes_base_false mergeBitRes_base_true
 
 lemma getBit_base : getBit (m := 0) i q = decide (q = 1) := by
   rw [Fin.eq_zero i]
@@ -857,9 +860,13 @@ condFlipBit i c = fun q => bif c (getRes i q) then flipBit i q else q := rfl
 
 lemma condFlipBit_apply_eq_mergeBitRes : condFlipBit i c q =
 mergeBitRes i (xor (c (getRes i q)) (getBit i q)) (getRes i q) := by
-rw [condFlipBit_apply] ; cases (c (getRes i q))
-· rw [cond_false, Bool.false_xor, mergeBitRes_getBit_getRes]
-· rw [cond_true, Bool.true_xor, flipBit_apply]
+  rw [condFlipBit_apply] ; cases (c (getRes i q))
+  · rw [cond_false, Bool.false_xor, mergeBitRes_getBit_getRes]
+  · rw [cond_true, Bool.true_xor, flipBit_apply]
+
+lemma condFlipBit_apply_eq_swap_apply : condFlipBit i c q =
+      Equiv.swap q (mergeBitRes i (xor (c (getRes i q)) (getBit i q)) (getRes i q)) q := by
+  exact condFlipBit_apply_eq_mergeBitRes.trans (Equiv.swap_apply_left _ _).symm
 
 lemma condFlipBit_base : condFlipBit (m := 0) i c = bif c 0 then Equiv.swap 0 1 else 1 := by
   ext q : 1

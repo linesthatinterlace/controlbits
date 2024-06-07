@@ -7,8 +7,6 @@ namespace Fin
 lemma modNat_two_eq_zero_or_one (q : Fin (m*2)): modNat q = 0 ∨ modNat q = 1 :=
 (exists_fin_two ).mp ⟨_, rfl⟩
 
-lemma lt_last_iff_ne_last {i : Fin (m + 1)} : i < last m ↔ i ≠ last m := lt_top_iff_ne_top
-
 lemma rev_eq_zero_iff_last {i : Fin (m + 1)} : i.rev = 0 ↔ i = last m := by
   convert rev_inj
   exact (rev_last m).symm

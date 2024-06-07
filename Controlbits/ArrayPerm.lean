@@ -2,6 +2,7 @@ import Mathlib.Data.Fintype.Card
 import Mathlib.GroupTheory.Perm.Basic
 import Mathlib.Logic.Equiv.Fin
 import Mathlib.Data.List.Indexes
+import Controlbits.BitResiduum
 
 set_option autoImplicit false
 
@@ -34,6 +35,7 @@ theorem swap_prop (p : α → Prop) {i j k : α} (hk : p k) (hi : p i) (hj : p j
     p (swap i j k) := by
   simp_rw [swap_apply_def, apply_ite p, hi, hj, hk, ite_self]
 
+/-- `swaps bs` is the permutation that swaps each pair along the list of pairs bs. -/
 def swaps (bs : List (α × α)) : Perm α := (bs.map fun b => Equiv.swap b.1 b.2).prod
 
 @[simp]
@@ -43,13 +45,20 @@ theorem swaps_nil : swaps ([] : List (α × α)) = 1 := rfl
 theorem swaps_cons (b : α × α) (bs : List (α × α)) : swaps (b :: bs) = swap b.1 b.2 * swaps bs :=
   prod_cons
 
-theorem swaps_coe {n : ℕ} {bs : List (Fin n × Fin n)} {k : Fin n} :
-    swaps bs k = swaps (bs.map fun b => (b.1.val, b.2.val)) k := by
+@[simp]
+theorem swaps_map_apply_coe {n : ℕ} {bs : List (Fin n × Fin n)} (f g : Fin n → Fin n) {k : Fin n} :
+    swaps (bs.map fun b => ((f b.1).val, (g b.2).val)) k  =
+    swaps (bs.map fun b => (f b.1, g b.2)) k := by
   induction' bs with b bs IH
   · rfl
   · simp_rw [map_cons, swaps_cons, Perm.coe_mul, comp_apply, swap_coe, IH]
 
-theorem swaps_prop (p : α → Prop) [DecidablePred p] {k : α} (bs : List (α × α))
+@[simp]
+theorem swaps_map_coe {n : ℕ} {bs : List (Fin n × Fin n)} {k : Fin n} :
+    swaps (bs.map fun b => (b.1.val, b.2.val)) k = swaps bs k := by
+  convert bs.map_id' ▸ swaps_map_apply_coe  (fun i => i) (fun i => i)
+
+theorem swaps_prop (p : α → Prop) {k : α} (bs : List (α × α))
     (hb : ∀ b ∈ bs, p b.1 ∧ p b.2) (hk : p k) : p (swaps bs k) := by
   induction' bs with b bs IH
   · exact hk
@@ -128,15 +137,48 @@ theorem mul_swaps_eq_swaps_mul (bs : List (α × α)) (π : Perm α) :
   simp_rw [swaps_mul_eq_mul_swaps, map_map, comp_def, Perm.inv_apply_self,
   Prod.mk.eta, map_id']
 
-theorem swaps_apply_apply (bs : List (α × α)) (π : Perm α) :
+theorem mul_swaps_mul (bs : List (α × α)) (π : Perm α) :
     swaps (bs.map fun b => (π b.1, π b.2)) = π * swaps bs * π⁻¹ := by
   rw [mul_swaps_eq_swaps_mul, mul_inv_cancel_right]
+
+theorem swaps_apply_of_ne (bs : List (α × α)) (a : α) (hb : ∀ x y, (x, y) ∈ bs → a ≠ x ∧ a ≠ y) :
+    Equiv.swaps bs a = a := by
+  induction' bs with b bs IH
+  · rfl
+  · simp_rw [mem_cons] at hb
+    let IH := IH fun x y h => hb x y (Or.inr h)
+    let hb := hb b.1 b.2 (Or.inl rfl)
+    rw [swaps_cons, Perm.mul_apply, IH, Equiv.swap_apply_of_ne_of_ne hb.1 hb.2]
+#check List.recOn
+
+def swapCycle' (bs : List (α × α)) : α → List (α × α) :=
+  match bs with
+  | [] => _
+
+
+def swapCycle (bs : List (α × α)) : α → List (α × α) :=
+  bs.reverseRecOn (fun _ => []) fun bs b swc a => swc (Equiv.swap b.1 b.2 a)
+
+#eval swapCycle [(1, 1)] 4
+
+theorem swaps_apply_eq_swaps_filter_apply (bs : List (α × α)) (a : α) :
+    Equiv.swaps bs a = Equiv.swaps (bs.filter fun b => a = b.1 || a = b.2) a := by
+  induction' bs using list_reverse_induction with bs b IH generalizing a
+  · rfl
+  · simp_rw [filter_append, filter_singleton, swaps_append, Bool.apply_cond swaps,
+    swaps_singleton, swaps_nil, Perm.mul_apply]
+    rcases eq_or_ne a b.1 with rfl | ha₁
+    · sorry
+    · simp_rw [ha₁, decide_False, Bool.false_or]
+      rcases eq_or_ne a b.2 with rfl | ha₂
+      · simp_rw [decide_True, cond_true, swap_apply_right]
+      · simp_rw [ha₂, decide_False, cond_false, swap_apply_of_ne_of_ne ha₁ ha₂, IH, Perm.one_apply]
 
 end Equiv
 
 namespace Array
 
-open Equiv Function List
+open Equiv Function List Fin
 
 variable {α : Type*}
 
@@ -175,12 +217,15 @@ theorem get_swap_fin (a : Array α) {i j k : Fin a.size}
     (a.swap i j)[k] = a[Equiv.swap i.val j.val k] := by
   simp_rw [Fin.getElem_fin, a.get_swap_eq_get_apply_swap']
 
-def swaps (a : Array α) (bs : List (Fin a.size × Fin a.size)) : Array α :=
-  match bs with
+/--
+Swaps pairs of entries in an array a given by a list bs.
+-/
+@[semireducible]
+def swaps (a : Array α) : List (Fin a.size × Fin a.size) → Array α
   | [] => a
-  | (b :: bs) => (a.swap b.1 b.2).swaps
+  | b :: bs => (a.swap b.1 b.2).swaps
     (bs.map (fun b => (b.1.cast (a.size_swap _ _).symm, b.2.cast (a.size_swap _ _).symm)))
-    termination_by bs.length
+  termination_by bs => bs.length
 
 @[simp]
 theorem swaps_nil (a : Array α) : a.swaps [] = a := rfl
@@ -188,16 +233,17 @@ theorem swaps_nil (a : Array α) : a.swaps [] = a := rfl
 @[simp]
 theorem swaps_cons (a : Array α) (b : Fin a.size × Fin a.size)
     (bs : List (Fin a.size × Fin a.size)) : a.swaps (b :: bs) = (a.swap b.1 b.2).swaps
-    (bs.map (fun b => (b.1.cast (a.size_swap _ _).symm, b.2.cast (a.size_swap _ _).symm))) := rfl
+    (bs.map (fun b => (b.1.cast (a.size_swap _ _).symm, b.2.cast (a.size_swap _ _).symm))) :=
+  rfl
 
 theorem swaps_singleton (a : Array α) (b : Fin a.size × Fin a.size) :
-  a.swaps [b] = a.swap b.1 b.2 := rfl
+  a.swaps [b] = a.swap b.1 b.2 := by simp_rw [swaps_cons, map_nil, swaps_nil]
 
 @[simp]
 theorem size_swaps (a : Array α) (bs : List (Fin a.size × Fin a.size)) :
     (a.swaps bs).size = a.size :=
   match bs with
-  | [] => rfl
+  | [] => by rw[swaps_nil]
   | (b :: bs) => by rw [swaps_cons, size_swaps, size_swap]
   termination_by bs.length
 
@@ -209,11 +255,9 @@ theorem swaps_append (a : Array α) (bs₁ bs₂ : List (Fin a.size × Fin a.siz
   | (b₁ :: bs₁) => by
     rw [cons_append, swaps_cons, map_append]
     refine' ((a.swap b₁.1 b₁.2).swaps_append _ _).trans _
-    rw [map_map]
-    rfl
+    simp_rw [map_map, comp_def, Fin.cast_trans, swaps_cons]
   termination_by bs₁.length
 
-@[simp]
 theorem swaps_concat (a : Array α) (b : Fin a.size × Fin a.size)
     (bs : List (Fin a.size × Fin a.size)) : a.swaps (bs.concat b) =
     (a.swaps bs).swap (b.1.cast (a.size_swaps _).symm) (b.2.cast (a.size_swaps _).symm) := by
@@ -226,7 +270,7 @@ theorem get_swaps_eq_get_apply_swaps (a : Array α) {bs : List (Fin a.size × Fi
     swaps_prop (fun k => k < a.size) _ (Fin.fst_lt_snd_lt_of_mem_map_val _) h) :
     (a.swaps bs)[k] = a[Equiv.swaps (bs.map fun b => (Fin.val b.1, Fin.val b.2)) k] := by
   induction' bs using list_reverse_induction with bs b IH generalizing k
-  · rfl
+  · simp_rw [swaps_nil, map_nil, Equiv.swaps_nil, Perm.one_apply]
   · simp_rw [← concat_eq_append, swaps_concat, map_concat, Equiv.swaps_concat,
     (a.swaps bs).get_swap_eq_get_apply_swap', Fin.coe_cast, Perm.coe_mul, comp_apply,
     IH _ (swap_prop (fun t => t < a.size) h (Fin.isLt _) (Fin.isLt _))]
@@ -241,8 +285,23 @@ theorem get_swaps_eq_get_apply_swaps' (a : Array α) {bs : List (Fin a.size × F
 
 end Array
 
+/--
+An `ArrayPerm n` is a permutation on `Fin n` represented by two arrays, which we can
+think of as an array of values and a corresponding area of indexes which are inverse to
+one another. (One can flip the interpretation of indexes and values, and this is essentially
+the inversion operation.)
+It is designed to be a performant version of `Equiv.Perm`.
+-/
 structure ArrayPerm (n : ℕ) where
+  /--
+  Gives the `ArrayPerm` as an array of values. Index `i` is mapped to the value at position `i`
+  in `toArray`.
+  -/
   toArray : Array (Fin n)
+  /--
+  Gives the `ArrayPerm` as an array of indexes. Value `v` is mapped to the index at position `v`
+  in `invArray`.
+  -/
   invArray : Array (Fin n)
   sizeTo : toArray.size = n := by rfl
   sizeInv : invArray.size = n := by rfl
@@ -275,6 +334,9 @@ theorem lt_of_lt_invArray_size {a : ArrayPerm n} {i : ℕ} (h : i < a.invArray.s
 theorem coe_lt_invArray_size (a : ArrayPerm n) {i : Fin n} :
   i < a.invArray.size := i.val_lt_of_le a.sizeInv.ge
 
+/--
+`getAt` is the forward function represented by the `ArrayPerm`.
+-/
 def getAt (a : ArrayPerm n) : Fin n → Fin n :=
   fun i => have := a.sizeTo ; a.toArray[(i : ℕ)]
 
@@ -282,11 +344,14 @@ def getAt (a : ArrayPerm n) : Fin n → Fin n :=
 theorem mk_getAt {a b : Array (Fin n)} {sa sb hab} :
   getAt ⟨a, b, sa, sb, hab⟩ = fun i => a[i] := rfl
 
-theorem getAt_def (a : ArrayPerm n) {i : Fin n} :
-  a.getAt i = a.toArray[(i : ℕ)]'a.coe_lt_toArray_size := rfl
+@[simp]
+theorem toArray_coe (a : ArrayPerm n) {i : Fin n}
+    (h : i < a.toArray.size := a.coe_lt_toArray_size) :
+  a.toArray[(i : ℕ)] = a.getAt i := rfl
 
-theorem toArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.toArray.size) :
-  a.toArray[i] = a.getAt ⟨i, lt_of_lt_toArray_size h⟩ := rfl
+@[simp]
+theorem getAt_mk (a : ArrayPerm n) {i : ℕ} (h : i < n) :
+  a.getAt ⟨i, h⟩ = a.toArray[i]'(a.sizeTo.symm.trans_gt h) := rfl
 
 theorem getAt_eq_iff_toArray_eq {a b : ArrayPerm n} :
     a.getAt = b.getAt ↔ a.toArray = b.toArray :=
@@ -294,6 +359,9 @@ theorem getAt_eq_iff_toArray_eq {a b : ArrayPerm n} :
   (fun _ _ _ => congrFun h ⟨_, a.sizeTo.trans_gt (by assumption)⟩),
   fun h => funext (fun i => by unfold getAt; simp_rw [h])⟩
 
+/--
+`getInv` is the inverse function represented by the `ArrayPerm`.
+-/
 def getInv (a : ArrayPerm n) : Fin n → Fin n :=
   fun i => have := a.sizeInv ; a.invArray[(i : ℕ)]
 
@@ -301,11 +369,14 @@ def getInv (a : ArrayPerm n) : Fin n → Fin n :=
 theorem mk_getInv {a b : Array (Fin n)} {sa sb hab} :
   getInv ⟨a, b, sa, sb, hab⟩ = fun i => b[i] := rfl
 
-theorem getInv_def (a : ArrayPerm n) {i : Fin n} :
-  a.getInv i = a.invArray[(i : ℕ)]'a.coe_lt_invArray_size := rfl
+@[simp]
+theorem getInv_mk (a : ArrayPerm n) {i : ℕ} (h : i < n) :
+  a.getInv ⟨i, h⟩ = a.invArray[i]'(a.sizeInv.symm.trans_gt h) := rfl
 
-theorem invArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.invArray.size) :
-  a.invArray[i] = a.getInv ⟨i, lt_of_lt_invArray_size h⟩ := rfl
+@[simp]
+theorem invArray_coe (a : ArrayPerm n) {i : Fin n}
+    (h : i < a.invArray.size := a.coe_lt_invArray_size) :
+  a.invArray[(i : ℕ)] = a.getInv i := rfl
 
 theorem getInv_eq_iff_invArray_eq {a b : ArrayPerm n} :
     a.getInv = b.getInv ↔ a.invArray = b.invArray :=
@@ -316,27 +387,43 @@ theorem getInv_eq_iff_invArray_eq {a b : ArrayPerm n} :
 @[simp]
 theorem getInv_getAt (a : ArrayPerm n) : ∀ i, a.getInv (a.getAt i) = i := a.left_inv'
 
-@[simp]
-theorem invArray_get_getAt (a : ArrayPerm n) {i : Fin n} :
-    a.invArray[(a.getAt i : ℕ)]'a.coe_lt_invArray_size = i := a.getInv_getAt _
+theorem invArray_get_getAt (a : ArrayPerm n) {i : Fin n}
+    (h : a.getAt i < a.invArray.size := a.coe_lt_invArray_size) :
+    a.invArray[(a.getAt i : ℕ)] = i := a.getInv_getAt _
 
 @[simp]
 theorem getInv_toArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.toArray.size) :
     a.getInv a.toArray[i] = ⟨i, lt_of_lt_toArray_size h⟩ :=
   a.getInv_getAt ⟨i, lt_of_lt_toArray_size h⟩
 
-@[simp]
-theorem invArray_get_toArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.toArray.size) :
-    a.invArray[(a.toArray[i] : ℕ)]'a.coe_lt_invArray_size = ⟨i, lt_of_lt_toArray_size h⟩ :=
-  a.getInv_toArray_get h
+theorem invArray_get_toArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.toArray.size)
+    (h' : a.toArray[i] < a.invArray.size := a.coe_lt_invArray_size) :
+    a.invArray[(a.toArray[i] : ℕ)] = ⟨i, lt_of_lt_toArray_size h⟩ := a.getInv_toArray_get h
 
-def cast (h : n = m) (a : ArrayPerm n) : ArrayPerm m where
-  toArray := (a.toArray.map <| Fin.cast h)
+/--
+`ArrayPerm.congr` re-interprets an `ArrayPerm n` as an `ArrayPerm m`, where `n = m`.
+-/
+def congr (h : n = m) (a : ArrayPerm n) : ArrayPerm m where
+  toArray := a.toArray.map <| Fin.cast h
   invArray := a.invArray.map <| Fin.cast h
   sizeTo := (a.toArray.size_map _).trans <| a.sizeTo.trans h
   sizeInv := (a.invArray.size_map _).trans <| a.sizeInv.trans h
   left_inv'  i := by
     simp only [getElem_map, coe_cast, invArray_get_toArray_get, cast_mk, Fin.eta]
+
+theorem congr_toArray (h : n = m) (a : ArrayPerm n) :
+    (a.congr h).toArray = a.toArray.map (Fin.cast h) := rfl
+
+theorem congr_invArray (h : n = m) (a : ArrayPerm n) :
+    (a.congr h).invArray = a.invArray.map (Fin.cast h) := rfl
+
+@[simp]
+theorem congr_getAt (h : n = m) (a : ArrayPerm n) :
+    (a.congr h).getAt = (finCongr h).conj a.getAt := funext fun _ => getElem_map _ _ _ _
+
+@[simp]
+theorem congr_getInv (h : n = m) (a : ArrayPerm n) :
+    (a.congr h).getInv = (finCongr h).conj a.getInv := funext fun _ => getElem_map _ _ _ _
 
 @[simp]
 theorem getAt_leftInverse (a : ArrayPerm n) :
@@ -354,19 +441,18 @@ theorem getInv_comp_getAt (a : ArrayPerm n) : a.getInv ∘ a.getAt = id :=
 theorem getAt_getInv (a : ArrayPerm n) :
     ∀ i, a.getAt (a.getInv i) = i := a.getAt_leftInverse.rightInverse_of_card_le le_rfl
 
-@[simp]
-theorem toArray_get_getInv (a : ArrayPerm n) {i : Fin n} :
-    a.toArray[(a.getInv i : ℕ)]'a.coe_lt_toArray_size = i := a.getAt_getInv _
+theorem toArray_get_getInv (a : ArrayPerm n) {i : Fin n}
+    (h : a.getInv i < a.toArray.size := a.coe_lt_toArray_size) :
+    a.toArray[(a.getInv i : ℕ)] = i := a.getAt_getInv _
 
 @[simp]
 theorem getAt_invArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.invArray.size):
     a.getAt a.invArray[i] = ⟨i, lt_of_lt_invArray_size h⟩ :=
   a.getAt_getInv ⟨_, lt_of_lt_invArray_size h⟩
 
-@[simp]
-theorem toArray_get_invArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.invArray.size) :
-    a.toArray[(a.invArray[i] : ℕ)]'a.coe_lt_toArray_size = ⟨i, lt_of_lt_invArray_size h⟩ :=
-  a.getAt_invArray_get h
+theorem toArray_get_invArray_get (a : ArrayPerm n) {i : ℕ} (h : i < a.invArray.size)
+    (h' : a.invArray[i] < a.toArray.size := a.coe_lt_toArray_size) :
+    a.toArray[(a.invArray[i] : ℕ)] = ⟨i, lt_of_lt_invArray_size h⟩ := a.getAt_invArray_get h
 
 protected def mk' (toArray : Array (Fin n)) (invArray : Array (Fin n))
   (sizeTo : toArray.size = n := by rfl) (sizeInv : invArray.size = n := by rfl)
@@ -454,6 +540,21 @@ rw [getAt_eq_iff_toArray_eq, ext'_iff]
 @[ext]
 theorem ext {a b : ArrayPerm n} : a.getAt = b.getAt → a = b := (ext_iff a b).mpr
 
+#check finCongr_apply
+
+def arrayPermCongr (h : n = m) : ArrayPerm n ≃ ArrayPerm m where
+  toFun := congr h
+  invFun := congr h.symm
+  left_inv a := by
+    ext : 2
+    simp only [congr_getAt, conj_apply, finCongr_symm,
+    finCongr_apply, Fin.cast_trans, cast_eq_self]
+  right_inv a := by
+    ext : 2
+    simp only [congr_getAt, conj_apply, finCongr_symm,
+    finCongr_apply, Fin.cast_trans, cast_eq_self]
+
+
 instance : Mul (ArrayPerm n) := ⟨fun a b =>
   ⟨b.toArray.map a.getAt,
     a.invArray.map b.getInv,
@@ -526,9 +627,8 @@ def swap (a : ArrayPerm n) (i j : Fin n) : ArrayPerm n where
   sizeTo := (Array.size_swap _ _ _).trans a.sizeTo
   sizeInv := (Array.size_swap _ _ _).trans a.sizeInv
   left_inv' k := by
-    simp_rw [a.toArray.get_swap _ _ _ a.coe_lt_toArray_size,
-    a.invArray.get_swap _ _ _ a.coe_lt_invArray_size, Fin.getElem_fin, coe_cast, ← getInv_def,
-    ← getAt_def, val_eq_val, ← apply_ite (a.getAt), getInv_getAt,
+    simp_rw [a.toArray.get_swap', a.invArray.get_swap', Fin.getElem_fin, coe_cast, invArray_coe,
+    toArray_coe, val_eq_val, ← apply_ite (a.getAt), getInv_getAt,
     a.getAt_bijective.injective.eq_iff]
     rcases eq_or_ne k i with rfl | hki
     · simp_rw [if_true, ite_eq_right_iff, imp_self]
@@ -602,12 +702,10 @@ theorem swap_getAt' (a : ArrayPerm n) (i j : Fin n) :
     (a.swap i j).getAt = Equiv.swap (a.getAt i) (a.getAt j) ∘ a.getAt := by
   rw [swap_eq_one_swap_mul, mul_getAt, one_swap_getAt]
 
-@[simp]
 theorem swap_getAt_apply_left (a : ArrayPerm n) (i j : Fin n) : (a.swap i j).getAt i =
-    a.getAt j := by
-  rw [swap_getAt, comp_apply, swap_apply_left]
+    a.getAt j := by rw [swap_getAt, comp_apply, swap_apply_left]
 
-@[simp]
+
 theorem swap_getAt_apply_right (a : ArrayPerm n) (i j : Fin n) : (a.swap i j).getAt j =
     a.getAt i := by
   rw [swap_getAt, comp_apply, swap_apply_right]
@@ -629,7 +727,6 @@ theorem swap_getInv' (a : ArrayPerm n) (i j : Fin n) : (a.swap i j).getInv =
     Equiv.swap i j ∘ a.getInv := by
   rw [swap_eq_mul_one_swap, mul_getInv, one_swap_getInv]
 
-@[simp]
 theorem swap_getInv_apply' (a : ArrayPerm n) (i j k : Fin n) :
     (a.swap i j).getInv k = Equiv.swap i j (a.getInv k) := by
   rw [swap_getInv', comp_apply]
@@ -639,12 +736,10 @@ theorem swap_getInv_apply (a : ArrayPerm n) (i j k : Fin n) :
     (a.swap i j).getInv k = a.getInv (Equiv.swap (a.getAt i) (a.getAt j) k) := by
   rw [swap_getInv, comp_apply]
 
-@[simp]
 theorem swap_getInv_apply_left (a : ArrayPerm n) (i j : Fin n) :
     (a.swap i j).getInv (a.getAt i) = j := by
   rw [swap_getInv_apply, swap_apply_left, getInv_getAt]
 
-@[simp]
 theorem swap_getInv_apply_right (a : ArrayPerm n) (i j : Fin n) : (a.swap i j).getInv (a.getAt j) =
     i := by
   rw [swap_getInv_apply, swap_apply_right, getInv_getAt]
@@ -672,10 +767,9 @@ def swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : ArrayPerm n where
   sizeInv := (a.invArray.size_swaps _).trans a.sizeInv
   left_inv' i := by
     simp_rw [a.toArray.get_swaps_eq_get_apply_swaps', a.invArray.get_swaps_eq_get_apply_swaps',
-    toArray_get, invArray_get, map_map, comp_def, coe_cast,
-    getInv_apply_eq, mk_eq_iff_val_eq, ← swaps_coe, Fin.eta, ← mulEquivPerm_apply_apply,
-    ← Perm.mul_apply, mul_swaps_eq_swaps_mul, Perm.mul_apply, swaps_coe, map_map, comp_def,
-    map_reverse, Equiv.swaps_reverse, Perm.inv_apply_self]
+    map_map, comp_def, coe_cast, swaps_map_apply_coe, swaps_map_coe, toArray_coe, invArray_coe,
+    getInv_apply_eq, ← mulEquivPerm_apply_apply, ← Perm.mul_apply, mul_swaps_eq_swaps_mul,
+    Perm.mul_apply, map_reverse, Equiv.swaps_reverse,Perm.inv_apply_self]
 
 theorem swaps_toArray (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
     (a.swaps bs).toArray =
@@ -688,9 +782,8 @@ theorem swaps_invArray (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : (a.swaps
 @[simp]
 theorem swaps_getAt (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
     (a.swaps bs).getAt = a.getAt ∘ Equiv.swaps bs :=
-  funext fun i => (a.toArray.get_swaps_eq_get_apply_swaps' _ _).trans <|
-    (a.toArray_get _).trans (congrArg _ <| Fin.ext <|
-    by simp_rw [swaps_coe, map_map, comp_def, coe_cast])
+  funext fun i => (a.toArray.get_swaps_eq_get_apply_swaps' _ _).trans <| by
+  simp only [map_map, comp_def, coe_cast, swaps_map_coe, toArray_coe, comp_apply]
 
 @[simp]
 theorem swaps_getAt_apply (a : ArrayPerm n) (bs : List (Fin n × Fin n)) (k : Fin n) :
@@ -705,7 +798,6 @@ theorem mulEquivPerm_swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
     mulEquivPerm (swaps a bs) = mulEquivPerm a * Equiv.swaps bs := Equiv.ext fun _ => by
   simp only [mulEquivPerm_apply_apply, swaps_getAt_apply, Perm.mul_apply]
 
-@[simp]
 theorem mulEquivPerm_one_swaps (bs : List (Fin n × Fin n))  :
     mulEquivPerm (swaps 1 bs) = Equiv.swaps bs := by simp_rw [mulEquivPerm_swaps, map_one, one_mul]
 
@@ -732,6 +824,11 @@ theorem swaps_getInv (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : (a.swaps b
   swaps_getAt, one_getAt, id_comp]
 
 @[simp]
+theorem swaps_getInv_apply (a : ArrayPerm n) (bs : List (Fin n × Fin n)) (k : Fin n) :
+    (a.swaps bs).getInv k =
+    a.getInv (Equiv.swaps (bs.reverse.map fun b => (a.getAt b.1, a.getAt b.2)) k) := by
+  rw [swaps_getInv, comp_apply]
+
 theorem one_swaps_getAt (bs : List (Fin n × Fin n)) : (swaps 1 bs).getAt = Equiv.swaps bs := by
   simp only [swaps_getAt, one_getAt, id_comp]
 
@@ -799,13 +896,40 @@ theorem swaps_concat (a : ArrayPerm n) (bs : List (Fin n × Fin n)) (b : Fin n �
   a.swaps (bs.concat b) = (a.swaps bs).swap b.1 b.2 := by
   simp_rw [concat_eq_append, swaps_append, swaps_singleton]
 
-
-def condFlipBit (bs : Array (Fin 2)) : List (Fin ((bs.size)*2) × Fin ((bs.size)*2)) :=
-(Fin.list (bs.size)).map fun k => (finProdFinEquiv (k, 0), finProdFinEquiv (k, bs.get k))
-
-def blahj (bs : Array (Fin 2)) : ArrayPerm ((bs.size)*2) := swaps 1 <|
-  (Fin.list (bs.size)).map fun k => (finProdFinEquiv (k, 0), finProdFinEquiv (k, bs.get k))
-
-#eval (blahj #[0, 1, 0, 1]).swap (0 : Fin 8) (2 : Fin 8)
-
 end ArrayPerm
+
+open ArrayPerm
+
+def condPairs' (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 2^m) :
+    List (BV (m + 1) × BV (m + 1)) :=
+  match m with
+  | 0 => [(0, bif bs[0] then 1 else 0)]
+  | m + 1 => _
+
+def condPairs (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 2^m) :=
+    (Fin.list (2^m)).map fun k => (mergeBitRes i false k, mergeBitRes i (bs[(k : ℕ)]) k)
+
+lemma condPairs_base (i : Fin 1) (bs : Array Bool) (hbs : bs.size = 1) :
+    condPairs 0 i bs hbs = [((0 : BV 1), bif bs[0] then 1 else 0)] := by
+  simp_rw [condPairs, Nat.pow_zero, Fin.fin_one_eq_zero, Bool.cond_eq_ite, Fin.list_succ,
+    Fin.list_zero, List.map_cons, List.map_nil, mergeBitRes_base, if_false, Fin.coe_fin_one]
+
+lemma equivCondPairs_eq_condFlipBit {m : ℕ} (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 2^m) :
+    Equiv.swaps (condPairs m i bs hbs) = condFlipBit i fun k => bs[k] := by
+  induction' m with m IH
+  · simp_rw [condFlipBit_base, condPairs_base, Equiv.swaps_singleton, Fin.getElem_fin,
+      Fin.coe_fin_one]
+    cases bs[0]
+    · simp_rw [cond_false, Equiv.swap_self, Equiv.Perm.one_def]
+    · rfl
+  ·
+/-
+def condFlipBit' (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 2^m) :=
+    swaps 1 <| (Fin.list (2^m)).map fun k =>
+    (mergeBitRes i false k, mergeBitRes i (bs.get (k.cast hbs.symm)) k)
+-/
+/-
+#eval [0, 1, 2, 3, 4, 5, 6, 7].map (condFlipBit (1 : Fin 3) (#[false, true, false, true].get ∘ Fin.cast rfl))
+#eval [0, 1, 2, 3, 4, 5, 6, 7].map (mulEquivPerm (condFlipBit' 3 1 (#[false, true, false, true]) rfl))
+
+-/
