@@ -202,10 +202,12 @@ theorem mul_swaps_mul (bs : List (α × α)) (π : Perm α) :
 
 theorem swaps_nil_apply (a : α) : Equiv.swaps [] a = a := rfl
 
+@[simp]
 theorem swaps_concat_apply_left (bs : List (α × α)) (b : α × α) :
     swaps (bs ++ [b]) b.1 = swaps bs b.2 := by
   rw [swaps_concat, Perm.mul_apply, uncurry_swap_apply, swap_apply_left]
 
+@[simp]
 theorem swaps_concat_apply_right (bs : List (α × α)) (b : α × α) :
     swaps (bs ++ [b]) b.2 = swaps bs b.1 := by
   rw [swaps_concat, Perm.mul_apply, uncurry_swap_apply, swap_apply_right]
@@ -235,6 +237,39 @@ theorem swaps_apply_of_ne (bs : List (α × α)) (a : α)
     let hb := hb b (Or.inr rfl)
     rw [swaps_concat_apply_of_ne_of_ne bs hb.1 hb.2, IH]
 
+theorem swaps_apply_eq_swap_of_nodup_of_norep (bs : List (α × α)) (hbn : bs.Nodup)
+  (hxy : ∀ {b b'}, b ∈ bs → b' ∈ bs → b ≠ b' → b.1 ≠ b'.1 ∧ b.1 ≠ b'.2 ∧ b.2 ≠ b'.1 ∧ b.2 ≠ b'.2) :
+    ∀ b ∈ bs, Equiv.swaps bs b.1 = b.2 ∧ Equiv.swaps bs b.2 = b.1 := fun b hb => by
+  induction' bs using list_reverse_induction with bs b' IH
+  · exact (List.not_mem_nil _ hb).elim
+  · simp_rw [List.nodup_append, List.nodup_singleton, true_and, List.disjoint_singleton] at hbn
+    simp_rw [mem_append, mem_singleton] at hb hxy
+    simp_rw [swaps_append, swaps_singleton, Perm.mul_apply, uncurry_swap_apply]
+    rcases hb with hb | rfl
+    · have H := hxy (Or.inl hb) (Or.inr rfl) (ne_of_mem_of_not_mem hb hbn.2)
+      convert IH hbn.1 (fun h₁ h₂ h₃ => hxy (Or.inl h₁) (Or.inl h₂) h₃) hb
+      exacts [swap_apply_of_ne_of_ne H.1 H.2.1, swap_apply_of_ne_of_ne H.2.2.1 H.2.2.2]
+    · have H := fun b' (hb' : b' ∈ bs) =>
+        hxy (Or.inr rfl) (Or.inl hb') (ne_of_mem_of_not_mem hb' hbn.2).symm
+      simp_rw [swap_apply_left, swap_apply_right]
+      exact ⟨swaps_apply_of_ne bs b.2 (fun _ hb' => (H _ hb').2.2),
+        swaps_apply_of_ne bs b.1 (fun _ hb' => ⟨(H _ hb').1, (H _ hb').2.1⟩)⟩
+
+theorem swaps_apply_self_or_pairs_mem_of_nodup_of_norep (bs : List (α × α)) (hbn : bs.Nodup)
+  (hxy : ∀ {b b'}, b ∈ bs → b' ∈ bs → b ≠ b' → b.1 ≠ b'.1 ∧ b.1 ≠ b'.2 ∧ b.2 ≠ b'.1 ∧ b.2 ≠ b'.2) :
+    ∀ a : α, swaps bs a = a ∨ (a, swaps bs a) ∈ bs ∨ (swaps bs a, a) ∈ bs := fun a => by
+  by_cases h : ∀ b, b ∈ bs → a ≠ b.1 ∧ a ≠ b.2
+  · exact Or.inl (swaps_apply_of_ne bs a h)
+  · refine' Or.inr _
+    push_neg at h
+    rcases h with ⟨b, hb, hba⟩
+    have H := swaps_apply_eq_swap_of_nodup_of_norep bs hbn hxy b hb
+    rcases eq_or_ne a b.1 with rfl | ha
+    · rw [H.1]
+      exact Or.inl hb
+    · rw [hba ha, H.2]
+      exact Or.inr hb
+
 theorem swaps_apply_rdropWhile (bs : List (α × α)) (a : α) :
     Equiv.swaps bs a = Equiv.swaps
     (bs.rdropWhile (fun b => !decide (a = b.1) && !decide (a = b.2))) a := by
@@ -262,41 +297,69 @@ theorem swaps_apply_filter_eq (bs : List (α × α)) :
     · simp_rw [h, decide_True, cond_true, mul_one, IH, swap_self, Perm.mul_refl]
     · simp_rw [h, decide_False, cond_false, IH]
 
-theorem forall_swaps_iff (p : Perm α → Prop) :
-    (∀ bs, p (Equiv.swaps bs)) ↔ (∀ bs, (∀ b ∈ bs, b.1 ≠ b.2) → p (Equiv.swaps bs)) := by
-  refine' ⟨fun h _ _ => h _, fun H bs => swaps_apply_filter_eq bs ▸ H _ _⟩
-  simp_rw [mem_filter, not_decide_eq_true, ne_eq, and_imp, imp_self, implies_true]
+def swapsChain (bs : List (α × α)) : α → List (α × α) :=
+  bs.reverseRecOn (fun _ => []) (fun _ b sc a =>
+  if a = b.1 then sc b.2 ++ [b] else if a = b.2 then sc b.1 ++ [b] else sc a)
 
-theorem swaps_apply_eq_swap_of_just_once (bs  : List (α × α)) (a : α) (b : α × α) (hb : b ∈ bs)
-  (hab : a = b.1 ∨ a = b.2) (bsn : bs.Nodup)
-  (hbb : ∀ b', b' ∈ bs → b ≠ b' → b.1 ≠ b'.1 ∧ b.1 ≠ b'.2 ∧ b.2 ≠ b'.1 ∧ b.2 ≠ b'.2) :
-    Equiv.swaps bs a = Equiv.swap b.1 b.2 a := by
-  rcases (List.append_of_mem hb) with ⟨bsl, bsu, rfl⟩
-  simp_rw [List.nodup_append, List.nodup_cons, List.disjoint_cons_right] at bsn
-  obtain hbu := bsn.2.1.1
-  obtain hbl := bsn.2.2.1
-  obtain hbsu : ∀ b ∈ bsu, a ≠ b.1 ∧ a ≠ b.2 := by {
-    intro b' hb'
-    rcases eq_or_ne b b' with rfl | hbb'
-    · exact (hbu hb').elim
-    · obtain ⟨hbb'₁₁, hbb'₁₂, hbb'₂₁, hbb'₂₂⟩ :=
-      hbb _ (mem_append_right _ ((mem_cons_of_mem b hb'))) hbb'
-      rcases hab with rfl | rfl
-      · exact ⟨hbb'₁₁, hbb'₁₂⟩
-      · exact ⟨hbb'₂₁, hbb'₂₂⟩ }
-  obtain hbsl : ∀ b' ∈ bsl, (swap b.1 b.2) a ≠ b'.1 ∧ (swap b.1 b.2) a ≠ b'.2 := by {
-    intro b' hb'
-    rcases eq_or_ne b b' with rfl | hbb'
-    · exact (hbl hb').elim
-    · obtain ⟨hbb'₁₁, hbb'₁₂, hbb'₂₁, hbb'₂₂⟩ :=
-      (hbb b' (mem_append_left _ hb') hbb')
-      rcases hab with rfl | rfl
-      · rw [swap_apply_left]
-        exact ⟨hbb'₂₁, hbb'₂₂⟩
-      · rw [swap_apply_right]
-        exact ⟨hbb'₁₁, hbb'₁₂⟩ }
-  simp_rw [swaps_append, swaps_cons, Perm.mul_apply, uncurry_swap_apply,
-  swaps_apply_of_ne bsu a hbsu, swaps_apply_of_ne bsl _ hbsl]
+@[simp]
+lemma swapsChain_nil (a : α) : swapsChain [] a = [] := by
+  unfold swapsChain
+  simp_rw [reverseRecOn_nil]
+
+lemma swapsChain_concat (bs : List (α × α)) (b : α × α) (a : α) :
+    swapsChain (bs ++ [b]) a = if a = b.1 then swapsChain bs b.2 ++ [b]
+    else if a = b.2 then swapsChain bs b.1 ++ [b]
+    else swapsChain bs a := by
+  unfold swapsChain
+  simp_rw [reverseRecOn_concat]
+
+@[simp]
+lemma swapsChain_concat_left (bs : List (α × α)) (b : α × α) :
+    swapsChain (bs ++ [b]) b.1 = swapsChain bs b.2 ++ [b] := by
+  simp_rw [swapsChain_concat, if_true]
+
+@[simp]
+lemma swapsChain_concat_right (bs : List (α × α)) (b : α × α) :
+    swapsChain (bs ++ [b]) b.2 = swapsChain bs b.1 ++ [b] := by
+  simp_rw [swapsChain_concat, if_true]
+  rcases eq_or_ne b.2 b.1 with h | h
+  · simp_rw [h, if_true]
+  · simp_rw [h, if_false]
+
+lemma swapsChain_concat_of_ne_of_ne (bs : List (α × α)) {b : α × α} {a : α}
+  (h₁ : a ≠ b.1) (h₂ : a ≠ b.2) :
+    swapsChain (bs ++ [b]) a = swapsChain bs a := by
+  simp_rw [swapsChain_concat, h₁, h₂, if_false]
+
+theorem swaps_swapsChain (bs : List (α × α)) (a : α) :
+    swaps bs a = swaps (swapsChain bs a) a := by
+  induction' bs using list_reverse_induction with bs b IH generalizing a
+  · simp_rw [swapsChain_nil]
+  · rcases eq_or_ne a b.1 with rfl | h₁
+    · simp_rw [swapsChain_concat_left, swaps_concat_apply_left, IH]
+    · rcases eq_or_ne a b.2 with rfl | h₂
+      · simp_rw [swapsChain_concat_right, swaps_concat_apply_right, IH]
+      · simp_rw [swapsChain_concat_of_ne_of_ne _ h₁ h₂, swaps_concat_apply_of_ne_of_ne _ h₁ h₂, IH]
+
+theorem swapsChain_swapsChain (bs : List (α × α)) (a : α) :
+    swapsChain (swapsChain bs a) a = swapsChain bs a := by
+  induction' bs using list_reverse_induction with bs b IH generalizing a
+  · simp_rw [swapsChain_nil]
+  · rcases eq_or_ne a b.1 with rfl | h₁
+    · simp_rw [swapsChain_concat_left, IH]
+    · rcases eq_or_ne a b.2 with rfl | h₂
+      · simp_rw [swapsChain_concat_right, IH]
+      · simp_rw [swapsChain_concat_of_ne_of_ne _ h₁ h₂, IH]
+
+theorem swapsChain_length (bs : List (α × α)) (a : α) : (swapsChain bs a).length ≤ bs.length := by
+  induction' bs using list_reverse_induction with bs b IH generalizing a
+  · simp_rw [swapsChain_nil, length_nil, le_refl]
+  · rcases eq_or_ne a b.1 with rfl | h₁
+    · simp_rw [swapsChain_concat_left, length_append, length_singleton, add_le_add_iff_right, IH]
+    · rcases eq_or_ne a b.2 with rfl | h₂
+      · simp_rw [swapsChain_concat_right, length_append, length_singleton, add_le_add_iff_right, IH]
+      · simp_rw [swapsChain_concat_of_ne_of_ne _ h₁ h₂, length_append, length_singleton]
+        exact (IH a).trans (Nat.le_succ _)
 
 end Equiv
 
@@ -1001,137 +1064,206 @@ theorem swaps_concat' (a : ArrayPerm n) (bs : List (Fin n × Fin n)) (b : Fin n 
 
 end ArrayPerm
 
-open ArrayPerm
+section FlipPairs
+
+open ArrayPerm Equiv List
+
+def flipPairs (m : ℕ) (i : Fin (m + 1)) :=
+    (List.finRange (2^m)).map fun k => (mergeBitRes i false k, mergeBitRes i true k)
+
+variable {m : ℕ} {i : Fin (m + 1)}
+
+lemma mem_flipPairs (k : BV m) : (mergeBitRes i false k, mergeBitRes i true k) ∈
+    flipPairs m i := List.mem_map.mpr ⟨k, List.mem_finRange _, rfl⟩
+
+lemma eq_mbr_of_mem_flipPairs {b} (hb : b ∈ flipPairs m i) : b =
+  (mergeBitRes i false (getRes i b.1), mergeBitRes i true (getRes i b.1)) := by
+  simp_rw [flipPairs, mem_map, mem_finRange, true_and, Prod.ext_iff, mergeBitRes_eq_iff] at hb
+  rcases hb with ⟨k, ⟨h₁, h₂⟩, ⟨h₃, h₄⟩⟩
+  simp_rw [Prod.ext_iff, eq_mergeBitRes_iff, h₁, h₃, h₂, h₄, true_and]
+
+lemma mem_flipPairs_iff {b} : b ∈ flipPairs m i ↔
+    b.1 = mergeBitRes i false (getRes i b.1) ∧
+    b.2 = mergeBitRes i true (getRes i b.1) :=
+  ⟨ fun hb => Prod.ext_iff.mp (eq_mbr_of_mem_flipPairs hb),
+    fun ⟨h₁, h₂⟩ => by rw [← Prod.eta b, h₁, h₂] ; exact mem_flipPairs _⟩
+
+lemma flipPairs_length : (flipPairs m i).length = 2^m :=
+  (List.length_map _ _).trans (List.length_finRange _)
+
+lemma flipPairs_get (t : Fin (flipPairs m i).length) :
+  (flipPairs m i).get t = (mergeBitRes i false (t.cast flipPairs_length),
+  mergeBitRes i true (t.cast flipPairs_length)) := by
+  unfold flipPairs
+  simp_rw [List.get_map, List.get_finRange, Prod.ext_iff, mergeBitRes_inj_iff, Fin.ext_iff,
+    Fin.coe_cast, true_and]
+
+lemma flipPairs_nodup : (flipPairs m i).Nodup := by
+  rw [List.nodup_iff_injective_get]
+  intro t t'
+  simp_rw [flipPairs_get, Prod.ext_iff, mergeBitRes_inj_iff, Fin.ext_iff, Fin.coe_cast, true_and,
+  and_imp, imp_self, implies_true]
+
+lemma ne_ne_ne_ne_of_mem_flipPairs_mem_flipPairs {b b'} (hb : b ∈ flipPairs m i)
+    (hb' : b' ∈ flipPairs m i) (hbb' : b ≠ b') :
+  b.1 ≠ b'.1 ∧ b.1 ≠ b'.2 ∧ b.2 ≠ b'.1 ∧ b.2 ≠ b'.2 := by
+  simp_rw [mem_flipPairs_iff] at hb hb'
+  simp_rw [Prod.ext_iff.not, not_and_or] at hbb'
+  rw [hb.1, hb.2, hb'.1, hb'.2] at hbb' ⊢
+  simp_rw [(mergeBitRes_inj_iff i).not, not_and_or, not_true_eq_false, not_false_eq_true,
+  true_or, false_or, true_and, and_self]
+  exact fun h => by simp_rw [h, not_true, or_false] at hbb'
+
+lemma mergeBitRes_true_ne_fst_of_mem_flipPairs {b} (hb : b ∈ flipPairs m i) {k} :
+    mergeBitRes i true k ≠ b.1 := by
+  simp_rw [mem_flipPairs_iff] at hb
+  rw [hb.1, mergeBitRes_ne_inj_iff]
+  exact Or.inl (Bool.false_ne_true.symm)
+
+lemma mergeBitRes_not_bit_get_val_ne_snd_of_mem_flipPairs {b} (hb : b ∈ flipPairs m i) {k} :
+    mergeBitRes i false k ≠ b.2 := by
+  simp_rw [mem_flipPairs_iff] at hb
+  simp_rw [hb.2, mergeBitRes_ne_inj_iff]
+  exact Or.inl Bool.false_ne_true
+
+lemma swaps_flipPairs_apply_mergeBitRes_false {k : BV m} :
+    swaps (flipPairs m i) (mergeBitRes i false k) = mergeBitRes i true k :=
+  (swaps_apply_eq_swap_of_nodup_of_norep (flipPairs m i) flipPairs_nodup
+    ne_ne_ne_ne_of_mem_flipPairs_mem_flipPairs _ (mem_flipPairs k)).1
+
+lemma swaps_flipPairs_apply_mergeBitRes_true {k : BV m} :
+    swaps (flipPairs m i) (mergeBitRes i true k) = mergeBitRes i false k :=
+  (swaps_apply_eq_swap_of_nodup_of_norep (flipPairs m i) flipPairs_nodup
+    ne_ne_ne_ne_of_mem_flipPairs_mem_flipPairs _ (mem_flipPairs k)).2
+
+lemma swaps_flipPairs_eq_flipBit_get :
+  swaps (flipPairs m i) = flipBit i := by
+  ext q : 1
+  rcases mergeBitRes_surj i q with ⟨b, p, rfl⟩
+  simp_rw [flipBit_mergeBitRes]
+  cases b
+  · rw [swaps_flipPairs_apply_mergeBitRes_false, Bool.not_false]
+  · rw [swaps_flipPairs_apply_mergeBitRes_true, Bool.not_true]
+
+abbrev ArrayPerm.flipBit (i : Fin (m + 1)) := swaps 1 (flipPairs m i)
+
+lemma flipPairs_swaps_apply (q : BV (m + 1)) :
+    ArrayPerm.flipBit i • q = flipBit i q := by
+  simp_rw [one_swaps_smul, swaps_flipPairs_eq_flipBit_get]
+
+lemma mulEquivPerm_swaps_flipPairs :
+    ArrayPerm.mulEquivPerm (ArrayPerm.flipBit i) = _root_.flipBit i := by
+  ext : 1
+  simp_rw [mulEquivPerm_apply_apply, flipPairs_swaps_apply]
+
+#eval ArrayPerm.flipBit (1 : Fin 10) • (3 : BV (10))
+
+end FlipPairs
+
+section _condPairs
+
+open ArrayPerm Equiv List
 
 def condPairs (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 2^m) :=
     (List.finRange (2^m)).map fun k => (mergeBitRes i false k, mergeBitRes i bs[k.val] k)
 
-lemma mem_condPairs_iff {m : ℕ} {i : Fin (m + 1)} {bs : Array Bool} {hbs : bs.size = 2^m} :
-    ∀ {b}, b ∈ condPairs m i bs hbs ↔ ∃ k : BV m,
-    b = (mergeBitRes i false k, mergeBitRes i bs[k.val] k) := fun {_} => by
-  unfold condPairs
-  simp_rw [List.mem_map, List.mem_finRange, true_and, eq_comm]
+variable {m : ℕ} {i : Fin (m + 1)} {bs : Array Bool} {hbs : bs.size = 2^m}
 
-lemma condPairs_length (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 2^m)  :
-    (condPairs m i bs hbs).length = 2^m :=
+lemma mem_condPairs (k : BV m) : (mergeBitRes i false k, mergeBitRes i bs[k.val] k) ∈
+    condPairs m i bs hbs := List.mem_map.mpr ⟨k, List.mem_finRange _, rfl⟩
+
+lemma eq_mbr_of_mem_condPairs {b} (hb : b ∈ condPairs m i bs hbs) : b =
+  (mergeBitRes i false (getRes i b.1), mergeBitRes i bs[(getRes i b.1).val] (getRes i b.1)) := by
+  simp_rw [condPairs, mem_map, mem_finRange, true_and, Prod.ext_iff, mergeBitRes_eq_iff] at hb
+  rcases hb with ⟨k, ⟨h₁, h₂⟩, ⟨h₃, h₄⟩⟩
+  simp_rw [Prod.ext_iff, eq_mergeBitRes_iff, h₁, h₃, h₂, h₄, true_and]
+
+lemma mem_condPairs_iff {b} : b ∈ condPairs m i bs hbs ↔
+    b.1 = mergeBitRes i false (getRes i b.1) ∧
+    b.2 = mergeBitRes i bs[(getRes i b.1).val] (getRes i b.1) :=
+  ⟨ fun hb => Prod.ext_iff.mp (eq_mbr_of_mem_condPairs hb),
+    fun ⟨h₁, h₂⟩ => by rw [← Prod.eta b, h₁, h₂] ; exact mem_condPairs _⟩
+
+lemma condPairs_length : (condPairs m i bs hbs).length = 2^m :=
   (List.length_map _ _).trans (List.length_finRange _)
 
-lemma condPairs_get (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 2^m) (t : BV m) :
-  (condPairs m i bs hbs).get (t.cast (condPairs_length m i bs hbs).symm) =
-  (mergeBitRes i false t, mergeBitRes i bs[t.val] t) := by
+lemma condPairs_get (t : Fin (condPairs m i bs hbs).length) :
+  (condPairs m i bs hbs).get t = (mergeBitRes i false (t.cast condPairs_length),
+  mergeBitRes i bs[(t.cast condPairs_length).val] (t.cast condPairs_length)) := by
   unfold condPairs
-  simp_rw [List.get_map, Fin.coe_cast, List.get_finRange]
+  simp_rw [List.get_map, List.get_finRange, Prod.ext_iff, mergeBitRes_inj_iff, Fin.ext_iff,
+    Fin.coe_cast, true_and]
 
-lemma condPairs_get' (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 2^m)
-  (t : Fin (condPairs m i bs hbs).length) :
-  (condPairs m i bs hbs).get t =
-  (mergeBitRes i false (t.cast (condPairs_length m i bs hbs)),
-  mergeBitRes i bs[(t.cast (condPairs_length m i bs hbs)).val]
-  (t.cast (condPairs_length m i bs hbs))) := by
-  unfold condPairs
-  simp_rw [List.get_map, List.get_finRange, Prod.mk.injEq, mergeBitRes_inj_iff,
-    true_and, Fin.ext_iff, Fin.coe_cast, and_true]
-
-lemma condPairs_nodup (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 2^m) :
-    (condPairs m i bs hbs).Nodup := by
+lemma condPairs_nodup : (condPairs m i bs hbs).Nodup := by
   rw [List.nodup_iff_injective_get]
   intro t t'
-  simp_rw [condPairs_get', Prod.ext_iff, mergeBitRes_inj_iff, Fin.ext_iff, Fin.coe_cast, true_and,
+  simp_rw [condPairs_get, Prod.ext_iff, mergeBitRes_inj_iff, Fin.ext_iff, Fin.coe_cast, true_and,
   and_imp, imp_self, implies_true]
 
-lemma ne_ne_ne_ne_of_mem_condPairs_mem_condPairs (m : ℕ) (i : Fin (m + 1))
-    (bs : Array Bool) (hbs : bs.size = 2^m) :
-    ∀ b b', b ∈ condPairs m i bs hbs → b' ∈ condPairs m i bs hbs → b ≠ b' →
-    b.1 ≠ b'.1 ∧ b.1 ≠ b'.2 ∧ b.2 ≠ b'.1 ∧ b.2 ≠ b'.2 := by
-  simp_rw [mem_condPairs_iff, ne_eq, Prod.ext_iff]
-  rintro b b' ⟨k, hb₁, hb₂⟩ ⟨k', hb'₁, hb'₂⟩
-  simp_rw [hb₁, hb₂, hb'₁, hb'₂, mergeBitRes_inj_iff, true_and, not_and_or]
-  intro H
-  suffices h : k ≠ k'
-  · exact ⟨h, Or.inr h, Or.inr h, Or.inr h⟩
-  · intro h
-    simp_rw [h, not_true, or_false] at H
+lemma ne_ne_ne_ne_of_mem_condPairs_mem_condPairs {b b'} (hb : b ∈ condPairs m i bs hbs)
+    (hb' : b' ∈ condPairs m i bs hbs) (hbb' : b ≠ b') :
+  b.1 ≠ b'.1 ∧ b.1 ≠ b'.2 ∧ b.2 ≠ b'.1 ∧ b.2 ≠ b'.2 := by
+  simp_rw [mem_condPairs_iff] at hb hb'
+  simp_rw [Prod.ext_iff.not, not_and_or] at hbb'
+  rw [hb.1, hb.2, hb'.1, hb'.2] at hbb' ⊢
+  simp_rw [(mergeBitRes_inj_iff i).not, true_and, not_and_or]
+  have h : ¬getRes i b.1 = getRes i b'.1 := fun h => by simp_rw [h, not_true, or_false] at hbb'
+  exact ⟨h, Or.inr h, Or.inr h, Or.inr h⟩
 
-lemma exists_merge_false_mem_condPairs (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool)
-    (hbs : bs.size = 2^m) (k : BV m) : ∃ b ∈ condPairs m i bs hbs, mergeBitRes i false k = b.1 :=
-  ⟨⟨mergeBitRes i false k, mergeBitRes i bs[k.val] k⟩, mem_condPairs_iff.mpr ⟨k, rfl⟩, rfl⟩
+lemma mergeBitRes_true_ne_fst_of_mem_condPairs {b} (hb : b ∈ condPairs m i bs hbs) {k} :
+    mergeBitRes i true k ≠ b.1 := by
+  simp_rw [mem_condPairs_iff] at hb
+  rw [hb.1, mergeBitRes_ne_inj_iff]
+  exact Or.inl (Bool.false_ne_true.symm)
 
-lemma forall_merge_true_nmem_condPairs_fst (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool)
-    (hbs : bs.size = 2^m) (k : BV m) :
-    ∀ b ∈ condPairs m i bs hbs, mergeBitRes i true k ≠ b.1 := fun b => by
-  simp_rw [mem_condPairs_iff]
-  rintro ⟨k, rfl⟩
-  simp_rw [ne_eq, mergeBitRes_inj_iff, false_and, not_false_eq_true]
+lemma mergeBitRes_not_bit_get_val_ne_snd_of_mem_condPairs {b} (hb : b ∈ condPairs m i bs hbs) {k} :
+    mergeBitRes i (!bs[k.val]) k ≠ b.2 := by
+  simp_rw [mem_condPairs_iff] at hb
+  rw [hb.2, mergeBitRes_ne_inj_iff]
+  exact or_not_of_imp (fun h => h ▸ Bool.not_ne_self _)
 
-lemma exists_merge_true_mem_condPairs_of_true (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool)
-    (hbs : bs.size = 2^m) (k : BV m) (hk : bs[k.val]) :
-    ∃ b ∈ condPairs m i bs hbs, mergeBitRes i true k = b.2 :=
-  ⟨⟨mergeBitRes i false k, mergeBitRes i bs[k.val] k⟩, mem_condPairs_iff.mpr ⟨k, rfl⟩,
-  by simp_rw [hk]⟩
+lemma mergeBitRes_true_ne_snd_of_mem_condPairs_of_bit_get_val_false {k} (h : bs[k.val] = false) {b}
+    (hb : b ∈ condPairs m i bs hbs) : mergeBitRes i true k ≠ b.2 := by
+  rw [← Bool.not_false, ←h]
+  exact mergeBitRes_not_bit_get_val_ne_snd_of_mem_condPairs hb
 
-lemma forall_merge_true_nmem_condPairs_of_false (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool)
-    (hbs : bs.size = 2^m) (k : BV m) (hk : bs[k.val] = false) :
-    ∀ b ∈ condPairs m i bs hbs, mergeBitRes i true k ≠ b.2 := fun b => by
-  simp_rw [mem_condPairs_iff]
-  rintro ⟨k, rfl⟩
-  simp_rw [ne_eq, mergeBitRes_inj_iff, Bool.true_eq, not_and]
-  rintro h rfl
-  simp_rw [hk] at h
+lemma swaps_condPairs_apply_mergeBitRes_false {k : BV m} :
+    swaps (condPairs m i bs hbs) (mergeBitRes i false k) = mergeBitRes i bs[k.val] k :=
+  (swaps_apply_eq_swap_of_nodup_of_norep (condPairs m i bs hbs) condPairs_nodup
+    ne_ne_ne_ne_of_mem_condPairs_mem_condPairs _ (mem_condPairs k)).1
 
+lemma swaps_condPairs_apply_mergeBitRes_bit_get_val {k : BV m} :
+    swaps (condPairs m i bs hbs) (mergeBitRes i bs[k.val] k) = mergeBitRes i false k :=
+  (swaps_apply_eq_swap_of_nodup_of_norep (condPairs m i bs hbs) condPairs_nodup
+    ne_ne_ne_ne_of_mem_condPairs_mem_condPairs _ (mem_condPairs k)).2
 
+lemma swaps_condPairs_apply_mergeBitRes_true {k : BV m} :
+    swaps (condPairs m i bs hbs) (mergeBitRes i true k) = mergeBitRes i (!bs[k.val]) k := by
+  rcases h : bs[k.val] with (_ | _)
+  · exact swaps_apply_of_ne _ _ (fun b hb =>
+      ⟨mergeBitRes_true_ne_fst_of_mem_condPairs hb,
+      mergeBitRes_true_ne_snd_of_mem_condPairs_of_bit_get_val_false h hb⟩)
+  · rw [←h, swaps_condPairs_apply_mergeBitRes_bit_get_val, h, Bool.not_true]
 
-lemma swapsCondPairs_eq_condFlipBit_get {m : ℕ} (i : Fin (m + 1)) (bs : Array Bool)
-    (hbs : bs.size = 2^m) : Equiv.swaps (condPairs m i bs hbs) =
-    condFlipBit i fun k => bs[k.val] := by
+lemma swaps_condPairs_eq_condFlipBit_get :
+  swaps (condPairs m i bs hbs) = condFlipBit i fun k => bs[k.val] := by
   ext q : 1
-  simp_rw [condFlipBit_apply]
   rcases mergeBitRes_surj i q with ⟨b, p, rfl⟩
-  simp_rw [getRes_mergeBitRes, flipBit_mergeBitRes]
+  simp_rw [condFlipBit_mergeBitRes]
   cases b
-  · have H := Equiv.swaps_apply_eq_swap_of_just_once (condPairs m i bs hbs) (mergeBitRes i false p)
-      (mergeBitRes i false p, mergeBitRes i bs[p.val] p) (mem_condPairs_iff.mpr ⟨p, rfl⟩)
-      (Or.inl rfl) (condPairs_nodup _ _ _ _) (fun _ =>
-      ne_ne_ne_ne_of_mem_condPairs_mem_condPairs _ _ _ _ _ _ (mem_condPairs_iff.mpr ⟨p, rfl⟩))
-    simp_rw [Bool.not_false]
-    rw [H, Equiv.swap_apply_left]
-    cases (bs[p.val]) <;> rfl
-  · simp_rw [Bool.not_true]
-    cases h : bs[p.val]
-    · simp_rw [Bool.cond_false]
-      rw [Equiv.swaps_apply_of_ne]
-      intro b hb
-      exact ⟨forall_merge_true_nmem_condPairs_fst m i bs hbs p b hb,
-      forall_merge_true_nmem_condPairs_of_false _ _ _ _ _ h _ hb⟩
-    · simp_rw [← h]
-      have H := Equiv.swaps_apply_eq_swap_of_just_once (condPairs m i bs hbs)
-        (mergeBitRes i bs[p.val] p)
-        _ (mem_condPairs_iff.mpr ⟨p, rfl⟩)
-        (by simp_rw [h, or_true]) (condPairs_nodup _ _ _ _) (fun _ =>
-        ne_ne_ne_ne_of_mem_condPairs_mem_condPairs _ _ _ _ _ _ (mem_condPairs_iff.mpr ⟨p, rfl⟩))
-      simp_rw [H, h, Bool.cond_true, Equiv.swap_apply_right]
+  · rw [swaps_condPairs_apply_mergeBitRes_false, Bool.xor_false]
+  · rw [swaps_condPairs_apply_mergeBitRes_true, Bool.xor_true]
 
-lemma condPairs_swaps_apply (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool)
-    (hbs : bs.size = 2^m) (q : BV (m + 1)) :
+lemma condPairs_swaps_apply (q : BV (m + 1)) :
     swaps 1 (condPairs m i bs hbs) • q = condFlipBit i (fun k => bs[k.val]) q := by
-  simp_rw [one_swaps_smul, swapsCondPairs_eq_condFlipBit_get]
+  simp_rw [one_swaps_smul, swaps_condPairs_eq_condFlipBit_get]
 
-lemma mulEquivPerm_swaps_condPairs (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool)
-    (hbs : bs.size = 2^m) :
-    ArrayPerm.mulEquivPerm (swaps 1 (condPairs m i bs hbs)) =
+lemma mulEquivPerm_swaps_condPairs :  ArrayPerm.mulEquivPerm (swaps 1 (condPairs m i bs hbs)) =
     condFlipBit i (fun k => bs[k.val]) := by
   ext : 1
   simp_rw [mulEquivPerm_apply_apply, condPairs_swaps_apply]
 
-
-/-
-
-theorem swaps_apply_fasad_left (bs bsl bsu : List (α × α)) (b : α × α)
-  (hbslu : bs = bsl ++ b :: bsu) (hbl : b ∉ bsl) (hbu : b ∉ bsu) (a : α)
-  (hba : a = b.1 ∨ a = b.2)
-  (hbb : ∀ b' ∈ bs, b' ≠ b → b.1 ≠ b'.1 ∧ b.1 ≠ b'.2 ∧ b.2 ≠ b'.1 ∧ b.2 ≠ b'.2) :
-    Equiv.swaps bs a = Equiv.swap b.1 b.2 a
--/
-
+end _condPairs
 
 /-
 

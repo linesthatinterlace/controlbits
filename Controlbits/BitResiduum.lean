@@ -337,6 +337,9 @@ lemma mergeBitRes_inj_iff (i : Fin (m + 1)) : mergeBitRes i b₁ p₁ = mergeBit
   b₁ = b₂ ∧ p₁ = p₂ :=
   ⟨mergeBitRes_inj i, by rintro ⟨rfl, rfl⟩ ; rfl⟩
 
+lemma mergeBitRes_ne_inj_iff (i : Fin (m + 1)) : mergeBitRes i b₁ p₁ ≠ mergeBitRes i b₂ p₂ ↔
+  b₁ ≠ b₂ ∨ p₁ ≠ p₂ := by rw [ne_eq, mergeBitRes_inj_iff, not_and_or]
+
 lemma getRes_getBit_inj (i : Fin (m + 1)) (h₁ : getBit i q₁ = getBit i q₂)
   (h₂ : getRes i q₁ = getRes i q₂) : q₁ = q₂ :=
   by rw [← mergeBitRes_getBit_getRes (i := i) (q := q₁), h₁, h₂, mergeBitRes_getBit_getRes]
