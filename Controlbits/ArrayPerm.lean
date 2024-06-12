@@ -1156,11 +1156,9 @@ lemma mulEquivPerm_swaps_flipPairs :
   ext : 1
   simp_rw [mulEquivPerm_apply_apply, flipPairs_swaps_apply]
 
-#eval ArrayPerm.flipBit (1 : Fin 10) • (3 : BV (10))
-
 end FlipPairs
 
-section _condPairs
+section CondPairs
 
 open ArrayPerm Equiv List
 
@@ -1263,7 +1261,7 @@ lemma mulEquivPerm_swaps_condPairs :  ArrayPerm.mulEquivPerm (swaps 1 (condPairs
   ext : 1
   simp_rw [mulEquivPerm_apply_apply, condPairs_swaps_apply]
 
-end _condPairs
+end CondPairs
 
 /-
 

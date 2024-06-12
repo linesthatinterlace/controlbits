@@ -10,32 +10,193 @@ abbrev ControlBitsLayer (m : ℕ) := BV m → Bool
 
 section Decomposition
 
-abbrev XBackXForth (π : Perm (BV (m + 1))) := ⁅π, flipBit (0 : Fin (m + 1))⁆
+abbrev XBackXForth (i : Fin (m + 1)) (π : Perm (BV (m + 1))) := ⁅π, flipBit i⁆
 
-lemma xBXF_def {π : Perm (BV (m + 1))} :
-    XBackXForth π = ⁅π, flipBit (0 : Fin (m + 1))⁆ := rfl
+lemma xBXF_def {i : Fin (m + 1)} {π : Perm (BV (m + 1))} :
+    XBackXForth i π = ⁅π, flipBit i⁆ := rfl
 
-lemma xBXF_base : XBackXForth (m := 0) π = 1 := cmtr_fin_two
 
+def FirstLayer (i : Fin (m + 1)) (π : Perm (BV (m + 1))) : ControlBitsLayer m :=
+  fun p => getBit i (FastCycleMin i.rev (XBackXForth i π) (mergeBitRes i false p))
+
+def FirstLayerPerm (i : Fin (m + 1)) (π : Perm (BV (m + 1))) := condFlipBit i (FirstLayer i π)
+
+def LastLayer (i : Fin (m + 1)) (π : Perm (BV (m + 1))) : ControlBitsLayer m :=
+  fun p => getBit i ((FirstLayerPerm i π) (π (mergeBitRes i false p)))
+
+def LastLayerPerm (i : Fin (m + 1)) (π : Perm (BV (m + 1))) := condFlipBit i (LastLayer i π)
+
+def MiddlePerm (i : Fin (m + 1)) (π : Perm (BV (m + 1))) :=
+(FirstLayerPerm i π) * π * (LastLayerPerm i π)
+
+
+abbrev PartialControlBits (m n : ℕ) := Fin (2*n + 1) → ControlBitsLayer m
+
+namespace PartialControlBits
+
+variable {m : ℕ}
+
+def PartialControlBitsZero : PartialControlBits m 0 ≃ ControlBitsLayer m :=
+  funUnique (Fin 1) (ControlBitsLayer m)
+
+def toPerm (n : Fin (m + 1)) :
+  PartialControlBits m n → Perm (BV (m + 1)) :=
+  n.induction (fun cb => condFlipBit (last _) (cb 0))
+  (fun i re cb =>
+    condFlipBit (i.rev.castSucc) (cb 0) *
+    re (fun i => cb i.castSucc.succ) *
+    condFlipBit (i.rev.castSucc) (cb (last _)))
+
+def fromPerm {m : ℕ} (n : Fin (m + 1)) : Perm (BV (m + 1)) → PartialControlBits m n :=
+n.induction (fun π _ => LastLayer (Fin.last _) π)
+(fun n re π => Fin.cons (FirstLayer n.rev.castSucc π)
+  (Fin.snoc (re (MiddlePerm n.rev.castSucc π)) (LastLayer n.rev.castSucc π)))
+
+/-
+
+    piFinSuccCastSucc.symm ((FirstLayer n.rev.castSucc π, LastLayer n.rev.castSucc π),
+    re (MiddlePerm n.rev.castSucc π)))
+
+-/
+end PartialControlBits
+
+
+abbrev ControlBits (m : ℕ) := PartialControlBits m m
+
+namespace ControlBits
+
+variable {m : ℕ}
+
+abbrev toPerm : ControlBits m → Perm (BV (m + 1)) :=
+  PartialControlBits.toPerm (last _)
+
+def fromPerm {m : ℕ} : Perm (BV (m + 1)) → ControlBits m  := PartialControlBits.fromPerm (last _)
+
+end ControlBits
+
+abbrev SerialControlBits (m : ℕ) := Fin ((2*m + 1)*(2^m)) → Bool
+
+namespace SerialControlBits
+
+variable {m : ℕ}
+
+def equivControlBits {m : ℕ} : SerialControlBits m ≃ ControlBits m :=
+(finProdFinEquiv.arrowCongr (Equiv.refl _)).symm.trans (curry _ _ _)
+
+def toPerm (cb : SerialControlBits m) : Perm (BV (m + 1)) :=
+  (ControlBits.toPerm (m := m)) (equivControlBits cb)
+
+def fromPerm (π : Perm (BV (m + 1))) : SerialControlBits m :=
+  equivControlBits.symm (ControlBits.fromPerm (m := m) π)
+
+end SerialControlBits
+
+def serialControlBits1 : SerialControlBits 1 := ![true, false, true, false, false, false]
+def controlBits1 : ControlBits 1 := ![![true, false], ![true, false], ![false, false]]
+def controlBits1_normal  : ControlBits 1 := ![![false, true], ![false, true], ![true, true]]
+def controlBits1_perm : Perm (BV 2) where
+  toFun := ![2, 0, 1, 3]
+  invFun := ![1, 2, 0, 3]
+  left_inv s := by fin_cases s <;> rfl
+  right_inv s := by fin_cases s <;> rfl
+
+def serialControlBits2 : SerialControlBits 2 :=
+  (![true, false, true, false, true, false, false, false, false, false,
+  false, false, false, false, false, true, false, false, false, false] )
+def controlBits2 : ControlBits 2 :=
+  (![![true, false, true, false], ![true, false, false, false], ![false, false,
+  false, false], ![false, false, false, true], ![false, false, false, false]] )
+def controlBits2_normal : ControlBits 2 :=
+  ![![false, true, false, true],
+  ![false, false, false, false],
+  ![false, false, false, false],
+  ![false, true, true, false],
+  ![true, true, true, true]]
+
+def controlBits3_normal : ControlBits 3 :=
+![![false, false, false, false, false, false, false, false],
+  ![false, false, false, false, false, false, false, false],
+  ![false, false, false, false, false, false, false, false],
+  ![false, false, false, false, true, true, true, true],
+  ![false, false, true, true, true, true, false, false],
+  ![false, true, true, false, false, true, true, false],
+  ![false, true, false, true, false, true, false, true]]
+
+
+
+def controlBits2_perm : Perm (Fin 8) := ArrayPerm.mulEquivPerm (ArrayPerm.mk (n := 8)
+  (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5]))
+
+def controlBits3_perm : Perm (Fin 16) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 16)
+  (#[0, 15, 1, 14, 2, 13, 3, 12, 4, 11, 5, 10, 6, 9, 7, 8])
+  (#[0, 2, 4, 6, 8, 10, 12, 14, 15, 13, 11, 9, 7, 5, 3, 1])
+
+def controlBits4_perm : Perm (Fin 32) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 32)
+  (#[0, 31, 1, 30, 2, 29, 3, 28, 4, 27, 5, 26, 6, 25, 7, 24,
+      8, 23, 9, 22, 10, 21, 11, 20, 12, 19, 13, 18, 14, 17, 15, 16])
+  (#[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
+    28, 30, 31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1])
+
+def foo (n : ℕ) (i : Fin 32) : Fin 32 :=
+match n with
+| 0 => controlBits4_perm i
+| (n + 1) => (foo n) (foo n i)
+
+instance repr_pifin_perm {n : ℕ} : Repr (Perm (Fin n)) :=
+  ⟨fun f _ => Std.Format.paren (Std.Format.joinSep
+      ((List.finRange n).map fun n => repr (f n)) (" " ++ Std.Format.line))⟩
+
+instance repr_unique {α β : Type u} [Repr α] [Unique β] : Repr (β → α) :=
+  ⟨fun f _ => repr (f default)⟩
+
+instance repr_bool {α : Type u} [Repr α] : Repr (Bool → α) :=
+  ⟨fun f _ => repr (f false) ++ " | " ++ repr (f true)⟩
+
+#eval serialControlBits1.toPerm
+#eval controlBits1.toPerm
+#eval controlBits1_normal.toPerm
+#eval controlBits1_perm
+#eval (ControlBits.fromPerm (m := 1) controlBits1_perm)
+--#eval (ControlBits.fromPerm <| serialControlBits2.toPerm)
+
+#eval serialControlBits2.toPerm
+#eval controlBits2.toPerm
+#eval controlBits2_normal.toPerm
+#eval controlBits2_perm
+#eval FirstLayer (m := 2) 0 controlBits2_perm
+#eval MiddlePerm (m := 2) 0 controlBits2_perm
+#eval MiddlePerm 1 <| MiddlePerm (m := 2) 0 controlBits2_perm
+#eval LastLayerPerm 1 <| MiddlePerm (m := 2) 0 controlBits2_perm
+#eval (FirstLayerPerm 1 <| MiddlePerm (m := 2) 0 controlBits2_perm) *
+  (MiddlePerm 1 <| MiddlePerm (m := 2) 0 controlBits2_perm) * (LastLayerPerm 1 <| MiddlePerm (m := 2) 0 controlBits2_perm)
+#eval (ControlBits.fromPerm (m := 2) controlBits2_perm)
+--#eval (ControlBits.fromPerm <| serialControlBits2.toPerm)
+
+-- #eval MiddlePerm controlBits3_perm
+#eval FastCycleMin 1 controlBits4_perm 12
+set_option profiler true
+#eval ControlBits.fromPerm (m := 2) controlBits2_perm
+#eval ControlBits.fromPerm (m := 3) controlBits3_perm
+#eval controlBits3_normal.toPerm
+
+/-
 
 -- Theorem 4.3 (c)
-lemma orderOf_xBXF_cycleOf {q : BV (m + 1)} :
-  orderOf ((XBackXForth π).cycleOf q) ≤ 2^m := by
+lemma orderOf_xBXF_cycleOf {i : Fin (m + 1)} {π : Perm (BV (m + 1))} {q : BV (m + 1)}
+    (h : ∀ k < i, bitInvar k ⇑π) : orderOf ((XBackXForth i π).cycleOf q) ≤ 2^m := by
 refine' le_of_le_of_eq (cycleAt_cmtr_card_le_card_univ_div_two rfl flipBit_ne_self) _
 · rw [Finset.card_fin, pow_succ, Nat.mul_div_left _ Nat.ofNat_pos]
 
 -- Theorem 4.4
 lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF :
-CycleMin (XBackXForth π) (flipBit 0 q) = (flipBit 0) (CycleMin (XBackXForth π) q) :=
-cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr
-  rfl flipBit_ne_self eq_flipBit_zero_of_lt_of_flipBit_zero_gt
+CycleMin (XBackXForth i π) (flipBit i q) = (flipBit i) (CycleMin (XBackXForth i π) q) :=
+cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr rfl flipBit_ne_self _
 
 lemma cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply :
 CycleMin (XBackXForth π) (π (flipBit 0 q)) = CycleMin (XBackXForth π) (flipBit 0 (π q)) :=
 cycleMin_cmtr_apply_comm
 
-def FirstLayer (π : Perm (BV (m + 1))) : ControlBitsLayer m :=
-  fun p => getBit 0 (FastCycleMin m (XBackXForth π) (mergeBitRes 0 false p))
+
 
 lemma firstLayer_def : FirstLayer (π : Perm (BV (m + 1))) p =
 getBit 0 (FastCycleMin m (XBackXForth π) (mergeBitRes 0 false p)) := by rfl
@@ -457,3 +618,4 @@ set_option profiler true
 #eval ControlBits.fromPerm (m := 2) controlBits2_perm
 #eval ControlBits.fromPerm (m := 3) controlBits3_perm
 #eval controlBits3_normal.toPerm
+-/

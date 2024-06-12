@@ -85,6 +85,30 @@ lemma mergeBitRes_apply_true_zero {i : Fin (m + 1)} :
   mergeBitRes i true 0 = ⟨2^(i : ℕ), pow_lt_pow_right one_lt_two i.isLt⟩ := by
   rw [mergeBitRes_apply, ← getBitRes_apply_two_pow (i := i), Equiv.symm_apply_apply]
 
+lemma mergeBitRes_apply' : mergeBitRes (i : Fin (m + 1)) b p = ∑ i' : Fin (m + 1),
+    i.insertNth (bif b then 1 else 0)
+    (fun b => ((p.castLE ((le_add_self).trans_eq (Nat.two_pow_succ _).symm)) / 2^b.val) % 2) i' *
+    2 ^ i'.val := by
+  unfold mergeBitRes getBitRes
+  simp [finFunctionFinEquiv]
+  norm_cast
+  ext
+  simp
+  norm_cast
+
+lemma mergeBitRes_apply_true_eq_apply_false_add_apply_true_zero {i : Fin (m + 1)} :
+    mergeBitRes i true p = mergeBitRes i false p + mergeBitRes i true 0 := by
+  --simp_rw [mergeBitRes_apply_true_zero]
+  unfold mergeBitRes getBitRes
+  simp [finFunctionFinEquiv]
+  norm_cast
+  simp_rw [Fin.add_def]
+  ext : 1
+  simp
+  rw [← Finset.sum_add_distrib, Finset.sum_nat_mod, Finset.sum_congr]
+
+
+
 def getBitResZero : BV (m + 1) ≃ Bool × BV m :=
  calc
   _ ≃ _ := finProdFinEquiv.symm
@@ -345,8 +369,8 @@ lemma getRes_getBit_inj (i : Fin (m + 1)) (h₁ : getBit i q₁ = getBit i q₂)
   by rw [← mergeBitRes_getBit_getRes (i := i) (q := q₁), h₁, h₂, mergeBitRes_getBit_getRes]
 
 lemma getRes_getBit_inj_iff (i : Fin (m + 1)) :
-getBit i q₁ = getBit i q₂ ∧ getRes i q₁ = getRes i q₂ ↔ q₁ = q₂ :=
-⟨and_imp.mpr (getRes_getBit_inj i), by rintro rfl ; exact ⟨rfl, rfl⟩⟩
+q₁ = q₂ ↔ getBit i q₁ = getBit i q₂ ∧ getRes i q₁ = getRes i q₂ :=
+⟨by rintro rfl ; exact ⟨rfl, rfl⟩, and_imp.mpr (getRes_getBit_inj i)⟩
 
 lemma mergeBitRes_eq_iff :
   mergeBitRes i b p = q ↔ (getBit i q = b) ∧ (getRes i q = p) :=
@@ -415,14 +439,25 @@ lemma getRes_surj (i : Fin (m + 1)) (q : BV (m + 1)) :
   ⟨getBit i q, mergeBitRes_getBit_getRes⟩
 
 lemma ne_iff_getBit_ne_or_getRes_ne (i : Fin (m + 1)) :
-getBit i q₁ ≠ getBit i q₂ ∨ getRes i q₁ ≠ getRes i q₂ ↔ q₁ ≠ q₂  := by
-rw [ne_eq q₁, ← getRes_getBit_inj_iff i, not_and_or]
+q₁ ≠ q₂ ↔ getBit i q₁ ≠ getBit i q₂ ∨ getRes i q₁ ≠ getRes i q₂ := by
+rw [ne_eq q₁, getRes_getBit_inj_iff i, not_and_or]
 
 lemma ne_of_getBit_ne (i : Fin (m + 1)) (h : getBit i q₁ ≠ getBit i q₂) :
-q₁ ≠ q₂ := (ne_iff_getBit_ne_or_getRes_ne i).mp (Or.inl h)
+q₁ ≠ q₂ := (ne_iff_getBit_ne_or_getRes_ne i).mpr (Or.inl h)
 
 lemma ne_of_getRes_ne (i : Fin (m + 1)) (h : getRes i q₁ ≠ getRes i q₂) :
-q₁ ≠ q₂ := (ne_iff_getBit_ne_or_getRes_ne i).mp (Or.inr h)
+q₁ ≠ q₂ := (ne_iff_getBit_ne_or_getRes_ne i).mpr (Or.inr h)
+
+lemma getBit_ext_iff {q q' : BV (m + 1)} :
+    q = q' ↔ (∀ i : Fin (m + 1), getBit i q = getBit i q') := by
+  refine' ⟨fun h _ => h ▸ rfl, fun h => _⟩
+  induction' m with m IH
+  · simp_rw [getRes_getBit_inj_iff 0, Fin.eq_zero, and_true, h]
+  · simp_rw [Fin.forall_fin_succ (P := fun i => getBit i q = getBit i q'), getBit_succ] at h
+    exact (getRes_getBit_inj_iff 0).mpr ⟨h.1, IH h.2⟩
+
+lemma getBit_ext {q q' : BV (m + 1)} (h : ∀ i : Fin (m + 1), getBit i q = getBit i q') :
+    q = q' := getBit_ext_iff.mpr h
 
 end GetMerge
 
@@ -818,8 +853,6 @@ lemma flipBit_succ_bitInvar_zero {i : Fin m} : bitInvar 0 ⇑(flipBit (i.succ)) 
 lemma flipBit_zero_bitInvar_succ {i : Fin m} : bitInvar (i.succ) ⇑(flipBit 0) :=
   bitInvar_of_getBit_apply_eq_getBit (fun _ => getBit_succ_flipBit_zero)
 
-end FlipBit
-
 @[simp]
 lemma flipBit_ne_self (q) : flipBit i q ≠ q := by
   apply ne_of_getBit_ne i
@@ -835,10 +868,26 @@ simp_rw [flipBit_mergeBitRes, getBit_mergeBitRes, getRes_mergeBitRes,
 rcases Nat.eq_false_true_of_cond_succ_lt_of_cond_succ_lt h hf with ⟨hr, hq, he⟩
 exact ⟨hr, hq, Fin.ext (Nat.eq_of_mul_eq_mul_left zero_lt_two he)⟩
 
-lemma eq_flipBit_of_lt_of_flipBit_gt (h : r < q)
+lemma eq_flipBit_zero_of_lt_of_flipBit_zero_gt (h : r < q)
 (hf : flipBit 0 q < flipBit 0 r) : r = flipBit 0 q := by
 rcases getRes_zero_eq_and_getBit_zero_opp_of_lt_of_flipBit_gt h hf with ⟨hr, hq, hrq⟩
 simp only [eq_flipBit_iff, hr, hq, hrq, Bool.not_true, and_self]
+
+lemma eq_flipBit_zero_of_lt_of_flipBit_zero_gt' (h : r < q) (hf : flipBit i q < flipBit i r) :
+    ∀ k ≥ i, getBit k r = getBit k (flipBit i q) := by
+  rcases mergeBitRes_surj i q with ⟨bq, pq, rfl⟩
+  rcases mergeBitRes_surj i r with ⟨br, pr, rfl⟩
+  simp_rw [flipBit_mergeBitRes] at hf
+  cases br <;> cases bq
+  · sorry
+  · sorry
+  · sorry
+  · sorry
+  intros k hk
+  rcases hk.eq_or_lt with rfl | hk
+  · simp_rw [getBit_mergeBitRes, flipBit_mergeBitRes, getBit_mergeBitRes]
+
+end FlipBit
 
 section CondFlipBit
 
