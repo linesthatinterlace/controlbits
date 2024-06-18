@@ -21,6 +21,24 @@ def FirstLayer (i : Fin (m + 1)) (π : Perm (BV (m + 1))) : ControlBitsLayer m :
 
 def FirstLayerPerm (i : Fin (m + 1)) (π : Perm (BV (m + 1))) := condFlipBit i (FirstLayer i π)
 
+lemma firstLayer_def {i : Fin (m + 1)} : FirstLayer i (π : Perm (BV (m + 1))) p =
+getBit i (FastCycleMin i.rev (XBackXForth i π) (mergeBitRes i false p)) := by rfl
+
+lemma firstLayer_apply {i : Fin (m + 1)} : FirstLayer i π p =
+  getBit i (CycleMin (XBackXForth i π) (mergeBitRes i false p)) := by
+  rw [FirstLayer]
+  congr
+  exact cycleMin_eq_fastCycleMin sorry
+
+-- Theorem 5.2
+lemma firstLayer_apply_zero {π : Perm (BV (m + 1))} :
+  FirstLayer i π 0 = false := by
+  simp_rw [firstLayer_apply, mergeBitRes_apply_false_zero,
+    Fin.cycleMin_zero, getBit_apply_zero]
+
+lemma firstLayer_last {π : Perm (BV (m + 1))} :
+  FirstLayer (last _) π p = false := sorry
+
 def LastLayer (i : Fin (m + 1)) (π : Perm (BV (m + 1))) : ControlBitsLayer m :=
   fun p => getBit i ((FirstLayerPerm i π) (π (mergeBitRes i false p)))
 
@@ -29,15 +47,104 @@ def LastLayerPerm (i : Fin (m + 1)) (π : Perm (BV (m + 1))) := condFlipBit i (L
 def MiddlePerm (i : Fin (m + 1)) (π : Perm (BV (m + 1))) :=
 (FirstLayerPerm i π) * π * (LastLayerPerm i π)
 
+@[simp]
+lemma condFlipBit_firstLayer : condFlipBit 0 (FirstLayer i π) = FirstLayerPerm i π := rfl
+
+lemma firstLayerPerm_apply : FirstLayerPerm i π q =
+  bif getBit i (CycleMin (XBackXForth i π) (mergeBitRes i false (getRes i q)))
+  then flipBit i q else q := firstLayer_apply ▸ condFlipBit_apply
+
+@[simp]
+lemma firstLayerPerm_symm : (FirstLayerPerm i π).symm = FirstLayerPerm i π := rfl
+
+@[simp]
+lemma inv_firstLayerPerm : (FirstLayerPerm i π)⁻¹ = FirstLayerPerm i π := rfl
+
+@[simp]
+lemma firstLayerPerm_firstLayerPerm : FirstLayerPerm i π (FirstLayerPerm i π q) = q :=
+  condFlipBit_condFlipBit
+
+@[simp]
+lemma firstLayerPerm_mul_self : (FirstLayerPerm i π) * (FirstLayerPerm i π) = 1 :=
+  condFlipBit_mul_self
+
+@[simp]
+lemma firstLayerPerm_mul_cancel_right : ρ * (FirstLayerPerm i π) * (FirstLayerPerm i π) = ρ :=
+condFlipBit_mul_cancel_right
+
+@[simp]
+lemma firstLayerPerm_mul_cancel_left : (FirstLayerPerm i π) * ((FirstLayerPerm i π) * ρ) = ρ :=
+condFlipBit_mul_cancel_left
+
+-- Theorem 5.3
+lemma getBit_zero_firstLayerPerm_apply_eq_getBit_zero_cycleMin {q} :
+    getBit i (FirstLayerPerm i π q) = getBit i (CycleMin (XBackXForth i π) q) := by
+  simp_rw [firstLayerPerm_apply, Bool.apply_cond (getBit i), getBit_flipBit]
+  rcases mergeBitRes_getRes_cases_flipBit i q false with (⟨h₁, h₂⟩ | ⟨h₁, h₂⟩)
+  · simp_rw [h₁, h₂, Bool.not_false, Bool.cond_false_right, Bool.and_true]
+  · simp_rw [h₁, h₂]
+    simp
+
+lemma lastLayer_apply : LastLayer π p =
+  getBit 0 (CycleMin (XBackXForth π) (π (mergeBitRes 0 false p))) :=
+  getBit_zero_firstLayerPerm_apply_eq_getBit_zero_cycleMin
+
+lemma lastLayer_base : LastLayer (m := 0) π = fun _ => decide (π 0 = 1) := by
+  ext
+  simp_rw [LastLayer, firstLayerPerm_base, mergeBitRes_base_false,
+    getBit_base, Perm.one_apply]
+
+def LastLayerPerm (π : Perm (BV (m + 1))) := condFlipBit 0 (LastLayer π)
+
+@[simp]
+lemma condFlipBit_lastLayer : condFlipBit 0 (LastLayer π) = LastLayerPerm π := rfl
+
+lemma lastLayerPerm_apply : LastLayerPerm π q =
+  bif getBit 0 (CycleMin (XBackXForth π) (π (mergeBitRes 0 false (getRes 0 q))))
+  then flipBit 0 q
+  else q := by
+  simp_rw [← condFlipBit_lastLayer, condFlipBit_apply, lastLayer_apply]
+
+lemma lastLayerPerm_base : LastLayerPerm (m := 0) π = π := by
+  simp_rw [LastLayerPerm, lastLayer_base, condFlipBit_base, Bool.cond_decide]
+  exact (perm_fin_two π).symm
+
+@[simp]
+lemma lastLayerPerm_symm : (LastLayerPerm π).symm = LastLayerPerm π := rfl
+
+@[simp]
+lemma lastLayerPerm_inv : (LastLayerPerm π)⁻¹ = LastLayerPerm π := rfl
+
+@[simp]
+lemma lastLayerPerm_lastLayerPerm : LastLayerPerm π (LastLayerPerm π q) = q := condFlipBit_condFlipBit
+
+@[simp]
+lemma lastLayerPerm_mul_self : (LastLayerPerm π) * (LastLayerPerm π) = 1 := condFlipBit_mul_self
+
+@[simp]
+lemma lastLayerPerm_mul_cancel_right : ρ * (LastLayerPerm π) * (LastLayerPerm π) = ρ :=
+condFlipBit_mul_cancel_right
+
+@[simp]
+lemma lastLayerPerm_mul_cancel_left : (LastLayerPerm π) * ((LastLayerPerm π) * ρ) = ρ :=
+condFlipBit_mul_cancel_left
+
+-- Theorem 5.4
+lemma getBit_zero_lastLayerPerm_apply_eq_getBit_zero_firstLayerPerm_perm_apply :
+    getBit 0 (LastLayerPerm π q) = getBit 0 (FirstLayerPerm π (π q)) := by
+  rw [getBit_zero_firstLayerPerm_apply_eq_getBit_zero_cycleMin]
+  rw [lastLayerPerm_apply, Bool.apply_cond (getBit 0), getBit_flipBit]
+  rcases mergeBitRes_getRes_cases_flipBit 0 q false with (⟨h₁, h₂⟩ | ⟨h₁, h₂⟩)
+  · rw [h₁, h₂, Bool.not_false, Bool.cond_false_right, Bool.and_true]
+  · rw [h₁, h₂, Bool.not_false, Bool.not_true, Bool.cond_true_right, Bool.or_false,
+    cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply,
+    cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF, getBit_flipBit, Bool.not_not]
 
 abbrev PartialControlBits (m n : ℕ) := Fin (2*n + 1) → ControlBitsLayer m
 
 namespace PartialControlBits
 
 variable {m : ℕ}
-
-def PartialControlBitsZero : PartialControlBits m 0 ≃ ControlBitsLayer m :=
-  funUnique (Fin 1) (ControlBitsLayer m)
 
 def toPerm (n : Fin (m + 1)) :
   PartialControlBits m n → Perm (BV (m + 1)) :=
@@ -47,10 +154,30 @@ def toPerm (n : Fin (m + 1)) :
     re (fun i => cb i.castSucc.succ) *
     condFlipBit (i.rev.castSucc) (cb (last _)))
 
+lemma toPerm_zero {cb : PartialControlBits m 0} :
+  toPerm 0 cb = condFlipBit (last _) (cb 0) := rfl
+
+lemma toPerm_succ {n : Fin m} {cb} : toPerm (n.succ) cb =
+    condFlipBit (n.rev.castSucc) (cb 0) * toPerm (n.castSucc) (fun i ↦ cb i.castSucc.succ) *
+    condFlipBit (n.rev.castSucc) (cb (last _)) := rfl
+
 def fromPerm {m : ℕ} (n : Fin (m + 1)) : Perm (BV (m + 1)) → PartialControlBits m n :=
 n.induction (fun π _ => LastLayer (Fin.last _) π)
 (fun n re π => Fin.cons (FirstLayer n.rev.castSucc π)
   (Fin.snoc (re (MiddlePerm n.rev.castSucc π)) (LastLayer n.rev.castSucc π)))
+
+lemma fromPerm_zero : fromPerm (0 : Fin (m + 1)) = fun π _ => LastLayer (last _) π := rfl
+
+lemma fromPerm_succ {n : Fin m} {π : Perm (BV (m + 1))} :
+  fromPerm n.succ π = Fin.cons (FirstLayer n.rev.castSucc π)
+  (Fin.snoc (fromPerm n.castSucc (MiddlePerm n.rev.castSucc π)) (LastLayer n.rev.castSucc π)) := rfl
+
+lemma toPerm_leftInverse (n : Fin (m + 1)) : (toPerm n).LeftInverse (fromPerm n) := by
+  unfold Function.LeftInverse
+  induction' n using Fin.induction with n IH
+  · simp_rw [fromPerm_zero, toPerm_zero]
+    sorry
+  · simp_rw [fromPerm_succ, toPerm_succ]
 
 /-
 
