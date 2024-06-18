@@ -9,39 +9,144 @@ import Controlbits.FunctionEnd
 
 namespace Nat
 
-def getBit (i q : ℕ) := q.testBit i
+lemma mod_two_eq_one_iff_iff_mod_two_eq : (a % 2 = 1 ↔ b % 2 = 1) ↔ (a % 2 = b % 2) := by
+  rcases a.mod_two_eq_zero_or_one with h | h <;> rw [h]
+  · simp_rw [false_iff, mod_two_ne_one, eq_comm]
+  · simp_rw [true_iff, eq_comm]
 
-def getRes (i q : ℕ) := (q >>> (i + 1)) <<< i + (q &&& (Nat.shiftLeft' true 0 i))
+lemma mod_two_eq_zero_iff_iff_mod_two_eq : (a % 2 = 0 ↔ b % 2 = 0) ↔ (a % 2 = b % 2) := by
+  simp_rw [← mod_two_eq_one_iff_iff_mod_two_eq, ← Nat.mod_two_ne_zero, not_iff_not]
 
-def mergeBitRes (i : ℕ) (b : Bool) (p : ℕ) :=
-  (p >>> i) <<< (i + 1) + (p &&& (Nat.shiftLeft' true 0 i)) + (b.toNat <<< i)
+lemma shiftLeft'_true {m : ℕ} (n : ℕ ) : m.shiftLeft' true n = (m <<< n) ||| (2^n - 1) := by
+  apply eq_of_testBit_eq
+  simp_rw [testBit_or, testBit_shiftLeft, testBit_two_pow_sub_one]
+  intro j
+  induction' n with n IH generalizing m j
+  · simp_rw [shiftLeft', zero_le, decide_True, Bool.true_and, not_lt_zero, decide_False,
+    Bool.or_false, Nat.sub_zero]
+  · cases' j with j
+    · simp_rw [shiftLeft', testBit_bit_zero, nonpos_iff_eq_zero, decide_False, Bool.false_and,
+      Bool.false_or, zero_lt_succ, decide_True]
+    · simp_rw [shiftLeft', testBit_bit_succ, IH, Nat.add_sub_add_right,
+      add_lt_add_iff_right, add_le_add_iff_right]
+
+lemma shiftLeft'_true_zero : shiftLeft' true 0 n = 2^n - 1 := by
+  rw [shiftLeft'_true, zero_shiftLeft, zero_or]
+
+lemma shiftLeft'_testBit {x : ℕ} : (x.shiftLeft' b i).testBit j =
+  ((j ≥ i) && x.testBit (j - i) || (j < i) && b) := by
+  cases b
+  · simp_rw [shiftLeft'_false, testBit_shiftLeft, Bool.and_false,
+    Bool.or_false]
+  · simp_rw [shiftLeft'_true, testBit_or, testBit_shiftLeft,
+    testBit_two_pow_sub_one, Bool.and_true]
+
+lemma shiftLeft'_true_zero_testBit {x : ℕ} : (shiftLeft' true 0 x).testBit j = decide (j < x) := by
+  rw [shiftLeft'_true_zero, testBit_two_pow_sub_one]
 
 lemma and_shiftLeft'_is_mod : p &&& (0 : ℕ).shiftLeft' true i = p % 2^i := by
   rw [← Nat.pred_eq_of_eq_succ (Nat.shiftLeft'_tt_eq_mul_pow _ _).symm, zero_add, one_mul,
   Nat.pred_eq_sub_one, Nat.and_pow_two_is_mod]
 
+lemma exists_pow_two_mul_of_testBit (b : ℕ) :
+    (∀ i < k, b.testBit i = false) → ∃ n, b = 2^k * n := by
+  induction' k with k IH
+  · exact fun _ => ⟨b, by rw [pow_zero, one_mul]⟩
+  · intros h
+    rcases IH (fun i hi => h i (hi.trans (Nat.lt_succ_self _))) with ⟨b, rfl⟩
+    have h := h k (Nat.lt_succ_self _)
+    simp_rw [testBit_mul_pow_two, le_refl, decide_True, Bool.true_and, Nat.sub_self,
+      testBit_zero, decide_eq_false_iff_not, mod_two_ne_one, ← Nat.dvd_iff_mod_eq_zero] at h
+    rcases h with ⟨b, rfl⟩
+    exact ⟨b, by rw [← mul_assoc, pow_succ]⟩
+
+lemma testBit_add_mul_pow_two (a : Nat) {b : Nat} {i : Nat} (b_lt : b < 2 ^ i) (j : Nat) :
+    (b + 2 ^ i * a).testBit j = if j < i then b.testBit j else a.testBit (j - i) := by
+  rw [add_comm]
+  exact testBit_mul_pow_two_add a b_lt j
+
+lemma testBit_add_mul_two_pow_eq (a : Nat) (b : Nat) (i : Nat) :
+    (b + 2 ^ i * a).testBit i = (decide (a % 2 = 1)).xor (b.testBit i) := by
+  rw [add_comm]
+  exact testBit_mul_two_pow_add_eq a b i
+
+lemma or_eq_add {a b i: ℕ} (ha : a < 2^i) (hb : ∃ k, b = 2^i * k) : a ||| b = a + b := by
+  rcases hb with ⟨b, rfl⟩
+  apply Nat.eq_of_testBit_eq
+  intros j
+  simp_rw [testBit_or, testBit_add_mul_pow_two _ ha, Nat.testBit_mul_pow_two]
+  rcases lt_or_le j i with hji | hji
+  · simp_rw [hji, if_true, hji.not_le, decide_False, Bool.false_and, Bool.or_false]
+  · simp_rw [hji, decide_True, hji.not_lt, if_false, Bool.true_and,
+    Nat.testBit_lt_two_pow (ha.trans_le (Nat.pow_le_pow_of_le one_lt_two hji)), Bool.false_or]
+
+lemma or_eq_add' {a b : ℕ} :
+    ∀ (x : ℕ), (∀ (i : ℕ), x ≤ i → a.testBit i = false) → (∀ i < x, b.testBit i = false) →
+    a ||| b = a + b := fun _ hia hib =>
+  or_eq_add (lt_pow_two_of_testBit _ hia) (exists_pow_two_mul_of_testBit _ hib)
+
+lemma nat_eq_testBit_sum_range {a : ℕ} (ha : a < 2^m) :
+    a = ∑ i ∈ Finset.range m, (a.testBit i).toNat * 2^i := by
+  induction' m with m IH generalizing a
+  · simp_rw [pow_zero, lt_one_iff] at ha
+    simp_rw [ha, Finset.range_zero, zero_testBit, Bool.toNat_false, zero_mul,
+      Finset.sum_const_zero]
+  · rw [Finset.sum_range_succ]
+    rcases lt_or_le a (2^m) with h | h
+    · rw [testBit_lt_two_pow h, Bool.toNat_false, zero_mul, add_zero]
+      exact IH h
+    · rcases (Nat.exists_eq_add_of_le h) with ⟨a, rfl⟩
+      rw [pow_succ', two_mul, add_lt_add_iff_left] at ha
+      rw [Nat.testBit_two_pow_add_eq, Nat.testBit_lt_two_pow ha,
+      Bool.not_false, Bool.toNat_true, one_mul]
+      nth_rewrite 1 [add_comm, add_left_inj, IH ha]
+      apply Finset.sum_equiv (Equiv.refl _) (by simp_rw [Equiv.refl_apply, implies_true])
+      simp_rw [Finset.mem_range, Equiv.refl_apply, mul_eq_mul_right_iff, pow_eq_zero_iff',
+        false_and, or_false]
+      exact fun _ hi => (Nat.testBit_two_pow_add_gt hi _) ▸ rfl
+
+lemma nat_eq_testBit_tsum {a : ℕ} :
+    a = ∑' i, (a.testBit i).toNat * 2^i := by
+  rcases pow_unbounded_of_one_lt a one_lt_two with ⟨k, ha⟩
+  refine' (nat_eq_testBit_sum_range ha).trans (tsum_eq_sum _).symm
+  simp_rw [Finset.mem_range, not_lt, _root_.mul_eq_zero, Bool.toNat_eq_zero, pow_eq_zero_iff',
+    false_and, or_false]
+  exact fun _ hj => testBit_lt_two_pow (ha.trans_le (Nat.pow_le_pow_of_le one_lt_two hj))
+
+def getBit (i q : ℕ) := q.testBit i
+
+def getRes (i q : ℕ) := ((q >>> (i + 1)) <<< i) ||| (q &&& (Nat.shiftLeft' true 0 i))
+
+def mergeBitRes (i : ℕ) (b : Bool) (p : ℕ) :=
+  ((p >>> i) <<< (i + 1)) ||| (p &&& (Nat.shiftLeft' true 0 i)) + (b.toNat <<< i)
+
 lemma getBit_eq : getBit i q = decide (q / 2^i % 2 = 1) := Nat.testBit_to_div_mod
 
-lemma eq_cond_getBit : q / 2^i % 2 = bif getBit i q then 1 else 0 := by
-  rw [getBit_eq]
-  rcases Nat.mod_two_eq_zero_or_one (q / 2 ^ i) with h | h
-  · simp_rw [h, decide_False, Bool.cond_false]
-  · simp_rw [h, decide_True, Bool.cond_true]
+lemma getBit_eq_iff : getBit i qi = getBit j qj ↔ qi / 2^i % 2 = qj / 2^j % 2 := by
+  simp_rw [getBit_eq, decide_eq_decide, mod_two_eq_one_iff_iff_mod_two_eq]
+
+lemma eq_cond_getBit : (getBit i q).toNat = q / 2^i % 2 := Nat.toNat_testBit _ _
 
 lemma getRes_eq : getRes i q = 2^i * (q / 2^(i + 1)) + q % 2^i := by
   unfold getRes
-  rw [and_shiftLeft'_is_mod]
-  rw [Nat.shiftLeft_eq_mul_pow, Nat.shiftRight_eq_div_pow, mul_comm]
+  rw [and_shiftLeft'_is_mod, shiftLeft_eq_mul_pow, shiftRight_eq_div_pow,
+    mul_comm, lor_comm, add_comm _ (q % 2 ^ i),
+    or_eq_add (mod_lt _ (Nat.pow_pos zero_lt_two)) ⟨q / 2 ^ (i + 1), rfl⟩]
 
 lemma mergeBitRes_eq : mergeBitRes i b p =
     2^(i + 1) * (p / 2^i) + p % 2^i + 2^i * bif b then 1 else 0 := by
   unfold mergeBitRes
-  rw [and_shiftLeft'_is_mod]
+  rw [and_shiftLeft'_is_mod, lor_comm]
   cases b
-  · simp_rw [cond_false, Bool.toNat_false, Nat.zero_shiftLeft, mul_zero, add_zero, add_left_inj,
-    Nat.shiftLeft_eq_mul_pow, Nat.shiftRight_eq_div_pow, mul_comm]
+  · simp_rw [cond_false, Bool.toNat_false, Nat.zero_shiftLeft, mul_zero, add_zero,
+    Nat.shiftLeft_eq_mul_pow, Nat.shiftRight_eq_div_pow, mul_comm (p / 2 ^ i),
+    add_comm _ (p % 2 ^ i), pow_succ, mul_assoc]
+    rw [or_eq_add (mod_lt _ (Nat.pow_pos zero_lt_two)) ⟨2 * (p / 2 ^ i), rfl⟩]
   · simp_rw [cond_true, mul_one, Bool.toNat_true, Nat.shiftLeft_eq_mul_pow, one_mul,
-    Nat.shiftRight_eq_div_pow, mul_comm]
+    Nat.shiftRight_eq_div_pow, mul_comm (p / 2 ^ i), add_assoc, add_comm _ (p % 2 ^ i + 2 ^ i)]
+    refine' (or_eq_add _ ⟨p / 2 ^ i, rfl⟩)
+    rw [pow_succ, mul_two, add_lt_add_iff_right]
+    exact mod_lt _ (Nat.pow_pos zero_lt_two)
 
 @[simp]
 lemma getBit_mergeBitRes : getBit i (mergeBitRes i b p) = b := by
@@ -106,10 +211,43 @@ lemma mergeBitRes_lt_iff_lt (hi : i ≤ m) : mergeBitRes i b p < 2^(m + 1) ↔ p
 lemma le_mergeBitRes_iff_le (hi : i ≤ m) : 2^(m + 1) ≤ mergeBitRes i b p ↔ 2^m ≤ p := by
   rw [← le_getRes_iff_ge hi, getRes_mergeBitRes]
 
-lemma ge_of_getBit_true (h : getBit i q = true) : 2^i ≤ q := by
-  rw [getBit_eq] at h
-  rcases le_or_lt (2^i) (q : ℕ) with H | H <;>
-  [exact H; simp_rw [Nat.div_eq_of_lt H, decide_False] at h]
+lemma ge_of_getBit_true (h : getBit i q = true) : 2^i ≤ q := testBit_implies_ge h
+
+lemma getBit_ext (h : ∀ i : ℕ, getBit i q = getBit i q') : q = q' := Nat.eq_of_testBit_eq h
+
+lemma getBit_ext_iff : q = q' ↔ (∀ i : ℕ, getBit i q = getBit i q') :=
+  ⟨fun h _ => h ▸ rfl, getBit_ext⟩
+
+
+lemma getBit_getRes_lower {a j q : ℕ} (ha : a < j):
+    a.getBit (j.getRes q) = a.getBit q := by
+  simp_rw [getBit, getRes] ; simp? [shiftLeft'_true_zero_testBit, ha]
+
+lemma getBit_getRes_upper (ha : j ≤ a) (hj : a < m) (hq : q < 2 ^ (m + 1)) :
+  a.getBit (j.getRes q) = (a + 1).getBit q := by sorry
+
+/-
+m : ℕ
+j : Fin (m + 1)
+q : BV (m + 1)
+a : Fin m
+h : ↑a < ↑j
+hj : ↑j ≤ m
+hq : ↑q < 2 ^ (m + 1)
+⊢ (↑a).getBit ((↑j).getRes ↑q) = (↑a).getBit ↑q
+
+-/
+
+/-
+m : ℕ
+j : Fin (m + 1)
+q : BV (m + 1)
+a : Fin m
+h : ↑j ≤ ↑a
+ha : ↑a < m
+hq : ↑q < 2 ^ (m + 1)
+⊢ (↑a).getBit ((↑j).getRes ↑q) = (↑a + 1).getBit ↑q
+-/
 
 end Nat
 
@@ -186,8 +324,7 @@ lemma getBitRes_apply' (j : Fin (m + 1)) (q : BV (m + 1)) : (getBitRes j) q =
       rw [Fin.lt_iff_val_lt_val, Fin.coe_castSucc] at h
       have hj := j.is_le
       have hq := q.is_lt
-      rw [← Nat.getRes_eq, Nat.eq_cond_getBit, Nat.eq_cond_getBit]
-      simp_rw [Bool.cond_eq_ite]
+      rw [← Nat.getRes_eq, ← Nat.eq_cond_getBit, ← Nat.eq_cond_getBit]
       suffices h : a.val.getBit (j.val.getRes q.val) = a.val.getBit q.val
       rw [h]
       sorry
@@ -195,7 +332,7 @@ lemma getBitRes_apply' (j : Fin (m + 1)) (q : BV (m + 1)) : (getBitRes j) q =
       rw [Fin.le_iff_val_le_val, Fin.coe_castSucc] at h
       have ha := a.is_lt
       have hq := q.is_lt
-      rw [← Nat.getRes_eq, Nat.eq_cond_getBit, Nat.eq_cond_getBit]
+      rw [← Nat.getRes_eq, ← Nat.eq_cond_getBit, ← Nat.eq_cond_getBit]
       suffices h : a.val.getBit (j.val.getRes q.val) = (a.val + 1).getBit q
       rw [h]
       sorry
