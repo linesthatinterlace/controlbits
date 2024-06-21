@@ -28,7 +28,7 @@ refine' le_of_le_of_eq (cycleAt_cmtr_card_le_card_univ_div_two rfl flipBit_ne_se
 lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF :
 CycleMin (XBackXForth π) (flipBit 0 q) = (flipBit 0) (CycleMin (XBackXForth π) q) :=
 cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr
-  rfl flipBit_ne_self eq_flipBit_zero_of_lt_of_flipBit_zero_gt
+  rfl flipBit_ne_self eq_flipBit_of_lt_of_flipBit_gt
 
 lemma cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply :
 CycleMin (XBackXForth π) (π (flipBit 0 q)) = CycleMin (XBackXForth π) (flipBit 0 (π q)) :=

@@ -2,7 +2,10 @@ import Mathlib.Data.Fintype.Card
 import Mathlib.GroupTheory.Perm.Basic
 import Mathlib.Logic.Equiv.Fin
 import Mathlib.Data.List.DropRight
-import Controlbits.BitResiduum
+import Mathlib.Data.List.Indexes
+import Mathlib.GroupTheory.GroupAction.Group
+import Mathlib.GroupTheory.GroupAction.Prod
+import Controlbits.Bool
 
 set_option autoImplicit false
 
@@ -355,9 +358,11 @@ theorem swapsChain_length (bs : List (α × α)) (a : α) : (swapsChain bs a).le
   induction' bs using list_reverse_induction with bs b IH generalizing a
   · simp_rw [swapsChain_nil, length_nil, le_refl]
   · rcases eq_or_ne a b.1 with rfl | h₁
-    · simp_rw [swapsChain_concat_left, length_append, length_singleton, add_le_add_iff_right, IH]
+    · simp_rw [swapsChain_concat_left, length_append, length_singleton,
+      Nat.add_le_add_iff_right, IH]
     · rcases eq_or_ne a b.2 with rfl | h₂
-      · simp_rw [swapsChain_concat_right, length_append, length_singleton, add_le_add_iff_right, IH]
+      · simp_rw [swapsChain_concat_right, length_append, length_singleton,
+        Nat.add_le_add_iff_right, IH]
       · simp_rw [swapsChain_concat_of_ne_of_ne _ h₁ h₂, length_append, length_singleton]
         exact (IH a).trans (Nat.le_succ _)
 
@@ -1064,6 +1069,7 @@ theorem swaps_concat' (a : ArrayPerm n) (bs : List (Fin n × Fin n)) (b : Fin n 
 
 end ArrayPerm
 
+/-
 section FlipPairs
 
 open ArrayPerm Equiv List
@@ -1288,4 +1294,4 @@ def condFlipBit' (m : ℕ) (i : Fin (m + 1)) (bs : Array Bool) (hbs : bs.size = 
 #eval [0, 1, 2, 3, 4, 5, 6, 7].map (condFlipBit (1 : Fin 3) (#[false, true, false, true].get ∘ Fin.cast rfl))
 #eval [0, 1, 2, 3, 4, 5, 6, 7].map (mulEquivPerm (condFlipBit' 3 1 (#[false, true, false, true]) rfl))
 
--/
+-/-/

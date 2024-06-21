@@ -1,16 +1,17 @@
 import Controlbits.PermFintwo
-import Controlbits.BitResiduum
+import Controlbits.BitResiduumAlt
 import Controlbits.CommutatorCycles
 import Controlbits.ArrayPerm
 import Paperproof
 
-open Fin Equiv
+open Fin Equiv Nat
+notation:75  "BV " arg:75   => Fin (2^arg)
 
 abbrev ControlBitsLayer (m : ℕ) := BV m → Bool
 
 section Decomposition
 
-abbrev XBackXForth (i : Fin (m + 1)) (π : Perm (BV (m + 1))) := ⁅π, flipBit i⁆
+abbrev XBackXForth (i : Fin (m + 1)) (π : Perm (BV (m + 1))) := ⁅π, flipBitPerm i⁆
 
 lemma xBXF_def {i : Fin (m + 1)} {π : Perm (BV (m + 1))} :
     XBackXForth i π = ⁅π, flipBit i⁆ := rfl
