@@ -6,6 +6,7 @@ import Mathlib.Data.List.Indexes
 import Mathlib.GroupTheory.GroupAction.Group
 import Mathlib.GroupTheory.GroupAction.Prod
 import Controlbits.Bool
+import Controlbits.BitResiduumAlt
 
 set_option autoImplicit false
 
@@ -811,18 +812,13 @@ the `i`th and `j`th values, which corresponds to multiplying on the right by a t
 -/
 def swap (a : ArrayPerm n) (i j : Fin n) : ArrayPerm n where
   toArray := a.toArray.swap (i.cast a.sizeTo.symm) (j.cast a.sizeTo.symm)
-  invArray := a.invArray.swap ((a • i).cast a.sizeInv.symm) ((a • j).cast a.sizeInv.symm)
+  invArray := a.invArray.map (fun k => Equiv.swap i j k)
   sizeTo := (Array.size_swap _ _ _).trans a.sizeTo
-  sizeInv := (Array.size_swap _ _ _).trans a.sizeInv
+  sizeInv := (Array.size_map _ _).trans a.sizeInv
   left_inv' k := by
-    simp_rw [a.toArray.get_swap', a.invArray.get_swap', Fin.getElem_fin, coe_cast, invArray_coe,
-    toArray_coe, val_eq_val, ← apply_ite (a • ·), inv_smul_smul, smul_left_cancel_iff]
-    rcases eq_or_ne k i with rfl | hki
-    · simp_rw [if_true, ite_eq_right_iff, imp_self]
-    · simp_rw [hki, if_false]
-      rcases eq_or_ne k j with rfl | hkj
-      · simp_rw [if_true]
-      · simp_rw [if_neg hkj, if_neg hki]
+    simp only [a.toArray.get_swap', coe_cast, getElem_fin, toArray_coe, getElem_map, invArray_coe,
+      smul_ite, inv_smul_smul, ← Fin.ext_iff]
+    simp_rw [← Equiv.swap_apply_def, swap_apply_self]
 
 @[simp]
 theorem uncurry_swap (a : ArrayPerm n) (x : Fin n × Fin n) :
@@ -832,7 +828,7 @@ theorem swap_toArray (a : ArrayPerm n) (i j : Fin n) : (a.swap i j).toArray =
 a.toArray.swap (i.cast a.sizeTo.symm) (j.cast a.sizeTo.symm) := rfl
 
 theorem swap_invArray (a : ArrayPerm n) (i j : Fin n) : (a.swap i j).invArray =
-a.invArray.swap ((a • i).cast a.sizeInv.symm) ((a • j).cast a.sizeInv.symm) := rfl
+a.invArray.map (fun k => Equiv.swap i j k) := rfl
 
 theorem swap_smul (a : ArrayPerm n) (i j k : Fin n) :
     (a.swap i j) • k = a • (Equiv.swap i j k) := by
@@ -937,23 +933,20 @@ For `a` an `ArrayPerm n`, `a.swaps bs` performs the swaps given by the list `bs`
 -/
 def swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : ArrayPerm n where
   toArray := a.toArray.swaps (bs.map <| Prod.map (Fin.cast a.sizeTo.symm) (Fin.cast a.sizeTo.symm))
-  invArray := a.invArray.swaps (bs.reverse.map
-    <| (Prod.map (Fin.cast a.sizeInv.symm) (Fin.cast a.sizeInv.symm)) ∘ (a • ·))
+  invArray := a.invArray.map (fun k => Equiv.swaps bs.reverse k)
   sizeTo := (a.toArray.size_swaps _).trans a.sizeTo
-  sizeInv := (a.invArray.size_swaps _).trans a.sizeInv
+  sizeInv := (a.invArray.size_map _).trans a.sizeInv
   left_inv' i := by
-    simp_rw [a.toArray.get_swaps_eq_get_apply_swaps', a.invArray.get_swaps_eq_get_apply_swaps',
-    toArray_eq_smul_mk, invArray_eq_smul_mk, map_map, Prod.map_comp_map_left, Prod.map_comp_map,
-    val_comp_cast, ← map_map, swaps_coe, Fin.eta, swaps_smul,
-    Equiv.swaps_reverse, Perm.inv_apply_self, inv_smul_smul]
+    simp_rw [a.toArray.get_swaps_eq_get_apply_swaps', a.invArray.getElem_map,
+    Fin.ext_iff, map_map, Prod.map_comp_map, val_comp_cast, swaps_coe,
+    a.invArray_get_toArray_get, Equiv.swaps_reverse, Perm.inv_apply_self]
 
 theorem swaps_toArray (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
     (a.swaps bs).toArray =
   a.toArray.swaps (bs.map <| Prod.map (Fin.cast a.sizeTo.symm) (Fin.cast a.sizeTo.symm)) := rfl
 
 theorem swaps_invArray (a : ArrayPerm n) (bs : List (Fin n × Fin n)) : (a.swaps bs).invArray =
-    a.invArray.swaps (bs.reverse.map
-    <| (Prod.map (Fin.cast a.sizeInv.symm) (Fin.cast a.sizeInv.symm)) ∘ (a • ·)) := rfl
+    a.invArray.map (fun k => Equiv.swaps bs.reverse k) := rfl
 
 @[simp]
 theorem swaps_smul (a : ArrayPerm n) (bs : List (Fin n × Fin n)) (k : Fin n) :
@@ -1035,7 +1028,9 @@ theorem swaps_reverse_swaps (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
   one_swaps_reverse_mul_one_swaps, mul_one]
 
 @[simp]
-theorem swaps_nil (a : ArrayPerm n) : a.swaps [] = a := rfl
+theorem swaps_nil (a : ArrayPerm n) : a.swaps [] = a := by
+  ext : 1
+  simp_rw [swaps_smul, Equiv.swaps_nil, Perm.coe_one, id_eq]
 
 @[simp]
 theorem swaps_cons (a : ArrayPerm n) (bs : List (Fin n × Fin n)) (b : Fin n × Fin n) :
@@ -1046,7 +1041,7 @@ theorem swaps_cons (a : ArrayPerm n) (bs : List (Fin n × Fin n)) (b : Fin n × 
 theorem swaps_eq_foldl (a : ArrayPerm n) (bs : List (Fin n × Fin n)) :
     a.swaps bs = bs.foldl (fun a b => uncurry a.swap b) a := by
   induction' bs with b bs IH generalizing a
-  · rfl
+  · rw [swaps_nil, foldl_nil]
   · rw [swaps_cons, foldl_cons, IH]
 
 theorem swaps_singleton (a : ArrayPerm n) (b : Fin n × Fin n) : a.swaps [b] = uncurry a.swap b := rfl

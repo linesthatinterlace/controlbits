@@ -2,6 +2,318 @@
 import Mathlib.GroupTheory.Perm.Cycle.Concrete
 
 namespace Equiv.Perm
+
+def FastCycleMin {α : Type*} [Min α] (n : ℕ) (π : Equiv.Perm α) : α → α :=
+  match n with
+  | 0 => id
+  | (i+1) => fun x => min (FastCycleMin i π x) (FastCycleMin i π ((π ^ (2^i : ℕ)) x))
+
+section FastCycleMin
+variable {α : Type*} {x : α} {π : Perm α}
+
+section Min
+
+variable [Min α]
+
+@[simp]
+lemma fastCycleMin_zero : FastCycleMin 0 π x = x := rfl
+
+@[simp]
+lemma fastCycleMin_succ :
+FastCycleMin (i + 1) π x = min (FastCycleMin i π x) (FastCycleMin i π ((π ^ (2^i : ℕ)) x)) := rfl
+
+end Min
+
+section LinearOrder
+
+variable [LinearOrder α]
+
+lemma fastCycleMin_le (h : k < 2^i) : FastCycleMin i π x ≤ (π ^ k) x := by
+  induction' i with i IH generalizing x k
+  · rw [pow_zero, Nat.lt_one_iff] at h
+    simp_rw [fastCycleMin_zero, h, pow_zero, one_apply, le_rfl]
+  · rw [pow_succ', two_mul] at h
+    simp_rw [fastCycleMin_succ, min_le_iff]
+    rcases lt_or_le k (2^i) with hk | hk
+    · exact Or.inl (IH hk)
+    · rw [← Nat.sub_lt_iff_lt_add hk] at h
+      convert Or.inr (IH h) using 2
+      rw [← Equiv.Perm.mul_apply, ← pow_add, Nat.sub_add_cancel hk]
+
+lemma exists_lt_fastCycleMin_eq_pow_apply (x : α) (i : ℕ) :
+    ∃ k < 2^i, (π ^ k) x = FastCycleMin i π x := by
+  simp_rw [eq_comm]
+  induction' i with i IH generalizing x
+  · exact ⟨0, Nat.two_pow_pos _, rfl⟩
+  · rcases (IH (x := x)) with ⟨k, hk, hπk⟩
+    rcases (IH (x := (π ^ (2 ^ i)) x)) with ⟨k', hk', hπk'⟩
+    simp_rw [fastCycleMin_succ, min_eq_iff, hπk, hπk', ← Equiv.Perm.mul_apply, ← pow_add,
+    pow_succ', two_mul]
+    rcases lt_or_le ((π ^ k) x) ((π ^ (k' + 2 ^ i)) x) with hkk' | hkk'
+    · exact ⟨k, hk.trans (Nat.lt_add_of_pos_right (Nat.two_pow_pos _)),
+        Or.inl ⟨rfl, hkk'.le⟩⟩
+    · exact ⟨k' + 2^i, Nat.add_lt_add_right hk' _, Or.inr ⟨rfl, hkk'⟩⟩
+
+lemma sameCycle_fastCycleMin : π.SameCycle x (FastCycleMin i π x) := by
+  rcases π.exists_lt_fastCycleMin_eq_pow_apply x i with ⟨k, _, hk⟩
+  exact ⟨k, hk⟩
+
+-- Theorem 2.4
+
+lemma fastCycleMin_eq_min'_image_interval [DecidableEq α] : FastCycleMin i π x =
+    ((Finset.Iio (2^i)).image fun k => (π ^ k) x).min'
+    ((Finset.nonempty_Iio.mpr (not_isMin_of_lt (Nat.two_pow_pos _))).image _) := by
+  refine' le_antisymm _ (Finset.min'_le _ _ _)
+  · simp_rw [Finset.le_min'_iff, Finset.mem_image, Finset.mem_Iio, forall_exists_index, and_imp,
+    forall_apply_eq_imp_iff₂]
+    exact fun _ => fastCycleMin_le
+  · simp_rw [Finset.mem_image, Finset.mem_Iio]
+    exact exists_lt_fastCycleMin_eq_pow_apply x i
+
+end LinearOrder
+
+end FastCycleMin
+
+section CycleMin
+
+variable {α : Type*} {π : Equiv.Perm α} {x y : α}
+
+lemma sameCycle_nonempty : Set.Nonempty (π.SameCycle x ·) := ⟨x, ⟨0, rfl⟩⟩
+
+def CycleMin [InfSet α] (π : Equiv.Perm α) (x : α) : α := sInf (π.SameCycle x ·)
+
+section InfSet
+
+variable [InfSet α]
+
+lemma cycleMin_def : CycleMin π x = sInf (π.SameCycle x ·) := rfl
+
+-- Theorem 2.2
+lemma cycleMin_eq_cycleMin_apply : CycleMin π x = CycleMin π (π x) := by
+  simp_rw [cycleMin_def]
+  convert rfl using 3 with y
+  rw [sameCycle_apply_left]
+
+lemma cycleMin_eq_cycleMin_apply_inv : CycleMin π x = CycleMin π (π⁻¹ x) := by
+rw [cycleMin_eq_cycleMin_apply (x := (π⁻¹ x)), Equiv.Perm.apply_inv_self]
+
+end InfSet
+
+section ConditionallyCompleteLattice
+
+variable [ConditionallyCompleteLattice α]
+
+@[simp]
+lemma cycleMin_of_fixed (h : Function.IsFixedPt π x) : π.CycleMin x = x := by
+  rw [cycleMin_def]
+  convert csInf_singleton x using 2
+  rw [Set.eq_singleton_iff_unique_mem]
+  exact ⟨⟨0, rfl⟩, fun _ hy => (SameCycle.symm hy).eq_of_right h⟩
+
+lemma cycleMin_refl : CycleMin (Equiv.refl α) x = x := cycleMin_of_fixed rfl
+
+lemma cycleMin_one : CycleMin (1 : Equiv.Perm α) x = x := cycleMin_refl
+
+lemma le_cycleMin (h : ∀ y, π.SameCycle x y → z ≤ y) : z ≤ CycleMin π x := le_csInf ⟨x, ⟨0, rfl⟩⟩ h
+
+--simp_rw [cycleMin_def, Finset.le_min'_iff, mem_cycleAt_iff] ; exact h
+
+section BddBelow
+
+variable (hsb : BddBelow (π.SameCycle x ·))
+
+lemma cycleMin_le_of_bddBelow_sameCycle (h : π.SameCycle x y) : CycleMin π x ≤ y := by
+  rw [cycleMin_def]
+  exact csInf_le hsb h
+
+lemma cycleMin_le_of_le_of_bddBelow_sameCycle (h : π.SameCycle x y) (hy : y ≤ a) :
+    CycleMin π x ≤ a := (cycleMin_le_of_bddBelow_sameCycle hsb h).trans hy
+
+lemma cycleMin_le_zpow_apply_of_bddBelow_sameCycle (k : ℤ) : CycleMin π x ≤ (π^k) x :=
+  cycleMin_le_of_bddBelow_sameCycle hsb ⟨k, rfl⟩
+
+lemma cycleMin_le_pow_apply_of_bddBelow_sameCycle (n : ℕ) : CycleMin π x ≤ (π^n) x :=
+  cycleMin_le_of_bddBelow_sameCycle hsb ⟨n, rfl⟩
+
+lemma cycleMin_le_self_of_bddBelow_sameCycle : CycleMin π x ≤ x :=
+  cycleMin_le_zpow_apply_of_bddBelow_sameCycle hsb 0
+
+lemma le_cycleMin_iff_of_bddBelow_sameCycle :
+  z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y := le_csInf_iff hsb sameCycle_nonempty
+
+end BddBelow
+
+section OrderBot
+
+variable [OrderBot α]
+
+lemma cycleMin_le (h : π.SameCycle x y) : CycleMin π x ≤ y := by
+  rw [cycleMin_def]
+  exact csInf_le (OrderBot.bddBelow _) h
+
+lemma cycleMin_le_of_le (h : π.SameCycle x y) (hy : y ≤ a) : CycleMin π x ≤ a :=
+  (cycleMin_le h).trans hy
+
+lemma cycleMin_le_zpow_apply (k : ℤ) : CycleMin π x ≤ (π^k) x :=
+  cycleMin_le ⟨k, rfl⟩
+
+lemma cycleMin_le_pow_apply (n : ℕ) : CycleMin π x ≤ (π^n) x :=
+  cycleMin_le ⟨n, rfl⟩
+
+lemma cycleMin_le_self : CycleMin π x ≤ x := cycleMin_le_zpow_apply 0
+
+lemma le_cycleMin_iff : z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y :=
+  le_cycleMin_iff_of_bddBelow_sameCycle (OrderBot.bddBelow _)
+
+@[simp]
+lemma cycleMin_bot : CycleMin π ⊥ = ⊥ :=
+  le_antisymm cycleMin_le_self bot_le
+
+end OrderBot
+
+end ConditionallyCompleteLattice
+
+section ConditionallyCompleteLinearOrder
+
+variable [ConditionallyCompleteLinearOrder α] [IsWellOrder α (· < ·)]
+
+lemma sameCycle_cycleMin (x : α) : π.SameCycle x (CycleMin π x) := csInf_mem sameCycle_nonempty
+
+lemma cycleMin_exists_zpow_apply (x : α) : ∃ k : ℤ, (π^k) x = CycleMin π x :=
+  π.sameCycle_cycleMin x
+
+lemma cycleMin_exists_pow_apply_of_finite_order (hn : n > 0) (hnx : (π^n) x = x) :
+    ∃ k < n, (π^k) x = CycleMin π x := by
+  suffices h : ∃ k, (π ^ k) x = π.CycleMin x by
+    rcases h with ⟨k, hk⟩
+    refine' ⟨k % n, Nat.mod_lt _ hn, (hk.symm.trans _).symm⟩
+    nth_rewrite 1 [← Nat.div_add_mod k n, add_comm, pow_add, mul_apply, pow_mul]
+    exact congrArg _ (Function.IsFixedPt.perm_pow hnx _)
+  rcases π.cycleMin_exists_zpow_apply x with ⟨k | k, hk⟩
+  · exact ⟨k, hk⟩
+  · refine' ⟨(n - (k + 1) % n) , _⟩
+    rw [zpow_negSucc] at hk
+    nth_rewrite 1 [← hk, Equiv.Perm.eq_inv_iff_eq, ← mul_apply, ← pow_add,
+      ← Nat.div_add_mod (k + 1) n, add_assoc, Nat.add_sub_cancel' (Nat.mod_lt _ hn).le,
+      ← Nat.mul_succ, pow_mul]
+    exact Function.IsFixedPt.perm_pow hnx _
+
+section BddBelow
+
+variable (hsb : BddBelow (π.SameCycle x ·))
+
+lemma cycleMin_le_fastCycleMin_of_bddBelow_sameCycle :
+    CycleMin π x ≤ FastCycleMin i π x := by
+  rcases π.exists_lt_fastCycleMin_eq_pow_apply x i with ⟨k, _, hkx⟩
+  rw [← hkx]
+  exact cycleMin_le_of_bddBelow_sameCycle hsb ⟨k, rfl⟩
+
+end BddBelow
+
+end ConditionallyCompleteLinearOrder
+
+section ConditionallyCompleteLinearOrderBot
+
+variable [ConditionallyCompleteLinearOrderBot α] [IsWellOrder α (· < ·)]
+
+lemma cycleMin_le_fastCycleMin : CycleMin π x ≤ FastCycleMin i π x := by
+  rcases π.exists_lt_fastCycleMin_eq_pow_apply x i with ⟨k, _, hkx⟩
+  rw [← hkx]
+  exact cycleMin_le ⟨k, rfl⟩
+
+lemma cycleMin_eq_fastCycleMin (hn : n > 0) (hn' : n ≤ 2^i) (hnx : (π^n) x = x) :
+    FastCycleMin i π x = CycleMin π x := by
+  refine' le_antisymm _ cycleMin_le_fastCycleMin
+  rcases π.cycleMin_exists_pow_apply_of_finite_order hn hnx with ⟨k, hk, hkx⟩
+  rw [← hkx]
+  exact fastCycleMin_le (hk.trans_le hn')
+
+lemma blahj (s : Finset α) (π : Equiv.Perm α) (x : α) (hsx : ∀ x, x ∈ s ↔ π x ∈ s)
+  (hx : x ∈ s) :
+    ∃ k, (k > 0 ∧ k ≤ s.card ∧ (π^k) x = x) := by
+  induction' s using Finset.induction with a s has IH
+  · simp only [Finset.not_mem_empty, forall_const] at hsx
+  · simp [has] at *
+    have H : ∀ x, x ∈ s ↔ π x ∈ s := by
+      intro x
+      specialize hsx x
+    by_cases H : ∀ x, x ∈ s ↔ π x ∈ s
+    · rcases IH H with ⟨k, hk₁, hk₂, hk₃⟩
+      exact ⟨k, hk₁, (hk₂.trans (Nat.le_succ _)), hk₃⟩
+    · simp_rw [not_forall, not_iff] at H
+      rcases H with ⟨c, hk⟩
+      specialize hsx c
+      rw [← not_iff_not, not_or, not_or, hk] at hsx
+      simp [hk] at hsx
+      simp_rw [hk, or_false] at hsx
+
+lemma cycleMin_eq_fastCycleMin_of_mem_finset (s : Finset α)
+  (hsi : s.card ≤ 2^i) (hx : ∀ (k : ℤ), (π^k) x ∈ s) : FastCycleMin i π x = CycleMin π x := by
+  have h : ∃ k, (k > 0 ∧ k ≤ s.card ∧ (π^k) x = x) := blahj _
+  rcases h with ⟨k, hk, hk', hkx⟩
+  refine' cycleMin_eq_fastCycleMin hk (hk'.trans hsi) hkx
+
+end ConditionallyCompleteLinearOrderBot
+
+-- Theorem 2.5
+
+
+
+
+
+
+
+/-
+lemma cycleMin_eq_min_cycleAtTo :
+CycleMin π x = (CycleAtTo π (orderOf (π.cycleOf x)) x).min' (cycleAtTo_nonempty_of_pos (orderOf_pos _)) := by
+  simp_rw [cycleMin_def, cycleAt_eq_cycleAtTo_orderOf_cycleOf]
+-/
+
+/-
+lemma cycleMin_mem_cycleAt (π : Equiv.Perm α) (x : α) : CycleMin π x ∈ CycleAt π x := Finset.min'_mem _ _
+-/
+
+
+
+lemma cycleMin_exists_pow_apply'' (π : Equiv.Perm α) (x : α) :
+    ∃ k, k ≤ (orderOf (π.cycleOf x)) - 1 ∧ (π^k) x = CycleMin π x :=
+mem_cycleAt_iff_le.mp (cycleMin_mem_cycleAt π x)
+
+lemma cycleMin_exists_pow_apply' (π : Equiv.Perm α) (x : α):
+∃ k, k < orderOf (π.cycleOf x) ∧ (π^k) x = CycleMin π x :=
+mem_cycleAt_iff_lt.mp (cycleMin_mem_cycleAt π x)
+
+lemma cycleMin_eq_min_cycleAtTo_ge (ha : orderOf (π.cycleOf x) ≤ a) :
+CycleMin π x = (CycleAtTo π a x).min' cycleAtTo_nonempty := by
+simp_rw [cycleMin_def, cycleAt_eq_cycleAtTo_ge_orderOf_cycleOf ha]
+
+
+
+
+
+
+
+end LinearOrder
+
+section CanonicallyLinearOrderedMonoid
+
+@[simp]
+lemma cycleMin_zero [CanonicallyLinearOrderedAddCommMonoid α] : CycleMin π 0 = 0 :=
+le_antisymm cycleMin_le_self (zero_le _)
+
+end CanonicallyLinearOrderedMonoid
+
+section Fin
+
+@[simp]
+lemma Fin.cycleMin_zero {τ : Equiv.Perm (Fin m)} [NeZero m] : CycleMin τ 0 = (0 : Fin m) :=
+le_antisymm cycleMin_le_self (Fin.zero_le' _)
+
+end Fin
+
+
+end CycleMin
+
 variable {π : Equiv.Perm α} [DecidableEq α] [Fintype α]
 
 theorem cycleOf_pow_apply {β : Type v} [DecidableEq β] [Fintype β] (f : Equiv.Perm β)
@@ -270,15 +582,8 @@ simp_rw [cycleMin_def, Finset.le_min'_iff, mem_cycleAt_iff] ; exact h
 lemma le_cycleMin_iff : z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y := by
 simp_rw [cycleMin_def, Finset.le_min'_iff, mem_cycleAt_iff]
 
-def FastCycleMin (n : ℕ) (π : Equiv.Perm α) : α → α :=
-  match n with
-  | 0 => id
-  | (i+1) => fun x => min (FastCycleMin i π x) (FastCycleMin i π ((π ^ (2^i : ℕ)) x))
 
-lemma fastCycleMin_zero_eq : FastCycleMin 0 π x = x := rfl
 
-lemma fastCycleMin_succ_eq :
-FastCycleMin (i + 1) π x = min (FastCycleMin i π x) (FastCycleMin i π ((π ^ (2^i : ℕ)) x)) := rfl
 
 -- Theorem 2.4
 

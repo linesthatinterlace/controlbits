@@ -33,7 +33,7 @@ lemma piFinSuccCastSucc_symm_apply_castSucc_succ (a b : α) (v : (Fin n → α))
       piFinSuccCastSucc.symm ((a, b), v) (i.castSucc.succ) = v i := by
   simp only [piFinSuccCastSucc, Equiv.instTrans_trans, Equiv.symm_trans_apply, Equiv.symm_symm,
     Equiv.prodAssoc_apply, Equiv.prodCongr_symm, Equiv.refl_symm, Equiv.prodCongr_apply,
-    Equiv.coe_refl, Equiv.piFinSuccAbove_symm_apply, insertNth_last', Prod_map, id_eq,
+    Equiv.coe_refl, Equiv.piFinSuccAbove_symm_apply, insertNth_last', Prod.map_apply, id_eq,
     Equiv.piFinSucc_symm_apply, cons_succ, snoc_castSucc]
 
 @[simp]
@@ -50,7 +50,7 @@ lemma piFinSuccCastSucc_symm_apply_last (a b : α) (v : (Fin n → α)) :
       piFinSuccCastSucc.symm ((a, b), v) (last _) = b := by
   simp_rw [piFinSuccCastSucc, Equiv.instTrans_trans, Equiv.symm_trans_apply, Equiv.symm_symm,
     Equiv.prodAssoc_apply, Equiv.prodCongr_symm, Equiv.refl_symm, Equiv.prodCongr_apply,
-    Equiv.coe_refl, Equiv.piFinSuccAbove_symm_apply, insertNth_last', Prod_map, id_eq,
+    Equiv.coe_refl, Equiv.piFinSuccAbove_symm_apply, insertNth_last', Prod.map_apply, id_eq,
     Equiv.piFinSucc_symm_apply, cons_snoc_eq_snoc_cons, snoc_last]
 
 @[simp]
