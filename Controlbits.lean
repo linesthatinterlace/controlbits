@@ -2,7 +2,6 @@ import Controlbits.PermFintwo
 import Controlbits.BitResiduum
 import Controlbits.CommutatorCycles
 import Controlbits.ArrayPerm
-import Paperproof
 
 open Fin Equiv
 

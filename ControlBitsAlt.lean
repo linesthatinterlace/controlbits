@@ -2,9 +2,6 @@ import Controlbits.PermFintwo
 import Controlbits.BitResiduumAlt
 import Controlbits.CommutatorCycles
 import Controlbits.ArrayPerm
-import Paperproof
-
-
 
 section Decomposition
 open Equiv Equiv.Perm Nat

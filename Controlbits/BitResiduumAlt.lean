@@ -56,6 +56,12 @@ theorem decide_toNat_mod_two_eq_one : (b.toNat % 2 = 1 : Bool) = b := toNat_inje
 theorem eq_iff_iff' : a = b ↔ (a = false ↔ b = false) := by
   simp only [coe_false_iff_false, Bool.eq_not_iff, ne_eq, Bool.not_not_eq]
 
+lemma decide_and_eq_decide_and {P : Prop} [Decidable P] :
+    (decide P && b) = (decide P && b') ↔ P → b = b' := by
+  rcases Classical.em P with p | p
+  · simp_rw [p, decide_true_eq_true, true_and, true_implies]
+  · simp only [p, decide_false_eq_false, false_and, false_implies]
+
 end Bool
 
 namespace Fin
@@ -96,7 +102,7 @@ def equivEquiv' (n : ℕ) (e : (Fin n) ≃ (Fin n)) : ℕ ≃ ℕ where
   left_inv p := (lt_or_le p n).by_cases (fun h => by simp [h]) (fun h => by simp [h.not_lt])
   right_inv p := (lt_or_le p n).by_cases (fun h => by simp [h]) (fun h => by simp [h.not_lt])
 
-#check Equiv.permCongr ((Fin.equivSubtype (n := 4)))
+
 
 def equivNatEquivs : ((Fin n) ≃ (Fin n)) ≃ {e : ℕ ≃ ℕ // (∀ i, ¬ i < n → e i = i)} :=
 (Equiv.permCongr Fin.equivSubtype).trans (Equiv.Perm.subtypeEquivSubtypePerm _)
@@ -123,6 +129,17 @@ end Fin
 
 namespace Nat
 
+section DivMod
+
+theorem divMod_ext_iff {x y : ℕ} (d : ℕ) : x = y ↔ x / d = y / d ∧ x % d = y % d := by
+  rcases eq_or_ne d 0 with rfl | hd
+  · simp_rw [Nat.div_zero, mod_zero, true_and]
+  · haveI : NeZero d := ⟨hd⟩
+    rw [← (Nat.divModEquiv d).apply_eq_iff_eq]
+    simp_rw [divModEquiv_apply, Prod.mk.injEq, Fin.ext_iff, Fin.val_natCast]
+
+end DivMod
+
 section TestBit
 
 theorem lt_pow_two_iff_ge_imp_testBit_eq_false {n : Nat} {x : Nat} :
@@ -130,16 +147,29 @@ theorem lt_pow_two_iff_ge_imp_testBit_eq_false {n : Nat} {x : Nat} :
   refine' ⟨fun h _ hn => testBit_eq_false_of_lt (h.trans_le (Nat.pow_le_pow_of_le one_lt_two hn)),
   lt_pow_two_of_testBit _⟩
 
-theorem testBit_add_right (x i j : ℕ) : testBit x (i + j) = testBit (x/2^j) i := by
-  induction' j with j IH generalizing x
-  · rw [pow_zero, Nat.div_one, add_zero]
-  · rw [← add_assoc, testBit_succ, IH, Nat.div_div_eq_div_mul, pow_succ']
+theorem exists_eq_add_iff_le {m n : ℕ} : m ≤ n ↔ ∃ k, n = m + k := by exact
+  le_iff_exists_add
 
-theorem testBit_add_left (x i j : ℕ) : testBit x (i + j) = testBit (x/2^i) j := by
-  rw [add_comm, testBit_add_right]
+theorem testBit_div_two (x : Nat) (i : Nat) : (x / 2).testBit i = x.testBit i.succ :=
+  (testBit_succ x i).symm
+
+theorem testBit_div_two_pow (x i j : ℕ) : testBit (x/2^i) j = testBit x (i + j) := by
+  induction' i with i IH generalizing x j
+  · rw [pow_zero, Nat.div_one, zero_add]
+  · rw [pow_succ, ← Nat.div_div_eq_div_mul, testBit_div_two, IH,
+      succ_eq_add_one, add_comm j, add_assoc]
 
 lemma testBit_ext_iff {q q' : ℕ} : q = q' ↔ (∀ i : ℕ, q.testBit i = q'.testBit i) :=
   ⟨fun h _ => h ▸ rfl, Nat.eq_of_testBit_eq⟩
+
+lemma testBit_ext_div_two_pow_iff {q q' m : ℕ} : q / 2^m = q' / 2^m ↔
+  (∀ i ≥ m, q.testBit i = q'.testBit i) := by
+  simp_rw [testBit_ext_iff, testBit_div_two_pow, le_iff_exists_add,
+  forall_exists_index, forall_eq_apply_imp_iff]
+
+lemma testBit_ext_mod_two_pow_iff {q q' m : ℕ} : q % 2^m = q' % 2^m ↔
+  (∀ i < m, q.testBit i = q'.testBit i) := by
+  simp_rw [testBit_ext_iff, testBit_mod_two_pow, Bool.decide_and_eq_decide_and]
 
 theorem testBit_one_succ {k : ℕ} : testBit 1 (k + 1) = false := by
   rw [testBit_succ, div_eq_of_lt one_lt_two, zero_testBit]
@@ -811,8 +841,8 @@ lemma testBit_eq_false_true_of_lt_of_flipBit_ge {q r : ℕ} (hrq : r < q)
     exact (hf.not_lt hrq).elim
 
 lemma flipBit_div_eq {i q : ℕ} (h : i < k) : q.flipBit i / 2^k = q / 2^k := by
-  simp_rw [testBit_ext_iff, ← testBit_add_right,
-  testBit_flipBit_of_ne (h.trans_le (Nat.le_add_left _ _)).ne', implies_true]
+  simp_rw [testBit_ext_iff, testBit_div_two_pow,
+  testBit_flipBit_of_ne (h.trans_le (Nat.le_add_right _ _)).ne', implies_true]
 
 lemma testBit_eq_of_le_of_flipBit_lt_ge {q r : ℕ} (hrq : r ≤ q)
     (hf : q.flipBit i ≤ r.flipBit i) (hik : i < k) : r.testBit k = q.testBit k := by
@@ -981,9 +1011,8 @@ lemma id_bitInvar : bitInvar i id := fun _ => rfl
 lemma one_bitInvar : bitInvar i (1 : Function.End ℕ) := id_bitInvar
 
 lemma eq_id_iff_forall_bitInvar : f = id ↔ (∀ i, bitInvar i f) := by
-  refine' ⟨fun h _ => h ▸ id_bitInvar,
-    fun h => funext (fun p => Nat.eq_of_testBit_eq (fun k => _))⟩
-  simp_rw [id_eq, h k p]
+  simp_rw [funext_iff, id_eq, testBit_ext_iff, bitInvar_iff_testBit_apply_eq_testBit]
+  exact forall_comm
 
 lemma eq_one_iff_forall_bitInvar {f : Function.End ℕ} : f = 1 ↔ (∀ i, bitInvar i f) :=
   eq_id_iff_forall_bitInvar
@@ -1054,6 +1083,9 @@ def bitInvarEQ (i : ℕ) : Submonoid (Function.End ℕ) where
 @[simp]
 lemma mem_bitInvarEQ_iff : f ∈ bitInvarEQ i ↔ bitInvar i f := Iff.rfl
 
+lemma mem_bitInvarEQ_iff_testBit_eq :
+  f ∈ bitInvarEQ i ↔ ∀ p, (f p).testBit i = p.testBit i := Iff.rfl
+
 lemma nmem_bitInvarEQ_iff {f : Function.End ℕ} :
   f ∉ bitInvarEQ i ↔ ¬ bitInvar i f := mem_bitInvarEQ_iff.not
 
@@ -1063,9 +1095,8 @@ lemma mem_bitInvar_of_bitInvar (h : bitInvar i f) :
 lemma bitInvar_of_mem_bitInvarEQ (h : f ∈ bitInvarEQ i) :
   bitInvar i f := h
 
-lemma eq_one_iff_forall_mem_bitInvarEQ : f = 1 ↔ ∀ m, f ∈ bitInvarEQ m := by
-  refine' ⟨fun h => h ▸ by simp only [one_mem, and_self, implies_true],
-  by simp_rw [eq_one_iff_forall_bitInvar, mem_bitInvarEQ_iff, imp_self]⟩
+lemma eq_one_iff_forall_mem_bitInvarEQ : f = 1 ↔ ∀ i, f ∈ bitInvarEQ i := by
+  simp_rw [mem_bitInvarEQ_iff, eq_one_iff_forall_bitInvar]
 
 def bitInvarLT (i : ℕ) : Submonoid (Function.End ℕ) := ⨅ k : ℕ, ⨅ (_ : k < i), bitInvarEQ k
 
@@ -1073,6 +1104,11 @@ def bitInvarLT (i : ℕ) : Submonoid (Function.End ℕ) := ⨅ k : ℕ, ⨅ (_ :
 lemma mem_bitInvarLT_iff {f : Function.End ℕ} :
     f ∈ bitInvarLT i ↔ ∀ k < i, bitInvar k f := by
   simp only [bitInvarLT, mem_iInf, mem_bitInvarEQ_iff]
+
+lemma mem_bitInvarLT_iff_mod_two_pow_eq {f : Function.End ℕ} :
+    f ∈ bitInvarLT i ↔ ∀ (p : ℕ), f p % 2 ^ i = p % 2 ^ i := by
+  simp_rw [testBit_ext_mod_two_pow_iff, mem_bitInvarLT_iff, bitInvar_iff_testBit_apply_eq_testBit,
+  imp_forall_iff, forall_swap (α := ℕ)]
 
 lemma nmem_bitInvarLT_iff {f : Function.End ℕ} :
   f ∉ bitInvarLT i ↔ (∃ k < i, ¬ bitInvar k f) := by
@@ -1103,6 +1139,11 @@ def bitInvarGE (i : ℕ) : Submonoid (Function.End ℕ) := ⨅ k : ℕ, ⨅ (_ :
 lemma mem_bitInvarGE_iff {f : Function.End ℕ} :
     f ∈ bitInvarGE i ↔ ∀ k ≥ i, bitInvar k f := by
   simp only [bitInvarGE, mem_iInf, mem_bitInvarEQ_iff]
+
+lemma mem_bitInvarGE_iff_div_two_pow_eq {f : Function.End ℕ} :
+    f ∈ bitInvarGE i ↔ ∀ (p : ℕ), f p / 2 ^ i = p / 2 ^ i := by
+  simp_rw [testBit_ext_div_two_pow_iff, mem_bitInvarGE_iff, bitInvar_iff_testBit_apply_eq_testBit,
+  imp_forall_iff, forall_swap (α := ℕ)]
 
 lemma lt_iff_apply_lt_of_mem_bitInvarGE {f : Function.End ℕ} (hf : f ∈ bitInvarGE i) {p : ℕ}:
     p < 2^i ↔ f p < 2^i := by
@@ -1135,22 +1176,18 @@ lemma bitInvarGE_le_iff_le : bitInvarGE m ≤ bitInvarGE n ↔ m ≤ n :=
   bitInvarGE_strictMono.le_iff_le
 
 lemma bitInvarLT_inf_bitInvarGE_eq_bot :
-    (bitInvarLT m) ⊓ (bitInvarGE m) = ⊥ := by
-  simp_rw [SetLike.ext_iff, Submonoid.mem_inf, mem_bitInvarLT_iff,
-    mem_bitInvarGE_iff, Submonoid.mem_bot, eq_one_iff_forall_bitInvar]
-  exact fun f => ⟨fun ⟨hl, hu⟩ k => (lt_or_le k m).by_cases (hl _) (hu _),
-    fun h => by simp_rw [h, implies_true, and_self]⟩
+    (bitInvarGE m) ⊓ (bitInvarLT m) = ⊥ := SetLike.ext <| fun f => by
+  simp_rw [mem_bot, Function.End.ext_iff, Function.End.one_def, id_eq,
+  Submonoid.mem_inf, mem_bitInvarGE_iff_div_two_pow_eq,
+  mem_bitInvarLT_iff_mod_two_pow_eq, ← forall_and, ← divMod_ext_iff (2^m)]
 
 lemma eq_one_iff_exists_mem_bitInvarLT_mem_bitInvarGE :
-    f = 1 ↔ ∃ m, f ∈ (bitInvarLT m) ∧ f ∈ (bitInvarGE m) := by
-  refine' ⟨fun h => h ▸ ⟨0, by simp only [bitInvarLT_zero, mem_top], by
-  simp only [bitInvarGE_zero, mem_bot]⟩, fun ⟨_, h⟩ => _⟩
-  rwa [← Submonoid.mem_inf, bitInvarLT_inf_bitInvarGE_eq_bot, mem_bot] at h
+    f = 1 ↔ ∃ m, f ∈ (bitInvarGE m) ∧ f ∈ (bitInvarLT m) := by
+  simp_rw [← Submonoid.mem_inf, bitInvarLT_inf_bitInvarGE_eq_bot, exists_const, mem_bot]
 
 lemma eq_one_iff_forall_mem_bitInvarLT_mem_bitInvarGE :
-    f = 1 ↔ ∀ m, f ∈ (bitInvarLT m) ∧ f ∈ (bitInvarGE m) := by
-  refine' ⟨fun h => h ▸ by simp only [one_mem, and_self, implies_true],
-  fun h => eq_one_iff_exists_mem_bitInvarLT_mem_bitInvarGE.mpr ⟨default, h _⟩⟩
+    f = 1 ↔ ∀ m, f ∈ (bitInvarGE m) ∧ f ∈ (bitInvarLT m) := by
+  simp_rw [← Submonoid.mem_inf, bitInvarLT_inf_bitInvarGE_eq_bot, forall_const, mem_bot]
 
 end Submonoid
 
@@ -1177,6 +1214,10 @@ lemma coe_mem_bitInvarEQ_of_mem_bitInvar
 lemma mem_bitInvarEQ_iff_coe_unit_mem : ∀ π, π ∈ bitInvarEQ i ↔
   (Equiv.Perm.equivUnitsEnd π).val ∈ Submonoid.bitInvarEQ i :=
   mem_bitInvarEQ_iff_coe_mem_bitInvarEQ
+
+def bitInvarLT (i : ℕ) : Subgroup (Equiv.Perm ℕ) := ⨅ k : ℕ, ⨅ (_ : k < i), bitInvarEQ k
+
+def bitInvarGE (i : ℕ) : Subgroup (Equiv.Perm ℕ) := ⨅ k : ℕ, ⨅ (_ : i ≤ k), bitInvarEQ k
 
 end Subgroup
 
