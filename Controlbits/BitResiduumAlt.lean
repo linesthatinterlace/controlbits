@@ -840,9 +840,12 @@ lemma eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq {q r : ℕ} (hrq : r < q)
   · rw [testBit_flipBit_of_ne hik.ne, h hik]
   · exact testBit_eq_flipBit_testBit_of_le_of_flipBit_le_ge hrq hf hik
 
-@[simps!]
+@[pp_nodot, simps!]
 def flipBitPerm (i : ℕ) : Equiv.Perm ℕ :=
   ⟨(flipBit · i), (flipBit · i), xor_cancel_right _, xor_cancel_right _⟩
+
+@[simp]
+lemma flipBitPerm_inv_apply : ∀ (i x : ℕ), (flipBitPerm i)⁻¹ x = x.flipBit i := fun _ _ => rfl
 
 lemma flipBitPerm_eq_permCongr (i : ℕ) :
     flipBitPerm i = (testBitRes i).symm.permCongr (boolInversion.prodCongr (Equiv.refl _)) := by

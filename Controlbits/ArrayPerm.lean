@@ -104,7 +104,7 @@ theorem _root_.Function.Injective.swaps_map_comp_apply {bs : List (α × α)} {k
   induction' bs with b bs IH
   · rfl
   · simp_rw [map_cons, swaps_cons, Perm.mul_apply, IH, comp_apply, uncurry_swap,
-    Prod_map, hf.swap_apply]
+    Prod.map_apply, hf.swap_apply]
 
 theorem _root_.Function.Injective.swaps_map_apply {bs : List (α × α)} {k : α} {f : α → β}
     (hf : Function.Injective f) : swaps (bs.map (map f f)) (f k) = f (swaps bs k) := by
@@ -193,7 +193,7 @@ theorem swaps_mul_eq_mul_swaps (bs : List (α × α)) (π : Perm α) :
   induction' bs with b bs IH generalizing π
   · rfl
   · simp_rw [map_cons, swaps_cons, mul_assoc, IH, ← mul_assoc, uncurry_swap_apply,
-    swap_mul_eq_mul_swap, mul_assoc, Prod_map]
+    swap_mul_eq_mul_swap, mul_assoc, Prod.map_apply]
 
 theorem mul_swaps_eq_swaps_mul (bs : List (α × α)) (π : Perm α) :
     π * swaps bs = swaps (bs.map (Prod.map π π)) * π := by
@@ -374,6 +374,24 @@ namespace Array
 open Equiv Function List Fin
 
 variable {α : Type*}
+
+@[simp]
+theorem range_zero : range 0 = #[] := rfl
+
+@[simp]
+theorem range_succ {n : ℕ} : range (n + 1) = (range n).push n := rfl
+
+@[simp]
+theorem getElem_range {i n : ℕ} (h : i < (range n).size) : (range n)[i] = i := by
+  induction' n with n IH
+  · simp_rw [size_range, not_lt_zero'] at h
+  · simp_rw [range_succ, Array.get_push, size_range]
+    simp_rw [size_range] at IH
+    rw [size_range, Nat.lt_succ_iff, le_iff_eq_or_lt] at h
+    rcases h with rfl | h
+    · simp_rw [lt_irrefl, dite_false]
+    · simp_rw [h, dite_true]
+      exact IH h
 
 @[simp]
 theorem swap_congr (a a' : Array α) {i j : Fin a.size} {i' j' : Fin a'.size}

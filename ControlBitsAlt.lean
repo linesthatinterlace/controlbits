@@ -7,17 +7,40 @@ import Paperproof
 
 
 section Decomposition
-open Equiv Nat
+open Equiv Equiv.Perm Nat
 
 abbrev XBackXForth (i : ℕ) (π : Perm ℕ) := ⁅π, flipBitPerm i⁆
 
 lemma xBXF_def {i : ℕ} {π : Perm ℕ} : XBackXForth i π = ⁅π, flipBitPerm i⁆ := rfl
 
-theorem lt_iff_xBXF_lt (h : i < m) (hπ : ): q < 2^m ↔ XBackXForth
+theorem lt_iff_xBXF_lt (h : i < m) (hπ : ∀ q, q < 2^m ↔ π q < 2^m) :
+    ∀ q, q < 2^m ↔ XBackXForth i π q < 2^m := fun q => by
+  unfold XBackXForth
+  simp_rw [commutatorElement_def, Perm.mul_apply, flipBitPerm_inv_apply, flipBitPerm_apply,
+  ← hπ, ← lt_iff_flipBit_lt h, hπ (π⁻¹ (q.flipBit i)), Perm.apply_inv_self]
+  exact lt_iff_flipBit_lt h
 
 def FirstLayer (π : Perm ℕ) (m : ℕ) (i : ℕ) : Array Bool :=
-  (Array.range (2^m)).map (fun p => testBit (FastCycleMin (m - i) (XBackXForth i π) _) i)
-  --fun p => (FastCycleMin i.rev (XBackXForth i π) (p.mergeBit i false)).testBit i
+  (Array.range (2^m)).map (fun p => testBit (FastCycleMin (m - i) (XBackXForth i π) p) i)
+
+@[simp]
+lemma size_firstLayer : (FirstLayer π m i).size = 2^m := by
+  unfold FirstLayer
+  rw [Array.size_map, Array.size_range]
+
+@[simp]
+lemma firstLayer_getElem (h : p < (FirstLayer π m i).size) :
+  (FirstLayer π m i)[p] = testBit (FastCycleMin (m - i) (XBackXForth i π) p) i := by
+  unfold FirstLayer
+  simp_rw [Array.getElem_map, Array.getElem_range]
+
+lemma firstLayer_getElem_of_blah (h : p < (FirstLayer π m i).size) :
+  (FirstLayer π m i)[p] = testBit (CycleMin (XBackXForth i π) p) i := by
+  unfold FirstLayer
+  simp_rw [Array.getElem_map, Array.getElem_range]
+  congr
+  rw [size_firstLayer] at h
+  exact ((XBackXForth i π) ).fastCycleMin_eq_cycleMin_of_mem_finset sorry sorry sorry sorry
 
 end Decomposition
 
