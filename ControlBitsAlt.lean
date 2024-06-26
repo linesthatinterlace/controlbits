@@ -40,7 +40,10 @@ lemma firstLayer_getElem_of_blah (h : p < (FirstLayer π m i).size) :
   simp_rw [Array.getElem_map, Array.getElem_range]
   congr
   rw [size_firstLayer] at h
-  exact ((XBackXForth i π) ).fastCycleMin_eq_cycleMin_of_mem_finset sorry sorry sorry sorry
+  let s := {x : ℕ | ∀ k, (k < i ∨ m ≤ k) → x.testBit k = p.testBit k}
+  have hsp : p ∈ s := by simp_rw [s, Set.mem_setOf_eq, implies_true]
+  haveI : Fintype s := sorry
+  exact ((XBackXForth i π)).fastCycleMin_eq_cycleMin_of_mem_finite_fix s (le_of_eq sorry) sorry hsp
 
 end Decomposition
 
