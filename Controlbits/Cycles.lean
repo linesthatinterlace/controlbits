@@ -29,10 +29,10 @@ lemma exists_pow_fixpoint_mem_finite_of_fix [DecidableEq α] (π : Equiv.Perm α
     rcases H hxπ with ⟨k, hk, hkx, hkπ⟩
     exact ⟨k, hk, hkx.trans (Finset.card_le_univ _), hkπ⟩
 
-def FastCycleMin {α : Type*} [Min α] (n : ℕ) (π : Equiv.Perm α) : α → α :=
-  match n with
+def FastCycleMin {α : Type*} [Min α] (i : ℕ) (π : Equiv.Perm α) : α → α :=
+  match i with
   | 0 => id
-  | (i+1) => fun x => min (FastCycleMin i π x) (FastCycleMin i π ((π ^ (2^i : ℕ)) x))
+  | (i+1) => fun x => min (FastCycleMin i π x) (FastCycleMin i π <| (π ^ 2^i) x)
 
 section FastCycleMin
 variable {α : Type*} {x : α} {π : Perm α}
@@ -54,17 +54,45 @@ section LinearOrder
 
 variable [LinearOrder α]
 
-lemma fastCycleMin_le (h : k < 2^i) : FastCycleMin i π x ≤ (π ^ k) x := by
-  induction' i with i IH generalizing x k
-  · rw [pow_zero, Nat.lt_one_iff] at h
-    simp_rw [fastCycleMin_zero, h, pow_zero, one_apply, le_rfl]
-  · rw [pow_succ', two_mul] at h
-    simp_rw [fastCycleMin_succ, min_le_iff]
+lemma fastCycleMin_le : ∀ k < 2^i, FastCycleMin i π x ≤ (π ^ k) x := by
+  induction' i with i IH generalizing x
+  · simp_rw [pow_zero, Nat.lt_one_iff, fastCycleMin_zero, forall_eq, pow_zero, one_apply, le_rfl]
+  · simp_rw [pow_succ', two_mul, fastCycleMin_succ, min_le_iff]
+    intro k hk'
     rcases lt_or_le k (2^i) with hk | hk
-    · exact Or.inl (IH hk)
-    · rw [← Nat.sub_lt_iff_lt_add hk] at h
-      convert Or.inr (IH h) using 2
+    · exact Or.inl (IH _ hk)
+    · rw [← Nat.sub_lt_iff_lt_add hk] at hk'
+      convert Or.inr (IH _ hk') using 2
       rw [← Equiv.Perm.mul_apply, ← pow_add, Nat.sub_add_cancel hk]
+
+lemma le_fastCycleMin : ∀ z, (∀ k < 2^i, z ≤ (π ^ k) x) → z ≤ FastCycleMin i π x := by
+  induction' i with i IH generalizing x
+  · simp_rw [pow_zero, Nat.lt_one_iff, forall_eq, pow_zero, one_apply, fastCycleMin_zero, imp_self,
+    implies_true]
+  · simp_rw [fastCycleMin_succ, le_min_iff]
+    intros z hz
+    refine' ⟨_, _⟩
+    · exact IH _ (fun _ hk => hz _ (hk.trans
+        (Nat.pow_lt_pow_of_lt one_lt_two (Nat.lt_succ_self _))))
+    · rw [pow_succ', two_mul] at hz
+      refine' IH _ (fun _ hk => _)
+      simp_rw [← Perm.mul_apply, ← pow_add]
+      exact hz _ (add_lt_add_right hk _)
+
+lemma fastCycleMin_le_iff :
+    ∀ z, FastCycleMin i π x ≤ z ↔ (∀ y, (∀ k < 2^i, y ≤ (π ^ k) x) → y ≤ z) :=
+  fun _ => ⟨fun h _ hy => h.trans' (le_fastCycleMin _ hy), fun h => h _ fastCycleMin_le⟩
+
+lemma fastCycleMin_le_self : FastCycleMin i π x ≤ x := fastCycleMin_le _ (Nat.two_pow_pos _)
+
+lemma le_fastcycleMin_iff : ∀ z, z ≤ FastCycleMin i π x ↔ ∀ k < 2^i, z ≤ (π ^ k) x :=
+  fun _ => ⟨fun h _ hk => h.trans (fastCycleMin_le _ hk), le_fastCycleMin _⟩
+
+lemma self_eq_fastCycleMin_iff : x = FastCycleMin i π x ↔ x ≤ FastCycleMin i π x:= by
+  simp_rw [eq_iff_le_not_lt, not_lt, fastCycleMin_le_self, and_true]
+
+lemma fastCycleMin_eq_self_iff : FastCycleMin i π x = x ↔ x ≤ FastCycleMin i π x:= by
+  simp_rw [← self_eq_fastCycleMin_iff, eq_comm]
 
 lemma exists_lt_fastCycleMin_eq_pow_apply (x : α) (i : ℕ) :
     ∃ k < 2^i, (π ^ k) x = FastCycleMin i π x := by
@@ -92,11 +120,40 @@ lemma fastCycleMin_eq_min'_image_interval [DecidableEq α] : FastCycleMin i π x
   refine' le_antisymm _ (Finset.min'_le _ _ _)
   · simp_rw [Finset.le_min'_iff, Finset.mem_image, Finset.mem_Iio, forall_exists_index, and_imp,
     forall_apply_eq_imp_iff₂]
-    exact fun _ => fastCycleMin_le
+    exact fun _ => fastCycleMin_le _
   · simp_rw [Finset.mem_image, Finset.mem_Iio]
     exact exists_lt_fastCycleMin_eq_pow_apply x i
 
+lemma min_fastCycleMin_apply :
+    min (FastCycleMin i π (π x)) x = min (FastCycleMin i π x) ((π ^ 2^i) x) := by
+  simp_rw [fastCycleMin_eq_min'_image_interval, ← Finset.min'_insert, ← mul_apply,
+  ← pow_succ, ← Finset.image_insert (fun k => (π ^ k) x), Finset.Iio_insert]
+  congr 1
+  ext y
+  simp_rw [Finset.mem_insert, Finset.mem_image, Finset.mem_Iio, Finset.mem_Iic, eq_comm (a := y),
+  ← Nat.succ_le_iff, Nat.succ_eq_add_one]
+  nth_rewrite 2 [← Nat.or_exists_succ]
+  simp_rw [zero_le, pow_zero, one_apply, true_and]
+
+section OrderBot
+
+variable [OrderBot α]
+
+lemma fastCycleMin_apply_bot : FastCycleMin i π ⊥ = ⊥ := by
+  rw [eq_bot_iff]
+  exact fastCycleMin_le_self
+
+end OrderBot
+
 end LinearOrder
+
+section Nat
+
+lemma fastCycleMin_apply_zero {π : Perm ℕ} : FastCycleMin i π 0 = 0 := by
+  rw [fastCycleMin_eq_self_iff]
+  exact zero_le _
+
+end Nat
 
 end FastCycleMin
 
@@ -152,9 +209,6 @@ lemma cycleMin_le_of_bddBelow_sameCycle (h : π.SameCycle x y) : CycleMin π x �
   rw [cycleMin_def]
   exact csInf_le hsb h
 
-lemma cycleMin_le_of_le_of_bddBelow_sameCycle (h : π.SameCycle x y) (hy : y ≤ a) :
-    CycleMin π x ≤ a := (cycleMin_le_of_bddBelow_sameCycle hsb h).trans hy
-
 lemma cycleMin_le_zpow_apply_of_bddBelow_sameCycle (k : ℤ) : CycleMin π x ≤ (π^k) x :=
   cycleMin_le_of_bddBelow_sameCycle hsb ⟨k, rfl⟩
 
@@ -176,9 +230,6 @@ variable [OrderBot α]
 lemma cycleMin_le (h : π.SameCycle x y) : CycleMin π x ≤ y := by
   rw [cycleMin_def]
   exact csInf_le (OrderBot.bddBelow _) h
-
-lemma cycleMin_le_of_le (h : π.SameCycle x y) (hy : y ≤ a) : CycleMin π x ≤ a :=
-  (cycleMin_le h).trans hy
 
 lemma cycleMin_le_zpow_apply (k : ℤ) : CycleMin π x ≤ (π^k) x :=
   cycleMin_le ⟨k, rfl⟩
@@ -252,7 +303,7 @@ lemma fastCycleMin_eq_cycleMin_of_order_le (hn : n > 0) (hn' : n ≤ 2^i) (hnx :
   refine' le_antisymm _ cycleMin_le_fastCycleMin
   rcases π.cycleMin_exists_pow_apply_of_finite_order hn hnx with ⟨k, hk, hkx⟩
   rw [← hkx]
-  exact fastCycleMin_le (hk.trans_le hn')
+  exact fastCycleMin_le _ (hk.trans_le hn')
 
 lemma fastCycleMin_eq_cycleMin_of_mem_finite_fix (s : Set α) [Fintype s]
   (hsi : Fintype.card s ≤ 2^i) (hsx : ∀ x, x ∈ s ↔ π x ∈ s) (hx : x ∈ s) :

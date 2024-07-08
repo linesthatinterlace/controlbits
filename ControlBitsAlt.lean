@@ -17,8 +17,8 @@ theorem lt_iff_xBXF_lt (h : i < m) (hπ : ∀ q, q < 2^m ↔ π q < 2^m) :
   ← hπ, ← lt_iff_flipBit_lt h, hπ (π⁻¹ (q.flipBit i)), Perm.apply_inv_self]
   exact lt_iff_flipBit_lt h
 
-def FirstLayer (π : Perm ℕ) (m : ℕ) (i : ℕ) : Array Bool :=
-  (Array.range (2^m)).map (fun p => testBit (FastCycleMin (m - i) (XBackXForth i π) p) i)
+def FirstLayer (π : Perm ℕ) (m i : ℕ) : Array Bool :=
+  (Array.range (2^m)).map fun p => testBit (FastCycleMin (m - i) (XBackXForth i π) p) i
 
 @[simp]
 lemma size_firstLayer : (FirstLayer π m i).size = 2^m := by
@@ -31,7 +31,7 @@ lemma firstLayer_getElem (h : p < (FirstLayer π m i).size) :
   unfold FirstLayer
   simp_rw [Array.getElem_map, Array.getElem_range]
 
-lemma firstLayer_getElem_of_blah (h : p < (FirstLayer π m i).size) :
+lemma firstLayer_getElem' (h : p < (FirstLayer π m i).size) :
   (FirstLayer π m i)[p] = testBit (CycleMin (XBackXForth i π) p) i := by
   unfold FirstLayer
   simp_rw [Array.getElem_map, Array.getElem_range]
@@ -42,18 +42,30 @@ lemma firstLayer_getElem_of_blah (h : p < (FirstLayer π m i).size) :
   haveI : Fintype s := sorry
   exact ((XBackXForth i π)).fastCycleMin_eq_cycleMin_of_mem_finite_fix s (le_of_eq sorry) sorry hsp
 
+def FirstLayerPerm (π : Perm ℕ) (m i : ℕ) := Nat.condFlipBitPerm (FirstLayer π m i) i
+
+def LastLayer (π : Perm ℕ) (m i : ℕ) : Array Bool :=
+  (Array.range (2^m)).map fun p => testBit i ((FirstLayerPerm π m i) (π (p.mergeBit i false)))
+
+def LastLayerPerm (π : Perm ℕ) (m i : ℕ) := Nat.condFlipBitPerm (LastLayer π m i) i
+
+def MiddlePerm (π : Perm ℕ) (m i : ℕ) := (FirstLayerPerm π m i) * π * (LastLayerPerm π m i)
+
+-- Theorem 5.2
+lemma firstLayer_apply_zero {π : Perm ℕ} : (FirstLayer π m i)[0] = false := by
+  simp_rw [firstLayer_getElem, fastCycleMin_apply_zero, zero_testBit]
+
 end Decomposition
 
 
 abbrev ControlBitsLayer (m : ℕ) := BV m → Bool
 
 
+/-
 
 
 
 
-def FirstLayerPerm (i : Fin (m + 1)) (π : Perm (BV (m + 1))) :=
-  Fin.condFlipBitPerm (Array.ofFn <| FirstLayer π i) i
 
 lemma firstLayer_def {i : Fin (m + 1)} : FirstLayer (π : Perm (BV (m + 1))) i p =
 (FastCycleMin i.rev (XBackXForth i π) (p.mergeBit i false)).testBit i  := by rfl
@@ -69,9 +81,6 @@ lemma firstLayer_apply_zero {π : Perm (BV (m + 1))} :
   FirstLayer π i 0 = false := by
   simp_rw [firstLayer_apply,
     Fin.cycleMin_zero, testBit_apply_zero]
-
-lemma firstLayer_last {π : Perm (BV (m + 1))} :
-  FirstLayer (last _) π p = false := sorry
 
 def LastLayer (i : Fin (m + 1)) (π : Perm (BV (m + 1))) : ControlBitsLayer m :=
   fun p => testBit i ((FirstLayerPerm i π) (π (mergeBitRes i false p)))
@@ -175,6 +184,7 @@ lemma testBit_zero_lastLayerPerm_apply_eq_testBit_zero_firstLayerPerm_perm_apply
     cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF, testBit_flipBit, Bool.not_not]
 
 abbrev PartialControlBits (m n : ℕ) := Fin (2*n + 1) → ControlBitsLayer m
+-/
 
 namespace PartialControlBits
 

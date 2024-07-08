@@ -6,7 +6,6 @@ import Mathlib.Data.List.Indexes
 import Mathlib.GroupTheory.GroupAction.Group
 import Mathlib.GroupTheory.GroupAction.Prod
 import Controlbits.Bool
-import Controlbits.BitResiduumAlt
 
 set_option autoImplicit false
 
@@ -104,7 +103,7 @@ theorem _root_.Function.Injective.swaps_map_comp_apply {bs : List (α × α)} {k
   induction' bs with b bs IH
   · rfl
   · simp_rw [map_cons, swaps_cons, Perm.mul_apply, IH, comp_apply, uncurry_swap,
-    Prod.map_apply, hf.swap_apply]
+    map_fst, map_snd, hf.swap_apply]
 
 theorem _root_.Function.Injective.swaps_map_apply {bs : List (α × α)} {k : α} {f : α → β}
     (hf : Function.Injective f) : swaps (bs.map (map f f)) (f k) = f (swaps bs k) := by
@@ -193,7 +192,7 @@ theorem swaps_mul_eq_mul_swaps (bs : List (α × α)) (π : Perm α) :
   induction' bs with b bs IH generalizing π
   · rfl
   · simp_rw [map_cons, swaps_cons, mul_assoc, IH, ← mul_assoc, uncurry_swap_apply,
-    swap_mul_eq_mul_swap, mul_assoc, Prod.map_apply]
+    swap_mul_eq_mul_swap, mul_assoc, map_fst, map_snd]
 
 theorem mul_swaps_eq_swaps_mul (bs : List (α × α)) (π : Perm α) :
     π * swaps bs = swaps (bs.map (Prod.map π π)) * π := by
@@ -384,7 +383,7 @@ theorem range_succ {n : ℕ} : range (n + 1) = (range n).push n := rfl
 @[simp]
 theorem getElem_range {i n : ℕ} (h : i < (range n).size) : (range n)[i] = i := by
   induction' n with n IH
-  · simp_rw [size_range, not_lt_zero'] at h
+  · simp_rw [size_range, Nat.not_lt_zero] at h
   · simp_rw [range_succ, Array.get_push, size_range]
     simp_rw [size_range] at IH
     rw [size_range, Nat.lt_succ_iff, le_iff_eq_or_lt] at h
@@ -640,7 +639,7 @@ theorem eq_of_toArray_get_eq (a b : ArrayPerm n)
   a.toArray[i.val] = b.toArray[i.val]) : a = b := (a.eq_iff_toArray_get_eq b).mpr h
 
 instance One : One (ArrayPerm n) :=
-⟨enum n, enum n, size_enum _, size_enum _, fun h => by simp only [Fin.getElem_fin, getElem_enum]⟩
+⟨enum n, enum n, size_enum _, size_enum _, fun h => by simp_rw [Fin.getElem_enum]⟩
 
 theorem one_toArray : (1 : ArrayPerm n).toArray = enum n := rfl
 theorem one_invArray : (1 : ArrayPerm n).invArray = enum n := rfl
@@ -667,7 +666,7 @@ instance : Mul (ArrayPerm n) := ⟨fun a b =>
     a.invArray.map (fun i => haveI := b.sizeInv ; b.invArray[i.val]),
     (b.toArray.size_map _).trans b.sizeTo,
     (a.invArray.size_map _).trans a.sizeInv, fun _ => by
-    simp_rw [getElem_map, a.left_inv', b.left_inv']⟩⟩
+    simp_rw [Array.getElem_map, a.left_inv', b.left_inv']⟩⟩
 
 theorem mul_toArray (a b : ArrayPerm n) :
 (a * b).toArray = b.toArray.map (fun i => haveI := a.sizeTo ; a.toArray[i.val]) := rfl
@@ -677,12 +676,12 @@ theorem mul_invArray (a b : ArrayPerm n) :
 theorem mul_toArray_get (a b : ArrayPerm n) (i : Fin n) :
     haveI ha := a.sizeTo; haveI hb := b.sizeTo; haveI hab := (a * b).sizeTo;
     (a * b).toArray[i.val] = a.toArray[b.toArray[i.val].val] := by
-  simp_rw [mul_toArray, getElem_map]
+  simp_rw [mul_toArray, Array.getElem_map]
 
 theorem mul_invArray_get (a b : ArrayPerm n) (i : Fin n) :
     haveI ha := a.sizeInv; haveI hb := b.sizeInv; haveI hab := (a * b).sizeInv;
     (a * b).invArray[i.val] = b.invArray[a.invArray[i.val].val] := by
-  simp_rw [mul_invArray, getElem_map]
+  simp_rw [mul_invArray, Array.getElem_map]
 
 instance : Group (ArrayPerm n) where
   mul_assoc a b c := (a * b * c).eq_of_toArray_get_eq (a * (b * c)) fun _ => by
@@ -757,10 +756,10 @@ multiplication (and, indeed, the scalar action on `Fin n`).
 def mulEquivPerm : ArrayPerm n ≃* Perm (Fin n) where
   toFun a := ⟨(a • ·), (a⁻¹ • ·), inv_smul_smul _, smul_inv_smul _⟩
   invFun π := ⟨ofFn π, ofFn π.symm, size_ofFn _, size_ofFn _, fun _ => by
-    simp_rw [getElem_ofFn, Fin.eta, symm_apply_apply]⟩
-  left_inv a := ext fun _ => by simp_rw [mk_smul, getElem_ofFn, Fin.eta, coe_fn_mk]
+    simp_rw [Array.getElem_ofFn, Fin.eta, symm_apply_apply]⟩
+  left_inv a := ext fun _ => by simp_rw [mk_smul, Array.getElem_ofFn, Fin.eta, coe_fn_mk]
   right_inv π := Equiv.ext fun _ => by
-    simp_rw [mk_smul, mk_inv_smul, getElem_ofFn, Fin.eta, coe_fn_mk]
+    simp_rw [mk_smul, mk_inv_smul, Array.getElem_ofFn, Fin.eta, coe_fn_mk]
   map_mul' a b := Equiv.ext fun _ => by
     simp_rw [mul_smul, mul_inv_rev, Perm.coe_mul, comp_apply, coe_fn_mk]
 
@@ -788,7 +787,7 @@ def congr (h : n = m) (a : ArrayPerm n) : ArrayPerm m where
   sizeTo := (a.toArray.size_map _).trans <| a.sizeTo.trans h
   sizeInv := (a.invArray.size_map _).trans <| a.sizeInv.trans h
   left_inv'  i := by
-    simp_rw [getElem_map, coe_cast, ← Fin.coe_cast h.symm i,
+    simp_rw [Array.getElem_map, coe_cast, ← Fin.coe_cast h.symm i,
     invArray_get_toArray_get, Fin.cast_trans, cast_eq_self]
 
 theorem congr_toArray (h : n = m) (a : ArrayPerm n) :
@@ -834,8 +833,8 @@ def swap (a : ArrayPerm n) (i j : Fin n) : ArrayPerm n where
   sizeTo := (Array.size_swap _ _ _).trans a.sizeTo
   sizeInv := (Array.size_map _ _).trans a.sizeInv
   left_inv' k := by
-    simp only [a.toArray.get_swap', coe_cast, getElem_fin, toArray_coe, getElem_map, invArray_coe,
-      smul_ite, inv_smul_smul, ← Fin.ext_iff]
+    simp only [a.toArray.get_swap', coe_cast, getElem_fin, toArray_coe,
+      Array.getElem_map, invArray_coe, smul_ite, inv_smul_smul, ← Fin.ext_iff]
     simp_rw [← Equiv.swap_apply_def, swap_apply_self]
 
 @[simp]

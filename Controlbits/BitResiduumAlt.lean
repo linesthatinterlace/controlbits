@@ -964,7 +964,7 @@ lemma lt_iff_condFlipBit_lt {q : ℕ} (hi : i < m) : q < 2^m ↔ q.condFlipBit c
   · exact Iff.rfl
 
 @[pp_nodot, simps!]
-def condFlipBitPerm (i : ℕ) (c : Array Bool) : Equiv.Perm ℕ where
+def condFlipBitPerm (c : Array Bool) (i : ℕ) : Equiv.Perm ℕ where
   toFun := (condFlipBit · c i)
   invFun := (condFlipBit · c i)
   left_inv _ := condFlipBit_condFlipBit_of_eq
