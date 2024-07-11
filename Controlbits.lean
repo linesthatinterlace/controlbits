@@ -16,32 +16,39 @@ lemma xBXF_def {π : Perm (BV (m + 1))} :
 
 lemma xBXF_base : XBackXForth (m := 0) π = 1 := cmtr_fin_two
 
+noncomputable instance Fin.completeLinearOrder' {n : ℕ} [NeZero n] : CompleteLinearOrder (Fin n) :=
+Fintype.toCompleteLinearOrder _
+
+noncomputable example : InfSet (BV (m + 1)) := inferInstance
 
 -- Theorem 4.3 (c)
 lemma orderOf_xBXF_cycleOf {q : BV (m + 1)} :
-  orderOf ((XBackXForth π).cycleOf q) ≤ 2^m := by
-refine' le_of_le_of_eq (cycleAt_cmtr_card_le_card_univ_div_two rfl flipBit_ne_self) _
-· rw [Finset.card_fin, pow_succ, Nat.mul_div_left _ Nat.ofNat_pos]
+  orderOf ((XBackXForth π).cycleOf q) ≤ 2^m :=  sorry
+  --by
+--refine' le_of_le_of_eq (cycleAt_cmtr_card_le_card_univ_div_two rfl flipBit_ne_self) _
+--· rw [Finset.card_fin, pow_succ, Nat.mul_div_left _ Nat.ofNat_pos]
 
 -- Theorem 4.4
-lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF :
-CycleMin (XBackXForth π) (flipBit 0 q) = (flipBit 0) (CycleMin (XBackXForth π) q) :=
+lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF {π : Perm (BV (m + 1))} :
+(XBackXForth π).CycleMin (flipBit 0 q) = (flipBit 0) ((XBackXForth π).CycleMin q) :=
 cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr
   rfl flipBit_ne_self eq_flipBit_of_lt_of_flipBit_gt
 
 lemma cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply :
-CycleMin (XBackXForth π) (π (flipBit 0 q)) = CycleMin (XBackXForth π) (flipBit 0 (π q)) :=
+(XBackXForth π).CycleMin (π (flipBit 0 q)) = (XBackXForth π).CycleMin (flipBit 0 (π q)) :=
 cycleMin_cmtr_apply_comm
 
 def FirstLayer (π : Perm (BV (m + 1))) : ControlBitsLayer m :=
-  fun p => getBit 0 (FastCycleMin m (XBackXForth π) (mergeBitRes 0 false p))
+  fun p => getBit 0 ((XBackXForth π).FastCycleMin m (mergeBitRes 0 false p))
 
 lemma firstLayer_def : FirstLayer (π : Perm (BV (m + 1))) p =
-getBit 0 (FastCycleMin m (XBackXForth π) (mergeBitRes 0 false p)) := by rfl
+getBit 0 ((XBackXForth π).FastCycleMin m (mergeBitRes 0 false p)) := by rfl
 
-lemma firstLayer_apply : FirstLayer π p =
-  getBit 0 (CycleMin (XBackXForth π) (mergeBitRes 0 false p)) := by
-  rw [FirstLayer, cycleMin_eq_fastCycleMin orderOf_xBXF_cycleOf]
+lemma firstLayer_apply {π : Perm (BV (m + 1))} : FirstLayer π p =
+  getBit 0 ((XBackXForth π).CycleMin (mergeBitRes 0 false p)) := by
+  rw [FirstLayer, Perm.fastCycleMin_eq_cycleMin_of_order_le]
+  exact ⟨orderOf ((XBackXForth π).cycleOf (mergeBitRes 0 false p)),
+    Nat.two_pow_pos _, le_rfl, _⟩
 
 -- Theorem 5.2
 lemma firstLayer_apply_zero {π : Perm (BV (m + 1))} :

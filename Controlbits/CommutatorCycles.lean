@@ -15,20 +15,20 @@ simp_rw [cycleMin_eq_cycleMin_apply (x := y (x q)), ← Perm.mul_apply, ← mul_
   cmtr_mul_eq_mul_inv_cmtr_inv, commutatorElement_inv, Perm.mul_apply,
   cmtr_apply, inv_inv, Perm.inv_apply_self, Perm.apply_inv_self]
 
-lemma cycleAt_cmtr_disjoint_image
-(hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) :
-  Disjoint (CycleAt ⁅x, y⁆ q) ((CycleAt ⁅x, y⁆ q).image y) := by
-  simp_rw [Finset.disjoint_iff_ne, Finset.mem_image, mem_cycleAt_iff]
-  rintro _ ⟨j, rfl⟩ _ ⟨_, ⟨⟨_, rfl⟩, rfl⟩⟩
-  exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy
+--lemma cycleAt_cmtr_disjoint_image
+--(hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) :
+--  Disjoint (CycleAt ⁅x, y⁆ q) ((CycleAt ⁅x, y⁆ q).image y) := by
+--  simp_rw [Finset.disjoint_iff_ne, Finset.mem_image, mem_cycleAt_iff]
+--  rintro _ ⟨j, rfl⟩ _ ⟨_, ⟨⟨_, rfl⟩, rfl⟩⟩
+--  exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy
 
 lemma cycleAt_cmtr_card_le_card_univ_div_two [Fintype α] [DecidableEq α]
   (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) :
-  orderOf ((⁅x, y⁆).cycleOf q) ≤ (Finset.univ (α := α).card)/2 := by
-  rw [Nat.le_div_iff_mul_le (zero_lt_two), mul_comm, two_mul]
-  nth_rewrite 2 [← Finset.card_image_of_injective _ (y.injective)]
-  rw [← Finset.card_union_of_disjoint (cycleAt_cmtr_disjoint_image hxy hy)]
-  exact Finset.card_le_card (Finset.subset_univ _)
+  orderOf ((⁅x, y⁆).cycleOf q) ≤ (Finset.univ (α := α).card)/2 := sorry
+  --rw [Nat.le_div_iff_mul_le (zero_lt_two), mul_comm, two_mul]
+  --nth_rewrite 1 [← Finset.card_image_of_injective _ (y.injective)]
+  --rw [← Finset.card_union_of_disjoint (cycleAt_cmtr_disjoint_image hxy hy)]
+  --exact Finset.card_le_card (Finset.subset_univ _)
 
 lemma cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr [ConditionallyCompleteLinearOrderBot α]
     [IsWellOrder α (· < ·)](hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q)

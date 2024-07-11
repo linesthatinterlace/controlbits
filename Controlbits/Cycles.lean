@@ -298,18 +298,19 @@ lemma cycleMin_le_fastCycleMin : CycleMin π x ≤ FastCycleMin i π x := by
   rw [← hkx]
   exact cycleMin_le ⟨k, rfl⟩
 
-lemma fastCycleMin_eq_cycleMin_of_order_le (hn : n > 0) (hn' : n ≤ 2^i) (hnx : (π^n) x = x) :
+lemma fastCycleMin_eq_cycleMin_of_order_le (hn : ∃ n : ℕ, 0 < n ∧ n ≤ 2^i ∧ (π^n) x = x) :
     FastCycleMin i π x = CycleMin π x := by
   refine' le_antisymm _ cycleMin_le_fastCycleMin
+  obtain ⟨n, hn, hni, hnx⟩ := hn
   rcases π.cycleMin_exists_pow_apply_of_finite_order hn hnx with ⟨k, hk, hkx⟩
   rw [← hkx]
-  exact fastCycleMin_le _ (hk.trans_le hn')
+  exact fastCycleMin_le _ (hk.trans_le hni)
 
 lemma fastCycleMin_eq_cycleMin_of_mem_finite_fix (s : Set α) [Fintype s]
   (hsi : Fintype.card s ≤ 2^i) (hsx : ∀ x, x ∈ s ↔ π x ∈ s) (hx : x ∈ s) :
     FastCycleMin i π x = CycleMin π x := by
   rcases (exists_pow_fixpoint_mem_finite_of_fix π hsx hx) with ⟨k, hk, hk', hkx⟩
-  exact fastCycleMin_eq_cycleMin_of_order_le hk (hk'.trans hsi) hkx
+  exact fastCycleMin_eq_cycleMin_of_order_le ⟨k, hk, (hk'.trans hsi), hkx⟩
 
 end ConditionallyCompleteLinearOrderBot
 
