@@ -4,30 +4,28 @@ import Mathlib.Data.Fintype.Order
 
 namespace Equiv.Perm
 
-theorem SameCycle.exists_pow_eq_of_mem_support' [Fintype α] [DecidableEq α]
-    (f : Perm α) (h : SameCycle f x y)
-  (hx : x ∈ f.support) : ∃ i : ℕ, 0 < i ∧ i ≤ (f.cycleOf x).support.card ∧ (f ^ i) x = y := by
-  obtain ⟨k, hk, hk'⟩ := h.exists_pow_eq_of_mem_support hx
-  cases' k with k
-  · refine ⟨(f.cycleOf x).support.card, ?_, le_rfl, ?_⟩
-    · refine zero_lt_one.trans (one_lt_card_support_of_ne_one ?_)
-      simpa using hx
-    · simp only [Nat.zero_eq, pow_zero, coe_one, id_eq] at hk'
-      subst hk'
-      rw [← (isCycle_cycleOf _ <| mem_support.1 hx).orderOf, ← cycleOf_pow_apply_self,
-        pow_orderOf_eq_one, one_apply]
-  · exact ⟨k + 1, by simp, hk.le, hk'⟩
-
-lemma exists_pow_fixpoint_mem_finite_of_fix [DecidableEq α] (π : Equiv.Perm α) {s : Set α}
-  [Fintype s] (hsx : ∀ x, x ∈ s ↔ π x ∈ s) (hx : x ∈ s) :
-    ∃ k, (k > 0 ∧ k ≤ Fintype.card s ∧ (π^k) x = x) := by
-  rcases eq_or_ne (π x) x with hxπ | hxπ
-  · haveI : Nonempty s := ⟨x, hx⟩
-    exact ⟨1, zero_lt_one, Nat.succ_le_of_lt (Fintype.card_pos), hxπ⟩
-  · have H := (SameCycle.refl (π.subtypePerm hsx) ⟨x, hx⟩).exists_pow_eq_of_mem_support' _
-    simp only [mem_support, subtypePerm_apply, ne_eq, Subtype.mk.injEq, subtypePerm_pow] at H
-    rcases H hxπ with ⟨k, hk, hkx, hkπ⟩
-    exact ⟨k, hk, hkx.trans (Finset.card_le_univ _), hkπ⟩
+theorem SameCycle.exists_pow_lt_finset_card_of_apply_zpow_mem {f : Perm α} (s : Finset α) {x y : α}
+    (hf : ∀ i : ℤ, (f ^ i) x ∈ s) : SameCycle f x y → ∃ i, i < s.card ∧ (f ^ i) x = y := by
+  have H : ∃ i ≤ s.card, ∃ j ≤ s.card, i ≠ j ∧ (f ^ i) x = (f ^ j) x := by
+    simp_rw [← Nat.lt_succ_iff, ← Finset.mem_range]
+    exact Finset.exists_ne_map_eq_of_card_lt_of_maps_to
+      (Finset.card_range _ ▸ Nat.lt_succ_self _) (fun i _ => hf i)
+  obtain ⟨i, hi, j, hj, hij', hijf⟩ := H
+  wlog hij : i < j
+  · exact this _ hf _ hj _ hi hij'.symm hijf.symm (hij'.symm.lt_of_le (le_of_not_lt hij))
+  rw [← inv_eq_iff_eq, ← mul_apply, ← inv_pow_sub _ hij.le,
+    inv_pow, inv_eq_iff_eq, eq_comm, ← zpow_natCast, Int.natCast_sub hij.le] at hijf
+  have hij : (0 : ℤ) < ↑j - ↑i := by rwa [sub_pos, Nat.cast_lt]
+  rintro ⟨k, hkf⟩
+  rw [← Int.emod_add_ediv k (j - i), zpow_add, mul_apply, zpow_mul,
+    Equiv.Perm.zpow_apply_eq_self_of_apply_eq_self hijf,
+    ← Int.natAbs_of_nonneg (Int.emod_nonneg _ hij.ne'), zpow_natCast] at hkf
+  have hks : (k % (↑j - ↑i)).natAbs < s.card := by
+    rw [←Int.ofNat_lt, Int.natCast_natAbs, abs_eq_self.mpr (Int.emod_nonneg _ hij.ne')]
+    refine' (Int.emod_lt_of_pos _ hij).trans_le _
+    rw [tsub_le_iff_right]
+    exact (Nat.cast_le.mpr hj).trans (le_add_of_nonneg_right (Nat.cast_nonneg _))
+  exact ⟨(k % (↑j - ↑i)).natAbs, hks, hkf⟩
 
 def FastCycleMin {α : Type*} [Min α] (i : ℕ) (π : Equiv.Perm α) : α → α :=
   match i with
@@ -108,7 +106,7 @@ lemma exists_lt_fastCycleMin_eq_pow_apply (x : α) (i : ℕ) :
         Or.inl ⟨rfl, hkk'.le⟩⟩
     · exact ⟨k' + 2^i, Nat.add_lt_add_right hk' _, Or.inr ⟨rfl, hkk'⟩⟩
 
-lemma sameCycle_fastCycleMin : π.SameCycle x (FastCycleMin i π x) := by
+lemma sameCycle_fastCycleMin (π : Perm α) (x : α) : π.SameCycle x (FastCycleMin i π x) := by
   rcases π.exists_lt_fastCycleMin_eq_pow_apply x i with ⟨k, _, hk⟩
   exact ⟨k, hk⟩
 
@@ -159,9 +157,9 @@ end FastCycleMin
 
 section CycleMin
 
-variable {α : Type*} {π : Equiv.Perm α} {x y : α}
+variable {α : Type*} {π : Perm α} {x y : α}
 
-lemma sameCycle_nonempty : Set.Nonempty (π.SameCycle x ·) := ⟨x, ⟨0, rfl⟩⟩
+lemma sameCycle_nonempty (π : Perm α) : Set.Nonempty (π.SameCycle x ·) := ⟨x, ⟨0, rfl⟩⟩
 
 def CycleMin [InfSet α] (π : Equiv.Perm α) (x : α) : α := sInf (π.SameCycle x ·)
 
@@ -219,7 +217,7 @@ lemma cycleMin_le_self_of_bddBelow_sameCycle : CycleMin π x ≤ x :=
   cycleMin_le_zpow_apply_of_bddBelow_sameCycle hsb 0
 
 lemma le_cycleMin_iff_of_bddBelow_sameCycle :
-  z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y := le_csInf_iff hsb sameCycle_nonempty
+  z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y := le_csInf_iff hsb π.sameCycle_nonempty
 
 end BddBelow
 
@@ -254,7 +252,8 @@ section ConditionallyCompleteLinearOrder
 
 variable [ConditionallyCompleteLinearOrder α] [IsWellOrder α (· < ·)]
 
-lemma sameCycle_cycleMin (x : α) : π.SameCycle x (CycleMin π x) := csInf_mem sameCycle_nonempty
+lemma sameCycle_cycleMin (π : Perm α) (x : α) : π.SameCycle x (CycleMin π x) :=
+  csInf_mem π.sameCycle_nonempty
 
 lemma cycleMin_exists_zpow_apply (x : α) : ∃ k : ℤ, (π^k) x = CycleMin π x :=
   π.sameCycle_cycleMin x
@@ -298,37 +297,21 @@ lemma cycleMin_le_fastCycleMin : CycleMin π x ≤ FastCycleMin i π x := by
   rw [← hkx]
   exact cycleMin_le ⟨k, rfl⟩
 
-lemma fastCycleMin_eq_cycleMin_of_order_le (hn : ∃ n : ℕ, 0 < n ∧ n ≤ 2^i ∧ (π^n) x = x) :
-    FastCycleMin i π x = CycleMin π x := by
+lemma fastCycleMin_eq_cycleMin_of_zpow_apply_mem_finset {x : α} (s : Finset α) (hs : s.card ≤ 2^i)
+    (hxs : ∀ i : ℤ, (π ^ i) x ∈ s) : FastCycleMin i π x = CycleMin π x := by
   refine' le_antisymm _ cycleMin_le_fastCycleMin
-  obtain ⟨n, hn, hni, hnx⟩ := hn
-  rcases π.cycleMin_exists_pow_apply_of_finite_order hn hnx with ⟨k, hk, hkx⟩
-  rw [← hkx]
-  exact fastCycleMin_le _ (hk.trans_le hni)
-
-lemma fastCycleMin_eq_cycleMin_of_mem_finite_fix (s : Set α) [Fintype s]
-  (hsi : Fintype.card s ≤ 2^i) (hsx : ∀ x, x ∈ s ↔ π x ∈ s) (hx : x ∈ s) :
-    FastCycleMin i π x = CycleMin π x := by
-  rcases (exists_pow_fixpoint_mem_finite_of_fix π hsx hx) with ⟨k, hk, hk', hkx⟩
-  exact fastCycleMin_eq_cycleMin_of_order_le ⟨k, hk, (hk'.trans hsi), hkx⟩
+  obtain ⟨k, hk, hkx⟩ := (π.sameCycle_cycleMin x).exists_pow_lt_finset_card_of_apply_zpow_mem s hxs
+  exact (fastCycleMin_le _ (hk.trans_le hs)).trans_eq hkx
 
 end ConditionallyCompleteLinearOrderBot
 
-namespace Nat
-
 @[simp]
-lemma cycleMin_zero {π : Perm ℕ} : CycleMin π (0 : ℕ) = 0 :=
+lemma _root_.Nat.cycleMin_zero {π : Perm ℕ} : CycleMin π (0 : ℕ) = 0 :=
 le_antisymm cycleMin_le_self (zero_le _)
 
-end Nat
-
-namespace Fin
-
 @[simp]
-lemma cycleMin_zero {τ : Equiv.Perm (Fin (m + 1))} :
-  CycleMin τ 0 = (0 : Fin (m + 1)) := le_antisymm cycleMin_le_self (Fin.zero_le' _)
-
-end Fin
+lemma _root_.Fin.cycleMin_zero [NeZero m] {τ : Equiv.Perm (Fin m)} :
+  CycleMin τ 0 = 0 := le_antisymm cycleMin_le_self (Fin.zero_le' _)
 
 end CycleMin
 
