@@ -14,13 +14,22 @@ CycleMin ⁅x, y⁆ (x (y q)) = CycleMin ⁅x, y⁆ (y (x q)):= by
 simp_rw [cycleMin_eq_cycleMin_apply (x := y (x q)), ← Perm.mul_apply, ← mul_assoc,
   cmtr_mul_eq_mul_inv_cmtr_inv, commutatorElement_inv, Perm.mul_apply,
   cmtr_apply, inv_inv, Perm.inv_apply_self, Perm.apply_inv_self]
+--Finset.univ.filter (fun y => (XBackXForth π).SameCycle q y)
+lemma cycleAt_cmtr_disjoint_image [DecidableRel (⁅x, y⁆).SameCycle]
+  [DecidableEq α] (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) (q : α) (s t : Finset α):
+  Disjoint (s.filter (fun q' => (⁅x, y⁆).SameCycle q q'))
+    ((t.filter (fun q' => (⁅x, y⁆).SameCycle q q')).image y) := by
+  simp_rw [Finset.disjoint_iff_ne, Finset.mem_image, Finset.mem_filter]
+  intro a ⟨_, ⟨j, hj⟩⟩ b ⟨c, ⟨⟨_, ⟨k, hk⟩⟩, hcb⟩⟩
+  rw [← hcb, ← hk, ← hj]
+  exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy
+  --simp_rw [Finset.disjoint_iff_ne, Finset.mem_image, mem_cycleAt_iff]
+  --rintro _ ⟨j, rfl⟩ _ ⟨_, ⟨⟨_, rfl⟩, rfl⟩⟩
+  --exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy
 
---lemma cycleAt_cmtr_disjoint_image
---(hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) :
---  Disjoint (CycleAt ⁅x, y⁆ q) ((CycleAt ⁅x, y⁆ q).image y) := by
---  simp_rw [Finset.disjoint_iff_ne, Finset.mem_image, mem_cycleAt_iff]
---  rintro _ ⟨j, rfl⟩ _ ⟨_, ⟨⟨_, rfl⟩, rfl⟩⟩
---  exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy
+lemma skjdfjksdf [DecidableRel (⁅x, y⁆).SameCycle] [DecidableEq α]
+    (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) (s : Finset α) :
+  2 * (s.filter (fun q' => (⁅x, y⁆).SameCycle q q')).card ≤ s.card := by
 
 lemma cycleAt_cmtr_card_le_card_univ_div_two [Fintype α] [DecidableEq α]
   (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) :
