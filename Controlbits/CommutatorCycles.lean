@@ -14,7 +14,7 @@ CycleMin ⁅x, y⁆ (x (y q)) = CycleMin ⁅x, y⁆ (y (x q)):= by
 simp_rw [cycleMin_eq_cycleMin_apply (x := y (x q)), ← Perm.mul_apply, ← mul_assoc,
   cmtr_mul_eq_mul_inv_cmtr_inv, commutatorElement_inv, Perm.mul_apply,
   cmtr_apply, inv_inv, Perm.inv_apply_self, Perm.apply_inv_self]
---Finset.univ.filter (fun y => (XBackXForth π).SameCycle q y)
+
 lemma cycleAt_cmtr_disjoint_image [DecidableRel (⁅x, y⁆).SameCycle]
   [DecidableEq α] (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) (q : α) (s t : Finset α):
   Disjoint (s.filter (fun q' => (⁅x, y⁆).SameCycle q q'))
@@ -23,21 +23,17 @@ lemma cycleAt_cmtr_disjoint_image [DecidableRel (⁅x, y⁆).SameCycle]
   intro a ⟨_, ⟨j, hj⟩⟩ b ⟨c, ⟨⟨_, ⟨k, hk⟩⟩, hcb⟩⟩
   rw [← hcb, ← hk, ← hj]
   exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy
-  --simp_rw [Finset.disjoint_iff_ne, Finset.mem_image, mem_cycleAt_iff]
-  --rintro _ ⟨j, rfl⟩ _ ⟨_, ⟨⟨_, rfl⟩, rfl⟩⟩
-  --exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy
 
-lemma skjdfjksdf [DecidableRel (⁅x, y⁆).SameCycle] [DecidableEq α]
-    (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) (s : Finset α) :
+lemma two_mul_filter_sameCycle_card_le_card [DecidableRel (⁅x, y⁆).SameCycle]
+    (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) (s : Finset α)
+    (hsy : ∀ q, q ∈ s → y q ∈ s) (q : α) :
   2 * (s.filter (fun q' => (⁅x, y⁆).SameCycle q q')).card ≤ s.card := by
-
-lemma cycleAt_cmtr_card_le_card_univ_div_two [Fintype α] [DecidableEq α]
-  (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) :
-  orderOf ((⁅x, y⁆).cycleOf q) ≤ (Finset.univ (α := α).card)/2 := sorry
-  --rw [Nat.le_div_iff_mul_le (zero_lt_two), mul_comm, two_mul]
-  --nth_rewrite 1 [← Finset.card_image_of_injective _ (y.injective)]
-  --rw [← Finset.card_union_of_disjoint (cycleAt_cmtr_disjoint_image hxy hy)]
-  --exact Finset.card_le_card (Finset.subset_univ _)
+  rw [two_mul]
+  classical
+    nth_rewrite 2 [← Finset.card_image_of_injective _ (y.injective)]
+    rw [← Finset.card_union_of_disjoint (cycleAt_cmtr_disjoint_image hxy hy q s s)]
+    exact Finset.card_le_card (Finset.union_subset (Finset.filter_subset _ _)
+      (Finset.image_subset_iff.mpr (fun q' hq' => hsy _ (Finset.mem_of_mem_filter _ hq'))))
 
 lemma cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr [ConditionallyCompleteLinearOrderBot α]
     [IsWellOrder α (· < ·)](hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q)

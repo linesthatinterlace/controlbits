@@ -89,7 +89,6 @@ lemma val_predAbove {i : Fin m} {j : Fin (m + 1)} :
 @[simp]
 lemma val_xor {i j : Fin n} : (i ^^^ j).val = (i.val ^^^ j.val) % n := rfl
 
-
 def equivEquiv (e : ℕ ≃ ℕ) (he : ∀ i, i < n ↔ e i < n) : ((Fin n) ≃ (Fin n)) where
   toFun p := Fin.mk (e p.val) ((he _).mp p.isLt)
   invFun p := Fin.mk (e.symm p.val) ((he _).mpr (e.apply_symm_apply _ ▸ p.isLt))
@@ -226,7 +225,7 @@ theorem testBit_two_pow_add_ne_of_testBit_false {i : Nat} {j : Nat} (hij : i ≠
     rcases Nat.exists_eq_add_of_lt hij with ⟨k, rfl⟩
     simp_rw [testBit_to_div_mod, decide_eq_decide,
     add_assoc, pow_add _ i,  pow_succ', ← Nat.div_div_eq_div_mul,
-    Nat.add_div_left _ (Nat.two_pow_pos _), succ_eq_add_one]
+    Nat.add_div_left _ (Nat.two_pow_pos _)]
     rw [← div_add_mod (x / 2^i) 2]
     simp_rw [hx, add_assoc, Nat.mul_add_div (zero_lt_two), Nat.zero_div, zero_add,
     div_eq_of_lt (one_lt_two)]
@@ -360,7 +359,7 @@ lemma lt_iff_testRes_lt (hi : i ≤ m) : q < 2^(m + 1) ↔ q.testRes i < 2^m := 
   rw [testRes_apply]
   refine' ⟨fun _ => _, lt_imp_lt_of_le_imp_le (fun _ => _)⟩
   · have h : 2 ^ i * (q / 2 ^ (i + 1)) ≤ 2^m - 2^i := by
-      rw [← Nat.add_sub_cancel' hi, pow_add _ i (m - i), ← Nat.mul_pred_right, ]
+      rw [← Nat.add_sub_cancel' hi, pow_add _ i (m - i), ← Nat.mul_pred, ]
       refine' Nat.mul_le_mul_left _ (Nat.le_pred_of_lt (Nat.div_lt_of_lt_mul _))
       rwa [mul_comm, ← pow_add, ← add_assoc, Nat.sub_add_cancel hi]
     exact (add_lt_add_of_le_of_lt h (Nat.mod_lt _ (Nat.two_pow_pos _))).trans_eq <|
@@ -881,7 +880,7 @@ lemma flipBitPerm_eq_permCongr (i : ℕ) :
     flipBitPerm i = (testBitRes i).symm.permCongr (boolInversion.prodCongr (Equiv.refl _)) := by
   simp_rw [Equiv.ext_iff, flipBitPerm_apply,
     flipBit_eq_mergeBit, Equiv.permCongr_apply, Equiv.symm_symm, testBitRes_symm_apply,
-    Equiv.prodCongr_apply, Prod.map_apply, Equiv.refl_apply, boolInversion_apply,
+    Equiv.prodCongr_apply, Prod.map_fst, Prod.map_snd, Equiv.refl_apply, boolInversion_apply,
     testBitRes_apply_snd, testBitRes_apply_fst, implies_true]
 
 end FlipBit

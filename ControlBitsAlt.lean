@@ -17,6 +17,15 @@ theorem lt_iff_xBXF_lt (h : i < m) (hπ : ∀ q, q < 2^m ↔ π q < 2^m) :
   ← hπ, ← lt_iff_flipBit_lt h, hπ (π⁻¹ (q.flipBit i)), Perm.apply_inv_self]
   exact lt_iff_flipBit_lt h
 
+--Theorem 4.3 (c)
+lemma univ_filter_sameCycle_le_pow_two {q : ℕ} [DecidableRel (XBackXForth i π).SameCycle] :
+((Finset.range (2^m)).filter (fun y => (XBackXForth i π).SameCycle q y)).card ≤ 2 ^ m := by
+  --apply Nat.le_of_mul_le_mul_left _ (zero_lt_two)
+  --rw [← pow_succ']
+  --have H := two_mul_filter_sameCycle_card_le_card (x := π) (y := flipBit 0)
+  --  rfl flipBit_ne_self Finset.univ (fun _ _ => Finset.mem_univ _) q
+  --exact H.trans_eq (by simp_rw [Finset.card_univ, Fintype.card_fin])
+
 def FirstLayer (π : Perm ℕ) (m i : ℕ) : Array Bool :=
   (Array.range (2^m)).map fun p => testBit (FastCycleMin (m - i) (XBackXForth i π) p) i
 

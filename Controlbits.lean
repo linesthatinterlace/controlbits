@@ -16,27 +16,20 @@ lemma xBXF_def {π : Perm (BV (m + 1))} :
 
 lemma xBXF_base : XBackXForth (m := 0) π = 1 := cmtr_fin_two
 
-lemma saddsadads {q : BV (m + 1)} :
+--Theorem 4.3 (c)
+lemma univ_filter_sameCycle_le_pow_two {q : BV (m + 1)} :
 (Finset.univ.filter (fun y => (XBackXForth π).SameCycle q y)).card ≤ 2 ^ m := by
   apply Nat.le_of_mul_le_mul_left _ (zero_lt_two)
-  rw [← pow_succ', two_mul]
-  nth_rewrite 1 [← Finset.card_image_of_injective _ ((flipBit 0).injective)]
-  rw [← Finset.card_union_of_disjoint]
-  exact (Finset.card_le_univ _).trans_eq (Fintype.card_fin _)
-
-
--- Theorem 4.3 (c)
-lemma orderOf_xBXF_cycleOf {q : BV (m + 1)} :
-  orderOf ((XBackXForth π).cycleOf q) ≤ 2^m :=  sorry
-  --by
---refine' le_of_le_of_eq (cycleAt_cmtr_card_le_card_univ_div_two rfl flipBit_ne_self) _
---· rw [Finset.card_fin, pow_succ, Nat.mul_div_left _ Nat.ofNat_pos]
+  rw [← pow_succ']
+  have H := two_mul_filter_sameCycle_card_le_card (x := π) (y := flipBit 0)
+    rfl flipBit_ne_self Finset.univ (fun _ _ => Finset.mem_univ _) q
+  exact H.trans_eq (by simp_rw [Finset.card_univ, Fintype.card_fin])
 
 -- Theorem 4.4
 lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF {π : Perm (BV (m + 1))} :
 (XBackXForth π).CycleMin (flipBit 0 q) = (flipBit 0) ((XBackXForth π).CycleMin q) :=
-cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr
-  rfl flipBit_ne_self eq_flipBit_of_lt_of_flipBit_gt
+  cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr
+    rfl flipBit_ne_self eq_flipBit_of_lt_of_flipBit_gt
 
 lemma cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply :
 (XBackXForth π).CycleMin (π (flipBit 0 q)) = (XBackXForth π).CycleMin (flipBit 0 (π q)) :=
@@ -51,12 +44,10 @@ getBit 0 ((XBackXForth π).FastCycleMin m (mergeBitRes 0 false p)) := by rfl
 lemma firstLayer_apply {π : Perm (BV (m + 1))} : FirstLayer π p =
   getBit 0 ((XBackXForth π).CycleMin (mergeBitRes 0 false p)) := by
   refine' congrArg (getBit 0 ·) <| (XBackXForth π).fastCycleMin_eq_cycleMin_of_zpow_apply_mem_finset
-    (Finset.univ.filter (fun y => (XBackXForth π).SameCycle (mergeBitRes 0 false p) y)) _ _
-  · sorry
-  · simp_rw [Finset.mem_filter, Finset.mem_univ, true_and, Equiv.Perm.sameCycle_zpow_right,
+    (Finset.univ.filter (fun y => (XBackXForth π).SameCycle (mergeBitRes 0 false p) y))
+    univ_filter_sameCycle_le_pow_two _
+  simp_rw [Finset.mem_filter, Finset.mem_univ, true_and, Equiv.Perm.sameCycle_zpow_right,
     Perm.SameCycle.rfl, implies_true]
-  --exact ⟨orderOf ((XBackXForth π).cycleOf (mergeBitRes 0 false p)),
-  --  Nat.two_pow_pos _, le_rfl, _⟩
 
 -- Theorem 5.2
 lemma firstLayer_apply_zero {π : Perm (BV (m + 1))} :
@@ -465,7 +456,7 @@ instance repr_bool {α : Type u} [Repr α] : Repr (Bool → α) :=
 --#eval (ControlBits.fromPerm <| serialControlBits2.toPerm)
 
 -- #eval MiddlePerm controlBits3_perm
-#eval FastCycleMin 1 controlBits4_perm 12
+#eval Perm.FastCycleMin 1 controlBits4_perm 12
 #eval MiddlePerm (m := 4) controlBits4_perm
 set_option profiler true
 #eval ControlBits.fromPerm (m := 2) controlBits2_perm
