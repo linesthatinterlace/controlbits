@@ -4,7 +4,7 @@ import Controlbits.CommutatorCycles
 import Controlbits.ArrayPerm
 
 section Decomposition
-open Equiv Equiv.Perm Nat
+open Equiv Equiv.Perm Nat Function
 
 abbrev XBackXForth (i : ℕ) (π : Perm ℕ) := ⁅π, flipBitPerm i⁆
 
@@ -18,16 +18,49 @@ theorem lt_iff_xBXF_lt (h : i < m) (hπ : ∀ q, q < 2^m ↔ π q < 2^m) :
   exact lt_iff_flipBit_lt h
 
 --Theorem 4.3 (c)
-lemma univ_filter_sameCycle_le_pow_two {q : ℕ} [DecidableRel (XBackXForth i π).SameCycle] :
-((Finset.range (2^m)).filter (fun y => (XBackXForth i π).SameCycle q y)).card ≤ 2 ^ m := by
+lemma univ_filter_sameCycle_le_pow_two {q : ℕ} [DecidableRel (XBackXForth i π).SameCycle]
+(hπ : π ∈ Subgroup.bitInvarLT i) :
+((Finset.range (2^m)).filter (fun y => (XBackXForth i π).SameCycle q y)).card ≤ 2 ^ m := sorry
   --apply Nat.le_of_mul_le_mul_left _ (zero_lt_two)
   --rw [← pow_succ']
   --have H := two_mul_filter_sameCycle_card_le_card (x := π) (y := flipBit 0)
   --  rfl flipBit_ne_self Finset.univ (fun _ _ => Finset.mem_univ _) q
   --exact H.trans_eq (by simp_rw [Finset.card_univ, Fintype.card_fin])
 
-def FirstLayer (π : Perm ℕ) (m i : ℕ) : Array Bool :=
-  (Array.range (2^m)).map fun p => testBit (FastCycleMin (m - i) (XBackXForth i π) p) i
+-- Theorem 4.4
+lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF {π : Perm ℕ}
+  (hπ : π ∈ Subgroup.bitInvarLT i) :
+(XBackXForth i π).CycleMin (q.flipBit i) = ((XBackXForth i π).CycleMin q).flipBit i := by
+  refine' cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr' (q :=q) rfl flipBit_ne_self
+    (fun h h' => eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq h h'.le (fun hk => _))
+  rw [Subgroup.mem_bitInvarLT_iff] at hπ
+  specialize hπ _ hk
+  simp_rw [(hπ.commutatorElement
+    (flipBitPerm_bitInvariant_of_ne hk.ne)).zpow_perm_bitInvariant.testBit_apply_eq_testBit]
+
+lemma blahj {π : Perm ℕ} (hπ : π ∈ Subgroup.bitInvarLT i) (hπ' : π ∈ Subgroup.bitInvarGE (m + 1))
+  (hp : p < 2 ^ m) :
+    FastCycleMin (m - i) (XBackXForth i π) (p.mergeBit i false) =
+    (XBackXForth i π).CycleMin (p.mergeBit i false) := by
+  classical
+  refine' fastCycleMin_eq_cycleMin_of_zpow_apply_mem_finset
+    ((Finset.range (2^(m + 1))).filter (fun y => (XBackXForth i π).SameCycle (p.mergeBit i false) y)) _ _
+  · sorry
+  · simp only [Finset.mem_filter, Finset.mem_range, sameCycle_zpow_right, Perm.SameCycle.rfl, and_true]
+    intro k
+    sorry
+    --refine' (lt_iff_xBXF_lt _ _ _).mp _
+
+/-
+
+-/
+def FirstLayer (π : Perm ℕ) (m i : ℕ) : Array Bool := (Array.range (2^m)).map
+  fun p => (FastCycleMin (m - i) (XBackXForth i π) (p.mergeBit i false)).testBit i
+
+#eval [0, 1, 2, 3].map <| ((Equiv.swap (2 : ℕ) 3) * (Equiv.swap (0 : ℕ) 2) * (Equiv.swap (0 : ℕ) 1))
+#eval FirstLayer (((Equiv.swap (2 : ℕ) 3) * (Equiv.swap (0 : ℕ) 2) * (Equiv.swap (0 : ℕ) 1))) 1 0
+/-def FirstLayer (π : Perm ℕ) (m i : ℕ) : Array Bool :=
+  (Array.range (2^m)).map fun p => testBit (FastCycleMin (m - i) (XBackXForth i π) p) i-/
 
 @[simp]
 lemma size_firstLayer : (FirstLayer π m i).size = 2^m := by
@@ -35,43 +68,61 @@ lemma size_firstLayer : (FirstLayer π m i).size = 2^m := by
   rw [Array.size_map, Array.size_range]
 
 @[simp]
-lemma firstLayer_getElem (h : p < (FirstLayer π m i).size) :
-  (FirstLayer π m i)[p] = testBit (FastCycleMin (m - i) (XBackXForth i π) p) i := by
+lemma firstLayer_getElem (h : p < (FirstLayer π m i).size) : (FirstLayer π m i)[p] =
+    testBit (FastCycleMin (m - i) (XBackXForth i π) (p.mergeBit i false)) i := by
   unfold FirstLayer
   simp_rw [Array.getElem_map, Array.getElem_range]
 
-lemma firstLayer_getElem' (h : p < (FirstLayer π m i).size) :
-  (FirstLayer π m i)[p] = testBit (CycleMin (XBackXForth i π) p) i := by
+lemma firstLayer_getElem' (h : p < (FirstLayer π m i).size) (hπ : π ∈ Subgroup.bitInvarLT i)
+    (hπ' : π ∈ Subgroup.bitInvarGE (m + 1)) :
+  (FirstLayer π m i)[p] = testBit (CycleMin (XBackXForth i π) (p.mergeBit i false)) i := by
   unfold FirstLayer
   simp_rw [Array.getElem_map, Array.getElem_range]
   congr
   rw [size_firstLayer] at h
-  let s := {x : ℕ | ∀ k, (k < i ∨ m ≤ k) → x.testBit k = p.testBit k}
-  have hsp : p ∈ s := by simp_rw [s, Set.mem_setOf_eq, implies_true]
-  haveI : Fintype s := sorry
-  exact ((XBackXForth i π)).fastCycleMin_eq_cycleMin_of_mem_finite_fix s (le_of_eq sorry) sorry hsp
+  exact blahj hπ hπ' h
 
 def FirstLayerPerm (π : Perm ℕ) (m i : ℕ) := Nat.condFlipBitPerm (FirstLayer π m i) i
 
-def LastLayer (π : Perm ℕ) (m i : ℕ) : Array Bool :=
-  (Array.range (2^m)).map fun p => testBit i ((FirstLayerPerm π m i) (π (p.mergeBit i false)))
+lemma firstLayerPerm_apply : FirstLayerPerm π m i q =
+  bif testBit i (CycleMin (XBackXForth i π) (mergeBitRes i false (getRes i q)))
+  then flipBit i q else q := firstLayer_apply ▸ condFlipBit_apply
+
+-- Theorem 5.3
+lemma testBit_zero_firstLayerPerm_apply_eq_testBit_zero_cycleMin {q} :
+    testBit i (FirstLayerPerm i π q) = testBit i (CycleMin (XBackXForth i π) q) := by
+  simp_rw [firstLayerPerm_apply, Bool.apply_cond (testBit i), testBit_flipBit]
+  rcases mergeBitRes_getRes_cases_flipBit i q false with (⟨h₁, h₂⟩ | ⟨h₁, h₂⟩)
+  · simp_rw [h₁, h₂, Bool.not_false, Bool.cond_false_right, Bool.and_true]
+  · simp_rw [h₁, h₂]
+    simp
+
+
+def LastLayer (π : Perm ℕ) (m i : ℕ) : Array Bool := (Array.range (2^m)).map
+  fun p => ((π (p.mergeBit i false)).condFlipBit (FirstLayer π m i) i).testBit i
+
+@[simp]
+lemma size_lastLayer : (LastLayer π m i).size = 2^m := by
+  unfold LastLayer
+  rw [Array.size_map, Array.size_range]
 
 def LastLayerPerm (π : Perm ℕ) (m i : ℕ) := Nat.condFlipBitPerm (LastLayer π m i) i
+
 
 def MiddlePerm (π : Perm ℕ) (m i : ℕ) := (FirstLayerPerm π m i) * π * (LastLayerPerm π m i)
 
 -- Theorem 5.2
 lemma firstLayer_apply_zero {π : Perm ℕ} : (FirstLayer π m i)[0] = false := by
-  simp_rw [firstLayer_getElem, fastCycleMin_apply_zero, zero_testBit]
+  simp_rw [firstLayer_getElem, zero_mergeBit_false, fastCycleMin_apply_zero, zero_testBit]
 
 end Decomposition
 
-
-abbrev ControlBitsLayer (m : ℕ) := BV m → Bool
-
-
 /-
 
+
+
+
+abbrev ControlBitsLayer (m : ℕ) := BV m → Bool
 
 
 
