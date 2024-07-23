@@ -423,6 +423,15 @@ theorem getElem_range {i n : ℕ} (h : i < (range n).size) : (range n)[i] = i :=
     · simp_rw [h, dite_true]
       exact IH h
 
+theorem mem_iff_getElem {as : Array α} {a : α} :
+    a ∈ as ↔ ∃ (i : ℕ), ∃ (hi : i < as.size), as[i] = a := by
+  rw [mem_def, List.mem_iff_getElem]
+  exact Iff.rfl
+
+theorem mem_iff_get {as : Array α} {a : α} :
+    a ∈ as ↔ ∃ (i : Fin (as.size)), as.get i = a := by
+  simp_rw [get_eq_getElem, mem_iff_getElem, Fin.exists_iff]
+
 @[simp]
 theorem swap_congr (a a' : Array α) {i j : Fin a.size} {i' j' : Fin a'.size}
     (ha : a = a') (hi : (i : ℕ) = i') (hj : (j : ℕ) = j') : a.swap i j = a'.swap i' j' := by
@@ -604,6 +613,11 @@ theorem invArray_surjective (a : ArrayPerm n) :
   haveI hai := a.sizeTo;
   fun i => ⟨a.toArray[i.val], a.invArray_get_toArray_get _⟩
 
+theorem mem_invArray (a : ArrayPerm n) (i : Fin n) : i ∈ a.invArray := by
+  simp_rw [Array.mem_iff_getElem, Fin.ext_iff]
+  rcases a.invArray_surjective i with ⟨j, hj⟩
+  exact ⟨j, (Fin.is_lt _).trans_eq a.sizeInv.symm, Fin.ext_iff.mp hj⟩
+
 theorem toArray_injective (a : ArrayPerm n) :
     haveI ha := a.sizeTo;
     Function.Injective (fun j : Fin n => a.toArray[j.val]) :=
@@ -613,15 +627,32 @@ theorem toArray_injective (a : ArrayPerm n) :
     simp_rw [invArray_get_toArray_get] at H
     exact H
 
+theorem toArray_inj (a : ArrayPerm n) (i j : ℕ) (hi : i < a.toArray.size)
+     (hj : j < a.toArray.size) : a.toArray[i] = a.toArray[j] ↔ i = j := by
+  refine' ⟨fun h => _, fun h => h ▸ rfl⟩
+  rw [← Fin.mk.inj_iff (ha := a.sizeTo ▸ hi) (hb := a.sizeTo ▸ hj)]
+  exact a.toArray_injective h
+
 theorem invArray_injective (a : ArrayPerm n) :
     haveI ha := a.sizeInv;
     Function.Injective (fun j : Fin n => a.invArray[j.val]) :=
   a.invArray_surjective.injective_of_fintype (Equiv.refl _)
 
+theorem invArray_inj (a : ArrayPerm n) (i j : ℕ) (hi : i < a.invArray.size)
+     (hj : j < a.invArray.size) : a.invArray[i] = a.invArray[j] ↔ i = j := by
+  refine' ⟨fun h => _, fun h => h ▸ rfl⟩
+  rw [←  Fin.mk.inj_iff (ha := a.sizeInv ▸ hi) (hb := a.sizeInv ▸ hj)]
+  exact a.invArray_injective h
+
 theorem toArray_surjective (a : ArrayPerm n) :
     haveI ha := a.sizeTo;
     Function.Surjective (fun j : Fin n => a.toArray[j.val]) :=
   a.toArray_injective.surjective_of_fintype (Equiv.refl _)
+
+theorem mem_toArray (a : ArrayPerm n) (i : Fin n) : i ∈ a.toArray := by
+  simp_rw [Array.mem_iff_getElem]
+  rcases a.toArray_surjective i with ⟨j, hj⟩
+  exact ⟨j, (Fin.is_lt _).trans_eq a.sizeTo.symm, hj⟩
 
 theorem toArray_get_invArray_get (a : ArrayPerm n) (i : Fin n) :
     haveI ha := a.sizeTo ; haveI hai := a.sizeInv;
@@ -779,6 +810,9 @@ theorem ext {a b : ArrayPerm n} (h : ∀ (i : Fin n), a • i = b • i) : a = b
 theorem ext_iff (a b : ArrayPerm n) : a = b ↔ ∀ (i : Fin n), a • i = b • i :=
   ⟨fun h _ => h ▸ rfl, ext⟩
 
+theorem smul_right_inj (a : ArrayPerm n) {i j : Fin n} : a • i = a • j ↔ i = j :=
+  ⟨fun h => a.toArray_injective h, fun h => h ▸ rfl⟩
+
 /--
 `ArrayPerm n` is equivalent to `Perm (Fin n)`, and this equivalence respects the
 multiplication (and, indeed, the scalar action on `Fin n`).
@@ -810,9 +844,9 @@ theorem mulEquivPerm_symm_inv_smul (π : Perm (Fin n)) (i : Fin n):
   (mulEquivPerm.symm π)⁻¹ • i = π⁻¹ • i := Array.getElem_ofFn _ _ _
 
 /--
-`ArrayPerm.congr` re-interprets an `ArrayPerm n` as an `ArrayPerm m`, where `n = m`.
+`ArrayPerm.cast` re-interprets an `ArrayPerm n` as an `ArrayPerm m`, where `n = m`.
 -/
-def congr (h : n = m) (a : ArrayPerm n) : ArrayPerm m where
+def cast (h : n = m) (a : ArrayPerm n) : ArrayPerm m where
   toArray := a.toArray.map <| Fin.cast h
   invArray := a.invArray.map <| Fin.cast h
   sizeTo := (a.toArray.size_map _).trans <| a.sizeTo.trans h
@@ -821,38 +855,107 @@ def congr (h : n = m) (a : ArrayPerm n) : ArrayPerm m where
     simp_rw [Array.getElem_map, coe_cast, ← Fin.coe_cast h.symm i,
     invArray_get_toArray_get, Fin.cast_trans, cast_eq_self]
 
-theorem congr_toArray (h : n = m) (a : ArrayPerm n) :
-    (a.congr h).toArray = a.toArray.map (Fin.cast h) := rfl
+theorem cast_toArray (h : n = m) (a : ArrayPerm n) :
+    (a.cast h).toArray = a.toArray.map (Fin.cast h) := rfl
 
-theorem congr_invArray (h : n = m) (a : ArrayPerm n) :
-    (a.congr h).invArray = a.invArray.map (Fin.cast h) := rfl
-
-@[simp]
-theorem congr_smul (h : n = m) (a : ArrayPerm n) (i : Fin m):
-    (a.congr h) • i = (a • (i.cast h.symm)).cast h := getElem_map _ _ _ _
+theorem cast_invArray (h : n = m) (a : ArrayPerm n) :
+    (a.cast h).invArray = a.invArray.map (Fin.cast h) := rfl
 
 @[simp]
-theorem congr_inv (h : n = m) (a : ArrayPerm n) :
-    (a.congr h)⁻¹ = a⁻¹.congr h := rfl
+theorem cast_smul (h : n = m) (a : ArrayPerm n) (i : Fin m):
+    (a.cast h) • i = (a • (i.cast h.symm)).cast h := getElem_map _ _ _ _
+
+@[simp]
+theorem cast_inv (h : n = m) (a : ArrayPerm n) :
+    (a.cast h)⁻¹ = a⁻¹.cast h := rfl
 
 /--
 When `n = m`, `ArrayPerm n` is multiplicatively equivalent to `ArrayPerm m`.
 -/
 
 def arrayPermCongr (h : n = m) : ArrayPerm n ≃* ArrayPerm m where
-  toFun := congr h
-  invFun := congr h.symm
+  toFun := cast h
+  invFun := cast h.symm
   left_inv a := by
     ext : 1
-    simp [congr_smul, conj_apply, finCongr_symm,
-    finCongr_apply, Fin.cast_trans, cast_eq_self]
+    simp only [cast_smul, Fin.cast_trans, cast_eq_self]
   right_inv a := by
     ext : 1
-    simp only [congr_smul, conj_apply, finCongr_symm,
-    finCongr_apply, Fin.cast_trans, cast_eq_self]
+    simp only [cast_smul, Fin.cast_trans, cast_eq_self]
   map_mul' a b := by
     ext : 1
-    simp only [congr_smul, mul_smul, Fin.cast_trans, cast_eq_self]
+    simp only [cast_smul, mul_smul, Fin.cast_trans, cast_eq_self]
+
+/--
+`ArrayPerm.castLE` re-interprets an `ArrayPerm n` as an `ArrayPerm m`, where `n ≤ m`.
+-/
+def castLE (h : n ≤ m) (a : ArrayPerm n) : ArrayPerm m where
+  toArray := a.toArray.map (Fin.castLE h) ++
+      ((Fin.enum (m - n)).map (Fin.cast (Nat.sub_add_cancel h) ∘ (Fin.addNat · n)))
+  invArray := a.invArray.map (Fin.castLE h) ++
+      ((Fin.enum (m - n)).map (Fin.cast (Nat.sub_add_cancel h) ∘ (Fin.addNat · n)))
+  sizeTo := by simp only [size_append, size_map, a.sizeTo, size_enum, Nat.add_sub_cancel' h]
+  sizeInv := by simp only [size_append, size_map, a.sizeInv, size_enum, Nat.add_sub_cancel' h]
+  left_inv'  i := by
+    rcases lt_or_le i.val a.toArray.size with hi | hi
+    · simp_rw [Array.get_append_left (hi.trans_eq (size_map _ _).symm), Array.getElem_map,
+      coe_castLE, Array.get_append_left (((size_map _ _).trans a.sizeInv).symm.trans_gt (is_lt _)),
+        Array.getElem_map, ← Fin.coe_castLT _ (hi.trans_eq a.sizeTo), invArray_get_toArray_get,
+        Fin.ext_iff, coe_castLE, coe_castLT]
+    · simp_rw [Array.get_append_right ((size_map _ a.toArray).trans_le hi), Array.getElem_map,
+        Fin.getElem_enum, comp_apply, addNat_mk, size_map, cast_mk, ← a.sizeTo,
+        Nat.sub_add_cancel hi,
+        Array.get_append_right ((((size_map _ _).trans a.sizeInv).trans
+        a.sizeTo.symm).trans_le hi), size_map, Array.getElem_map, Fin.getElem_enum, comp_apply,
+        addNat_mk, cast_mk, a.sizeInv, ← a.sizeTo, Nat.sub_add_cancel hi]
+
+theorem castLE_toArray (h : n ≤ m) (a : ArrayPerm n) :
+    (a.castLE h).toArray = a.toArray.map (Fin.castLE h) ++
+      ((Fin.enum (m - n)).map (Fin.cast (Nat.sub_add_cancel h) ∘ (Fin.addNat · n))) := rfl
+
+theorem castLE_invArray (h : n ≤ m) (a : ArrayPerm n) :
+    (a.castLE h).invArray = a.invArray.map (Fin.castLE h) ++
+      ((Fin.enum (m - n)).map (Fin.cast (Nat.sub_add_cancel h) ∘ (Fin.addNat · n))) := rfl
+
+@[simp]
+theorem castLE_smul_of_lt (h : n ≤ m) (a : ArrayPerm n) (i : Fin m) (hi : i < n):
+    (a.castLE h) • i = (a • (i.castLT hi)).castLE h := by
+  simp_rw [← toArray_coe, castLE_toArray,
+      Array.get_append_left (hi.trans_eq ((size_map _ _).trans a.sizeTo).symm),
+      Array.getElem_map, coe_castLT]
+
+@[simp]
+theorem castLE_smul_of_ge (h : n ≤ m) (a : ArrayPerm n) (i : Fin m) (hi : n ≤ i):
+    (a.castLE h) • i = i := by
+  simp_rw [← toArray_coe, castLE_toArray,
+    Array.get_append_right (((size_map _ _).trans a.sizeTo).trans_le hi),
+    size_map, Array.getElem_map, Fin.getElem_enum, comp_apply, addNat_mk, cast_mk, a.sizeTo,
+    Nat.sub_add_cancel hi]
+
+theorem castLE_smul (h : n ≤ m) (a : ArrayPerm n) (i : Fin m) :
+    (a.castLE h) • i = if hi : i < n then (a • (i.castLT hi)).castLE h else i := by
+  split_ifs with hi
+  · exact a.castLE_smul_of_lt h i hi
+  · exact a.castLE_smul_of_ge h i (le_of_not_lt hi)
+
+@[simp]
+theorem castLE_inv (h : n ≤ m) (a : ArrayPerm n) :
+    (a.castLE h)⁻¹ = a⁻¹.castLE h := rfl
+
+theorem castLE_of_eq (h : n = m) (h' : n ≤ m := h.le) (a : ArrayPerm n) :
+    a.castLE h' = a.cast h := by
+  ext i : 1
+  simp_rw [castLE_smul, cast_smul, (i.isLt.trans_eq h.symm)]
+  rfl
+
+def castLT (h : n ≤ m) (a : ArrayPerm m)
+    (ha : ∀ i ∈  a.toArray, i < n) :
+    ArrayPerm n where
+  toArray := a.toArray.attach.map (fun ⟨_, hx⟩ => ⟨_, ha _ hx⟩)
+  invArray := a.invArray.attach.map _
+  sizeTo := _
+  sizeInv := _
+  left_inv'  i := _
 
 /--
 For `a` an `ArrayPerm n`, `a.swap i j` is the permutation which is the same except for switching
