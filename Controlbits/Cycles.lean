@@ -27,10 +27,12 @@ theorem SameCycle.exists_pow_lt_finset_card_of_apply_zpow_mem {f : Perm α} (s :
     exact (Nat.cast_le.mpr hj).trans (le_add_of_nonneg_right (Nat.cast_nonneg _))
   exact ⟨(k % (↑j - ↑i)).natAbs, hks, hkf⟩
 
-def FastCycleMin {α : Type*} [Min α] (i : ℕ) (π : Equiv.Perm α) : α → α :=
+def FastCycleMin {α : Type*} [Min α] (i : ℕ) (π : Equiv.Perm α) (x : α) : α :=
   match i with
-  | 0 => id
-  | (i+1) => fun x => min (FastCycleMin i π x) (FastCycleMin i π <| (π ^ 2^i) x)
+  | 0 => x
+  | (i+1) => min (FastCycleMin i π x) (FastCycleMin i π <| (π ^ 2^i) x)
+
+
 
 section FastCycleMin
 variable {α : Type*} {x : α} {π : Perm α}
