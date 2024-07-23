@@ -45,7 +45,7 @@ lemma blahj {π : Perm ℕ} (hπ : π ∈ Subgroup.bitInvarLT i) (hπ' : π ∈ 
   classical
   refine' fastCycleMin_eq_cycleMin_of_zpow_apply_mem_finset
     ((Finset.range (2^(m + 1))).filter (fun y => (XBackXForth i π).SameCycle (p.mergeBit i false) y)) _ _
-  · sorry
+  · rw [Finset.card_filter_le_iff]
   · simp only [Finset.mem_filter, Finset.mem_range, sameCycle_zpow_right, Perm.SameCycle.rfl, and_true]
     intro k
     sorry
@@ -84,9 +84,15 @@ lemma firstLayer_getElem' (h : p < (FirstLayer π m i).size) (hπ : π ∈ Subgr
 
 def FirstLayerPerm (π : Perm ℕ) (m i : ℕ) := Nat.condFlipBitPerm (FirstLayer π m i) i
 
-lemma firstLayerPerm_apply : FirstLayerPerm π m i q =
-  bif testBit i (CycleMin (XBackXForth i π) (mergeBitRes i false (getRes i q)))
-  then flipBit i q else q := firstLayer_apply ▸ condFlipBit_apply
+lemma firstLayerPerm_apply (hπ : π ∈ Subgroup.bitInvarLT i)
+    (hπ' : π ∈ Subgroup.bitInvarGE (m + 1)) (hq : q < 2^(m + 1)) (hi : i ≤ m) :
+    FirstLayerPerm π m i q =
+  bif (CycleMin (XBackXForth i π) ((q.testRes i).mergeBit i false )).testBit i
+  then q.flipBit i else q := by
+  unfold FirstLayerPerm
+  rw [condFlipBitPerm_apply,
+    condFlipBit_eq_of_testRes_lt (((lt_iff_testRes_lt hi).mp hq).trans_eq size_firstLayer.symm),
+    firstLayer_getElem' _ hπ hπ']
 
 -- Theorem 5.3
 lemma testBit_zero_firstLayerPerm_apply_eq_testBit_zero_cycleMin {q} :

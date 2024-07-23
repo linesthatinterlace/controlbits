@@ -375,6 +375,37 @@ open Equiv Function List Fin
 variable {α : Type*}
 
 @[simp]
+theorem getD_eq_get_lt (a : Array α) (x : α) (i : ℕ) (h : i < a.size) : a[i]?.getD x = a[i] := by
+  rw [a.getElem?_lt h, Option.getD_some]
+
+@[simp]
+theorem getD_eq_get_ge (a : Array α) (x : α) (i : ℕ) (h : a.size ≤ i) : a[i]?.getD x = x := by
+  rw [a.getElem?_ge h, Option.getD_none]
+
+theorem getD_eq_get (a : Array α) (x : α) (i : ℕ) :
+    a[i]?.getD x = if h : i < a.size then a[i] else x := by
+  split_ifs with h
+  · rw [a.getD_eq_get_lt x i h]
+  · rw [a.getD_eq_get_ge x i (le_of_not_lt h)]
+
+@[simp]
+theorem ofFn_get (a : Array α) : Array.ofFn a.get = a :=
+  ext _ _ (size_ofFn _) (fun _ _ _ => getElem_ofFn _ _ _)
+
+@[simp]
+theorem get_ofFn {n : ℕ} (f : Fin n → α) :
+    (ofFn f).get = f ∘ (Fin.cast (size_ofFn _)) := funext <| fun _ => by
+  rw [get_eq_getElem, getElem_ofFn, comp_apply]
+  exact congrArg _ (Fin.ext rfl)
+
+@[simps]
+def equivSigmaTuple : Array α ≃ Σ n, Fin n → α where
+  toFun a := ⟨a.size, a.get⟩
+  invFun f := ofFn f.2
+  left_inv := ofFn_get
+  right_inv := fun _ => Fin.sigma_eq_of_eq_comp_cast _ (get_ofFn _)
+
+@[simp]
 theorem range_zero : range 0 = #[] := rfl
 
 @[simp]
