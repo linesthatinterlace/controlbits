@@ -974,6 +974,52 @@ end CondFlipBit
 
 end Nat
 
+namespace Array
+
+def swap_indices (as : Array ℕ) (i : ℕ) (c : Array Bool) : Array ℕ :=
+  c.zipWithIndex.foldr (fun bp as => as.swap! (bp.2.mergeBit i false) (bp.2.mergeBit i bp.1)) as
+
+theorem size_swap_indices (as : Array ℕ) (i : ℕ) (c : Array Bool) :
+    (swap_indices as i c).size = as.size := sorry
+
+theorem getElem_swap_indices (as : Array ℕ) (i : ℕ) (c : Array Bool) (k : ℕ)
+    (hk : k < (swap_indices as i c).size) :
+    (swap_indices as i c)[k] =
+    if h : (k.testRes i) < c.size then
+      (as.swap! ((k.testRes i).mergeBit i false)
+      ((k.testRes i).mergeBit i c[k.testRes i]))[k]'(hk.trans_eq (by simp only [size_swap_indices,
+        size_swap!])) else as[k]'(hk.trans_eq (by simp)) := sorry
+
+def swap_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) : Array ℕ :=
+  as.map (fun q => q.condFlipBit i c)
+
+theorem size_swap_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) :
+    (swap_vals as i c).size = as.size := size_map _ _
+
+theorem getElem_swap_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) (k : ℕ)
+    (hk : k < (swap_vals as i c).size) :
+    (swap_vals as i c)[k] = (as[k]'(hk.trans_eq (by simp))).condFlipBit i c := sorry
+
+end Array
+
+namespace ArrayPerm
+
+def condFlipBit : ArrayPerm 8 where
+  toArray := #[0, 1, 2, 3, 4, 5, 6, 7].swap_indices 1 #[false, true, true, false]
+  invArray := #[0, 1, 2, 3, 4, 5, 6, 7].swap_vals 1 #[false, true, true, false]
+  size_toArray := _
+  size_invArray := _
+  getElem_toArray_lt' := _
+  /-size_toArray := (a.toArray.size_swap_indices i c).trans a.size_toArray
+  size_invArray := (a.invArray.size_swap_vals i c).trans a.size_invArray
+  getElem_toArray_lt' := sorry
+  getElem_invArray_lt' := sorry
+  getElem_invArray_getElem_toArray' := sorry-/
+
+#eval #[0, 1, 2, 3, 4, 5, 6, 7].swap_indices 1 #[false, true, true, false]
+#eval #[0, 1, 2, 3, 4, 5, 6, 7].swap_vals 1 #[false, true, true, false]
+end ArrayPerm
+
 namespace Fin
 
 notation:75 "BV " arg:75  => Fin (2^arg)
@@ -984,7 +1030,6 @@ variable {m : ℕ} {i : Fin (m + 1)} {q : BV (m + 1)} {p : BV m}
 
 def testBit (q : BV (m + 1)) (i : Fin (m + 1)) := (q : ℕ).testBit i
 
-
 @[simps!]
 def testRes (q : BV (m + 1)) (i : Fin (m + 1)) : BV m where
   val := (q : ℕ).testRes i
@@ -994,7 +1039,6 @@ def testRes (q : BV (m + 1)) (i : Fin (m + 1)) : BV m where
 def mergeBit (p : BV m) (i : Fin (m + 1)) (b : Bool) : BV (m + 1) where
   val := (p : ℕ).mergeBit i b
   isLt := (Nat.lt_iff_mergeBit_lt i.is_le).mp p.is_lt
-
 
 @[pp_nodot, simps!]
 def testBitRes (i : Fin (m + 1)) : BV (m + 1) ≃ Bool × BV m where
@@ -1098,110 +1142,6 @@ theorem condFlipBit_apply_comm :
 simp_rw [condFlipBit_apply_eq_mergeBit, testRes_mergeBit_of_eq,
   testBit_mergeBit_of_eq, Bool.xor_left_comm]
 
-/-
-theorem condFlipBit_comm :
-(condFlipBit i c) * (condFlipBit i d) = (condFlipBit i d) * (condFlipBit i c) := by
-ext ; simp_rw [Equiv.Perm.coe_mul, Function.comp_apply, condFlipBit_apply_comm]
-
-theorem condFlipBit_apply_comm_flipBit :
-  condFlipBit i c (q.flipBit i) = flipBit i (condFlipBit i c q) := by
-  rw [condFlipBit_flipBit_of_all_true, condFlipBit_apply_comm]
-
-theorem condFlipBit_comm_flipBit :
-  (condFlipBit i c) * (flipBit i) = (flipBit i) * (condFlipBit i c) := by
-  rw [condFlipBit_flipBit_of_all_true, condFlipBit_comm]
-
-theorem condFlipBit_apply_flipBit :
-condFlipBit i c (q.flipBit i) = bif c (q.testRes i) then q else q.flipBit i := by
-  rw [condFlipBit_apply_comm_flipBit]
-  rcases (c (q.testRes i)).dichotomy with h | h <;> rw [condFlipBit_apply, h]
-  · simp_rw [cond_false]
-  · simp_rw [cond_true, flipBit_flipBit]
-
-
-@[simp]
-theorem testRes_condFlipBit : testRes i (condFlipBit i c q) = q.testRes i := by
-rcases (c (q.testRes i)).dichotomy with h | h  <;> rw [condFlipBit_apply, h]
-· rfl
-· rw [cond_true, testRes_flipBit_of_eq]
-
-theorem testBit_condFlipBit : testBit i (condFlipBit i c q) =
-bif c (q.testRes i) then !(testBit q i) else testBit q i := by
-rcases (c (q.testRes i)).dichotomy with hc | hc <;>
-simp only [condFlipBit_apply, cond_false, hc, cond_true, testBit_flipBit_of_eq]
-
-theorem testBit_condFlipBit' : testBit i (condFlipBit i c q) =
-xor (c (q.testRes i)) (testBit q i) := by
-rcases (c (q.testRes i)).dichotomy with hc | hc <;>
-simp only [condFlipBit_apply, hc, cond_false, cond_true,
-  Bool.false_xor, Bool.true_xor, testBit_flipBit_of_eq]
-
-theorem testBit_condFlipBit'' : testBit i (condFlipBit i c q) =
-bif (testBit q i) then !(c (q.testRes i)) else c (q.testRes i) := by
-rcases (testBit q i).dichotomy with hc | hc <;>
-simp only [testBit_condFlipBit', hc, Bool.xor_false, Bool.xor_true, cond_true, cond_false]
-
-theorem testBit_condFlipBit_of_ne {i j : Fin (m + 1)} (hij: i ≠ j):
-  testBit i ((condFlipBit j c) q) = testBit q i := by
-  rw [condFlipBit_apply]
-  rcases (c (testRes j q)).dichotomy with (h | h) <;> simp_rw [h]
-  · rw [cond_false]
-  · rw [cond_true, testBit_flipBit_of_ne hij]
-
-theorem condFlipBit_bitInvar_of_ne {i j : Fin (m + 1)} (h : i ≠ j) : bitInvar i ⇑(condFlipBit j c) :=
-  bitInvar_of_testBit_def_eq_testBit (fun _ => testBit_condFlipBit_of_ne h)
-
-theorem condFlipBit_succ_apply {i : Fin (m + 1)} : condFlipBit (Fin.succ i) c q =
-    mergeBit 0 (testBit 0 q) ((condFlipBit i fun p =>
-    c (mergeBit 0 (testBit 0 q) p)) (testRes 0 q)) := by
-    simp_rw [condFlipBit_apply_eq_mergeBit, mergeBit_succ, testRes_succ, testBit_succ,
-    testBit_mergeBit, testRes_mergeBit]
-
-theorem condFlipBit_succAbove_apply {j : Fin (m + 2)} {i : Fin (m + 1)} :
-  condFlipBit (j.succAbove i) c q =
-    mergeBit j (testBit j q) ((condFlipBit i fun p =>
-    c (mergeBit (i.predAbove j) (testBit j q) p)) (testRes j q)) := by
-    simp_rw [condFlipBit_apply, testRes_succAbove,
-    Bool.apply_cond (fun x => mergeBit j (testBit j q) x), mergeBit_testBit_testRes,
-    flipBit_succAbove]
-
-theorem condFlipBit_zero_apply : condFlipBit 0 c q =
-  bif c (q.divNat) then
-  finProdFinEquiv (q.divNat, q.modNat.rev)
-  else q := by
-  rw [condFlipBit_apply, flipBit_zero_apply, testRes_zero]
-
-theorem condFlipBit_zero_mergeBit :
-condFlipBit 0 c (mergeBit 0 b p) = finProdFinEquiv (p, bif xor (c p) b then 1 else 0) := by
-  simp_rw [condFlipBit_mergeBit, mergeBit_zero]
-
-theorem condFlipBit_zero_mergeBit_true  :
-condFlipBit 0 c (mergeBit 0 true p) = finProdFinEquiv (p, bif c p then 0 else 1) := by
-  simp_rw [condFlipBit_zero_mergeBit, Bool.xor_true, Bool.cond_not]
-
-theorem condFlipBit_zero_mergeBit_false :
-condFlipBit 0 c (mergeBit 0 false p) = finProdFinEquiv (p, bif c p then 1 else 0) := by
-  simp_rw [condFlipBit_zero_mergeBit, Bool.xor_false]
-
-/-
-@[simp]
-theorem condFlipBit_mul_self : (condFlipBit i c) * (condFlipBit i c) = 1 := by
-ext ; simp_rw [Equiv.Perm.coe_mul, Function.comp_apply,
-  condFlipBit_condFlipBit, Equiv.Perm.coe_one, id_eq]
-
-@[simp]
-theorem condFlipBit_mul_cancel_right : ρ * (condFlipBit i c) * (condFlipBit i c) = ρ := by
-  rw [mul_assoc, condFlipBit_mul_self, mul_one]
-
-@[simp]
-theorem condFlipBit_mul_cancel_left : (condFlipBit i c) * ((condFlipBit i c) * ρ) = ρ := by
-  rw [← mul_assoc, condFlipBit_mul_self, one_mul]
--/
-
-
-
--/
-
 @[pp_nodot, simps! apply symm_apply]
 def condFlipBitPerm (c : BV m → Bool) (i : Fin (m + 1)) : Equiv.Perm (BV (m + 1)) where
   toFun := (condFlipBit · i c)
@@ -1219,7 +1159,6 @@ theorem condFlipBitPerm_symm : (condFlipBitPerm c i).symm = condFlipBitPerm c i 
 
 @[simp]
 theorem condFlipBitPerm_inv : (condFlipBitPerm c i)⁻¹ = condFlipBitPerm c i := rfl
-
 
 end CondFlipBit
 
@@ -1775,3 +1714,109 @@ theorem bitInvarMulEquiv_last_apply_condFlipBits (c) (i : Fin (m + 1)) :
 -/
 
 end Equivs
+
+
+
+/-
+theorem condFlipBit_comm :
+(condFlipBit i c) * (condFlipBit i d) = (condFlipBit i d) * (condFlipBit i c) := by
+ext ; simp_rw [Equiv.Perm.coe_mul, Function.comp_apply, condFlipBit_apply_comm]
+
+theorem condFlipBit_apply_comm_flipBit :
+  condFlipBit i c (q.flipBit i) = flipBit i (condFlipBit i c q) := by
+  rw [condFlipBit_flipBit_of_all_true, condFlipBit_apply_comm]
+
+theorem condFlipBit_comm_flipBit :
+  (condFlipBit i c) * (flipBit i) = (flipBit i) * (condFlipBit i c) := by
+  rw [condFlipBit_flipBit_of_all_true, condFlipBit_comm]
+
+theorem condFlipBit_apply_flipBit :
+condFlipBit i c (q.flipBit i) = bif c (q.testRes i) then q else q.flipBit i := by
+  rw [condFlipBit_apply_comm_flipBit]
+  rcases (c (q.testRes i)).dichotomy with h | h <;> rw [condFlipBit_apply, h]
+  · simp_rw [cond_false]
+  · simp_rw [cond_true, flipBit_flipBit]
+
+
+@[simp]
+theorem testRes_condFlipBit : testRes i (condFlipBit i c q) = q.testRes i := by
+rcases (c (q.testRes i)).dichotomy with h | h  <;> rw [condFlipBit_apply, h]
+· rfl
+· rw [cond_true, testRes_flipBit_of_eq]
+
+theorem testBit_condFlipBit : testBit i (condFlipBit i c q) =
+bif c (q.testRes i) then !(testBit q i) else testBit q i := by
+rcases (c (q.testRes i)).dichotomy with hc | hc <;>
+simp only [condFlipBit_apply, cond_false, hc, cond_true, testBit_flipBit_of_eq]
+
+theorem testBit_condFlipBit' : testBit i (condFlipBit i c q) =
+xor (c (q.testRes i)) (testBit q i) := by
+rcases (c (q.testRes i)).dichotomy with hc | hc <;>
+simp only [condFlipBit_apply, hc, cond_false, cond_true,
+  Bool.false_xor, Bool.true_xor, testBit_flipBit_of_eq]
+
+theorem testBit_condFlipBit'' : testBit i (condFlipBit i c q) =
+bif (testBit q i) then !(c (q.testRes i)) else c (q.testRes i) := by
+rcases (testBit q i).dichotomy with hc | hc <;>
+simp only [testBit_condFlipBit', hc, Bool.xor_false, Bool.xor_true, cond_true, cond_false]
+
+theorem testBit_condFlipBit_of_ne {i j : Fin (m + 1)} (hij: i ≠ j):
+  testBit i ((condFlipBit j c) q) = testBit q i := by
+  rw [condFlipBit_apply]
+  rcases (c (testRes j q)).dichotomy with (h | h) <;> simp_rw [h]
+  · rw [cond_false]
+  · rw [cond_true, testBit_flipBit_of_ne hij]
+
+theorem condFlipBit_bitInvar_of_ne {i j : Fin (m + 1)} (h : i ≠ j) : bitInvar i ⇑(condFlipBit j c) :=
+  bitInvar_of_testBit_def_eq_testBit (fun _ => testBit_condFlipBit_of_ne h)
+
+theorem condFlipBit_succ_apply {i : Fin (m + 1)} : condFlipBit (Fin.succ i) c q =
+    mergeBit 0 (testBit 0 q) ((condFlipBit i fun p =>
+    c (mergeBit 0 (testBit 0 q) p)) (testRes 0 q)) := by
+    simp_rw [condFlipBit_apply_eq_mergeBit, mergeBit_succ, testRes_succ, testBit_succ,
+    testBit_mergeBit, testRes_mergeBit]
+
+theorem condFlipBit_succAbove_apply {j : Fin (m + 2)} {i : Fin (m + 1)} :
+  condFlipBit (j.succAbove i) c q =
+    mergeBit j (testBit j q) ((condFlipBit i fun p =>
+    c (mergeBit (i.predAbove j) (testBit j q) p)) (testRes j q)) := by
+    simp_rw [condFlipBit_apply, testRes_succAbove,
+    Bool.apply_cond (fun x => mergeBit j (testBit j q) x), mergeBit_testBit_testRes,
+    flipBit_succAbove]
+
+theorem condFlipBit_zero_apply : condFlipBit 0 c q =
+  bif c (q.divNat) then
+  finProdFinEquiv (q.divNat, q.modNat.rev)
+  else q := by
+  rw [condFlipBit_apply, flipBit_zero_apply, testRes_zero]
+
+theorem condFlipBit_zero_mergeBit :
+condFlipBit 0 c (mergeBit 0 b p) = finProdFinEquiv (p, bif xor (c p) b then 1 else 0) := by
+  simp_rw [condFlipBit_mergeBit, mergeBit_zero]
+
+theorem condFlipBit_zero_mergeBit_true  :
+condFlipBit 0 c (mergeBit 0 true p) = finProdFinEquiv (p, bif c p then 0 else 1) := by
+  simp_rw [condFlipBit_zero_mergeBit, Bool.xor_true, Bool.cond_not]
+
+theorem condFlipBit_zero_mergeBit_false :
+condFlipBit 0 c (mergeBit 0 false p) = finProdFinEquiv (p, bif c p then 1 else 0) := by
+  simp_rw [condFlipBit_zero_mergeBit, Bool.xor_false]
+
+/-
+@[simp]
+theorem condFlipBit_mul_self : (condFlipBit i c) * (condFlipBit i c) = 1 := by
+ext ; simp_rw [Equiv.Perm.coe_mul, Function.comp_apply,
+  condFlipBit_condFlipBit, Equiv.Perm.coe_one, id_eq]
+
+@[simp]
+theorem condFlipBit_mul_cancel_right : ρ * (condFlipBit i c) * (condFlipBit i c) = ρ := by
+  rw [mul_assoc, condFlipBit_mul_self, mul_one]
+
+@[simp]
+theorem condFlipBit_mul_cancel_left : (condFlipBit i c) * ((condFlipBit i c) * ρ) = ρ := by
+  rw [← mul_assoc, condFlipBit_mul_self, one_mul]
+-/
+
+
+
+-/
