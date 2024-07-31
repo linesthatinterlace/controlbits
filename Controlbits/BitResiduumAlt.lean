@@ -318,28 +318,10 @@ theorem mergeBit_apply_not {p : ℕ} : p.mergeBit i (!b) =
   · rw [Bool.not_false, cond_false, mergeBit_apply_true]
   · rw [Bool.not_true, cond_true, mergeBit_apply_false]
 
--- testRes inequalities
-
-theorem lt_iff_testRes_lt (hi : i ≤ m) : q < 2^(m + 1) ↔ q.testRes i < 2^m := by
-  rw [testRes_apply]
-  refine' ⟨fun _ => _, lt_imp_lt_of_le_imp_le (fun _ => _)⟩
-  · have h : 2 ^ i * (q / 2 ^ (i + 1)) ≤ 2^m - 2^i := by
-      rw [← Nat.add_sub_cancel' hi, pow_add _ i (m - i), ← Nat.mul_pred, ]
-      refine' Nat.mul_le_mul_left _ (Nat.le_pred_of_lt (Nat.div_lt_of_lt_mul _))
-      rwa [mul_comm, ← pow_add, ← add_assoc, Nat.sub_add_cancel hi]
-    exact (add_lt_add_of_le_of_lt h (Nat.mod_lt _ (Nat.two_pow_pos _))).trans_eq <|
-      Nat.sub_add_cancel (Nat.pow_le_pow_of_le one_lt_two hi)
-  · have h : 2 ^ m ≤ 2 ^ i * 2 ^ (m - i) + 0 := by rw [add_zero, ← pow_add, Nat.add_sub_cancel' hi]
-    refine' h.trans (Nat.add_le_add (Nat.mul_le_mul_left _
-      ((Nat.le_div_iff_mul_le (Nat.two_pow_pos _)).mpr _)) (Nat.zero_le _))
-    rwa [← pow_add, ← add_assoc, Nat.sub_add_cancel hi]
-
-theorem le_testRes_iff_ge (hi : i ≤ m) : 2^m ≤ q.testRes i ↔ 2^(m + 1) ≤ q := by
-  simp_rw [← not_lt, lt_iff_testRes_lt hi]
-
 -- testBit_testRes
 
-theorem testBit_testRes_of_lt {i j q : ℕ} (hij : i < j) : (q.testRes j).testBit i = q.testBit i := by
+theorem testBit_testRes_of_lt {i j q : ℕ} (hij : i < j) :
+    (q.testRes j).testBit i = q.testBit i := by
   simp_rw [testRes_def, testBit_or, testBit_and, testBit_shiftLeft, testBit_two_pow_sub_one,
   hij.not_le, hij, decide_false_eq_false, Bool.false_and, Bool.false_or,
   decide_true_eq_true, Bool.and_true]
@@ -363,6 +345,40 @@ theorem testBit_pred_testRes_of_gt {i j q : ℕ} (hij : j < i) :
 theorem testBit_testRes_succ_of_le {i j q : ℕ} (hij : i ≤ j) :
     (q.testRes (j + 1)).testBit i = q.testBit i := by
   rw [testBit_testRes_of_lt (Nat.lt_succ_of_le hij)]
+
+-- testRes equalities and inequalities
+
+theorem testRes_div_two_pow_eq (h : i ≤ k) : q.testRes i / 2^k = q / 2^(k + 1) := by
+  simp_rw [testBit_ext_iff, testBit_div_two_pow,
+  testBit_testRes_of_ge (h.trans (Nat.le_add_right _ _)), Nat.add_right_comm, implies_true]
+
+theorem testRes_mod_two_pow_eq (h : k ≤ i) : q.testRes i % 2^k = q % 2^k := by
+  simp_rw [testBit_ext_iff, testBit_mod_two_pow]
+  intro j
+  rcases lt_or_le j k with hjk | hjk
+  · simp_rw [hjk, testBit_testRes_of_lt (hjk.trans_le h)]
+  · simp_rw [hjk.not_lt, decide_False, Bool.false_and]
+
+theorem testRes_modEq_two_pow (h : k ≤ i) : q.testRes i ≡ q [MOD 2^k] := testRes_mod_two_pow_eq h
+
+theorem testRes_lt_iff_lt_two_mul (hn : 2^i ∣ n) : q.testRes i < n ↔ q < 2 * n := by
+  rcases hn with ⟨k, rfl⟩
+  simp_rw [← mul_assoc, ← pow_succ', mul_comm _ k,
+  ← Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _), testRes_div_two_pow_eq le_rfl]
+
+theorem testRes_lt_div_two_iff_lt (hn : 2^(i + 1) ∣ n) : q.testRes i < n / 2 ↔ q < n := by
+  rcases hn with ⟨k, rfl⟩
+  rw [pow_succ', mul_assoc, Nat.mul_div_cancel_left _ (zero_lt_two),
+    ← testRes_lt_iff_lt_two_mul (dvd_mul_right _ _)]
+
+theorem testRes_lt_two_pow_mul_iff_lt_two_pow_mul (h : i ≤ k) (n : ℕ) :
+    q.testRes i < 2^k * n ↔ q < 2^(k + 1) * n := by
+  rw [testRes_lt_iff_lt_two_mul (dvd_mul_of_dvd_left (pow_dvd_pow _ h) _), pow_succ', mul_assoc]
+
+theorem testRes_lt_two_pow_iff_lt_two_pow (h : i ≤ m) : q.testRes i < 2^m ↔ q < 2^(m + 1) := by
+  have H := testRes_lt_two_pow_mul_iff_lt_two_pow_mul h 1 (q := q)
+  simp_rw [mul_one] at H
+  exact H
 
 -- testBit_mergeBit
 
@@ -622,13 +638,38 @@ theorem mergeBit_mergeBit_pred_of_lt {i j p : ℕ} {b b' : Bool} (h : i < j) :
     (p.mergeBit (j - 1) b).mergeBit i b' = (p.mergeBit i b').mergeBit j b :=
   (mergeBit_mergeBit_of_gt h).symm
 
--- mergeBit inequalities
+-- mergeBit equalities and inequalities
 
-theorem lt_iff_mergeBit_lt (hi : i ≤ m) : p < 2^m ↔ p.mergeBit i b < 2^(m + 1) := by
-  rw [lt_iff_testRes_lt hi, testRes_mergeBit_of_eq]
+theorem mergeBit_div_two_pow_eq (h : i ≤ k) : q.mergeBit i b / 2^(k + 1) = q / 2^k := by
+  simp_rw [testBit_ext_iff, testBit_div_two_pow, Nat.add_right_comm _ 1,
+  testBit_succ_mergeBit_of_ge ((h.trans (Nat.le_add_right _ _))), implies_true]
 
-theorem le_mergeBit_iff_le (hi : i ≤ m) : 2^(m + 1) ≤ p.mergeBit i b ↔ 2^m ≤ p := by
-  rw [← le_testRes_iff_ge hi, testRes_mergeBit_of_eq]
+theorem mergeBit_mod_two_pow_eq (h : k ≤ i) : q.mergeBit i n % 2^k = q % 2^k := by
+  simp_rw [testBit_ext_iff, testBit_mod_two_pow]
+  intro j
+  rcases lt_or_le j k with hjk | hjk
+  · simp_rw [hjk, testBit_mergeBit_of_lt (hjk.trans_le h)]
+  · simp_rw [hjk.not_lt, decide_False, Bool.false_and]
+
+theorem mergeBit_modEq_two_pow (h : k ≤ i) : q.mergeBit i b ≡ q [MOD 2^k] :=
+  mergeBit_mod_two_pow_eq h
+
+theorem mergeBit_lt_iff_lt_div_two (n : ℕ) (hn : 2^(i + 1) ∣ n) :
+    q.mergeBit i b < n ↔ q < n / 2 := by
+  rw [← testRes_lt_div_two_iff_lt hn, testRes_mergeBit_of_eq]
+
+theorem mergeBit_lt_two_mul_iff_lt (n : ℕ) (hn : 2^i ∣ n) :
+    q.mergeBit i b < 2 * n ↔ q < n := by
+  rw [← testRes_lt_iff_lt_two_mul hn, testRes_mergeBit_of_eq]
+
+theorem mergeBit_lt_two_pow_mul_iff_lt_two_pow_mul (h : i ≤ k) (n : ℕ) :
+    q.mergeBit i b < 2^(k + 1) * n ↔ q < 2^k * n := by
+  simp_rw [← testRes_lt_two_pow_mul_iff_lt_two_pow_mul h, testRes_mergeBit_of_eq]
+
+theorem mergeBit_lt_two_pow_iff_lt_two_pow (h : i ≤ k) :
+    q.mergeBit i b < 2^(k + 1) ↔ q < 2^k := by
+  simp_rw [← testRes_lt_two_pow_iff_lt_two_pow h, testRes_mergeBit_of_eq]
+
 
 -- zero/succ
 
@@ -721,13 +762,35 @@ theorem flipBit_eq_mergeBit {i q : ℕ} :
 theorem flipBit_eq_cond {i q : ℕ} : q.flipBit i = bif testBit q i then q - 2^i else q + 2^i := by
   rw [flipBit_eq_mergeBit, mergeBit_not_testBit_testRes_of_eq]
 
--- flipBit inequality
+-- flipBit equalities and inequalities
 
-theorem lt_iff_flipBit_lt {q m : ℕ} (hi : i < m) : q < 2^m ↔ q.flipBit i < 2^m := by
-  cases' m with m
-  · exact (not_lt_zero _ hi).elim
-  · rw [Nat.lt_succ_iff] at hi
-    simp_rw [flipBit_eq_mergeBit, lt_iff_testRes_lt hi, testRes_mergeBit_of_eq]
+theorem flipBit_div_eq {i q : ℕ} (h : i < k) : q.flipBit i / 2^k = q / 2^k := by
+  simp_rw [testBit_ext_iff, testBit_div_two_pow,
+  testBit_flipBit_of_ne (h.trans_le (Nat.le_add_right _ _)).ne', implies_true]
+
+theorem flipBit_mod_two_pow_eq {i q : ℕ} (h : k ≤ i) : q.flipBit i % 2^k = q % 2^k := by
+  simp_rw [testBit_ext_iff, testBit_mod_two_pow]
+  intro j
+  rcases eq_or_ne j i with rfl | hji
+  · simp_rw [h.not_lt, decide_False, Bool.false_and]
+  · simp_rw [testBit_flipBit_of_ne hji]
+
+theorem flipBit_modEq_two_pow (h : k ≤ i) : q.flipBit i ≡ q [MOD 2^k] := flipBit_mod_two_pow_eq h
+
+theorem flipBit_lt_iff_lt {q : ℕ} (n : ℕ) (hn : 2^(i + 1) ∣ n) : q.flipBit i < n ↔ q < n := by
+  rcases hn with ⟨k, rfl⟩
+  simp_rw [mul_comm _ k, ← Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _),
+     flipBit_div_eq i.lt_succ_self]
+
+theorem flipBit_lt_two_pow_mul_iff_lt_two_pow_mul {q : ℕ} (h : i < k) (n : ℕ) :
+    q.flipBit i < 2^k * n ↔ q < 2^k * n :=
+  flipBit_lt_iff_lt _ (dvd_mul_of_dvd_left (pow_dvd_pow _ h) _)
+
+theorem flipBit_lt_two_pow_iff_lt_two_pow {q m : ℕ} (h : i < m) :
+    q.flipBit i < 2^m ↔ q < 2^m := by
+  have H := flipBit_lt_two_pow_mul_iff_lt_two_pow_mul h 1 (q := q)
+  simp_rw [mul_one] at H
+  exact H
 
 -- flipBit_testRes
 
@@ -806,6 +869,28 @@ theorem flipBit_mergeBitRes {p : ℕ}:
 
 -- properties of flipBit
 
+theorem testRes_eq_iff {q r : ℕ} :
+    q.testRes i = r.testRes i ↔ q = r ∨ q = r.flipBit i := by
+  refine ⟨fun h => ?_, ?_⟩
+  · simp_rw [testBit_ext_iff] at h ⊢
+    have H : ∀ j : ℕ, j ≠ i → q.testBit j = r.testBit j := fun j hji => by
+      rcases hji.lt_or_lt with hji | hji
+      · have hj := h j
+        simp_rw [testBit_testRes_of_lt hji] at hj
+        assumption
+      · have hj := h (j - 1)
+        simp_rw [testBit_pred_testRes_of_gt hji] at hj
+        assumption
+    refine ((q.testBit i).eq_or_eq_not (r.testBit i)).imp (fun hqr j => ?_) (fun hqr j => ?_) <;>
+    rcases eq_or_ne j i with rfl | hji
+    · assumption
+    · exact H _ hji
+    · rw [testBit_flipBit_of_eq, hqr]
+    · rw [testBit_flipBit_of_ne hji, H _ hji]
+  · rintro (rfl | rfl)
+    · rfl
+    · rw [testRes_flipBit_of_eq]
+
 @[simp]
 theorem flipBit_flipBit_of_eq {q : ℕ} : (q.flipBit i).flipBit i  = q := by
   simp_rw [flipBit_def, Nat.xor_cancel_right]
@@ -826,10 +911,6 @@ theorem testBit_eq_false_true_of_lt_of_flipBit_ge {q r : ℕ} (hrq : r < q)
     exact ((Nat.sub_le _ _).not_lt ((hrq.trans_le (Nat.le_add_right _ _)).trans_le hf)).elim
   · simp_rw [Bool.cond_true, tsub_le_iff_right, Nat.sub_add_cancel (testBit_implies_ge hr)] at hf
     exact (hf.not_lt hrq).elim
-
-theorem flipBit_div_eq {i q : ℕ} (h : i < k) : q.flipBit i / 2^k = q / 2^k := by
-  simp_rw [testBit_ext_iff, testBit_div_two_pow,
-  testBit_flipBit_of_ne (h.trans_le (Nat.le_add_right _ _)).ne', implies_true]
 
 theorem testBit_eq_of_le_of_flipBit_lt_ge {q r : ℕ} (hrq : r ≤ q)
     (hf : q.flipBit i ≤ r.flipBit i) (hik : i < k) : r.testBit k = q.testBit k := by
@@ -956,12 +1037,16 @@ theorem condFlipBit_of_all_not {q : ℕ} (hc : c.all (fun x => !x)) :
   · simp_rw [hc _ hq, cond_false]
   · rfl
 
-theorem lt_iff_condFlipBit_lt {q : ℕ} (hi : i < m) : q < 2^m ↔ q.condFlipBit i c < 2^m := by
-  rcases m
-  · exact (not_lt_zero _ hi).elim
-  · rw [Nat.lt_add_one_iff] at hi
-    rw [lt_iff_testRes_lt hi, condFlipBit_apply_eq_mergeBit]
-    exact lt_iff_mergeBit_lt hi
+theorem condFlipBit_lt_iff_lt {q : ℕ} (n : ℕ) (hn : 2^(i + 1) ∣ n) :
+    q.condFlipBit i c < n ↔ q < n := by
+  rw [condFlipBit_apply]
+  cases' c[q.testRes i]?.getD false
+  · rw [cond_false]
+  · rw [cond_true, flipBit_lt_iff_lt _ hn]
+
+theorem condFlipBit_lt_two_pow_iff_lt_two_pow {q : ℕ} (h : i < m) :
+    q.condFlipBit i c < 2^m ↔ q < 2^m := by
+  rw [condFlipBit_lt_iff_lt _ (pow_dvd_pow _ h)]
 
 @[pp_nodot, simps!]
 def condFlipBitPerm (c : Array Bool) (i : ℕ) : Equiv.Perm ℕ where
@@ -976,23 +1061,33 @@ end Nat
 
 namespace Array
 
-def swap_indices (as : Array ℕ) (i : ℕ) (c : Array Bool) : Array ℕ :=
+def swap_indices (as : Array α) (i : ℕ) (c : Array Bool) : Array α :=
   c.zipWithIndex.foldr (fun bp as => as.swap! (bp.2.mergeBit i false) (bp.2.mergeBit i bp.1)) as
 
-theorem size_swap_indices (as : Array ℕ) (i : ℕ) (c : Array Bool) :
-    (swap_indices as i c).size = as.size := sorry
+/-
+def swap_indices (as : Array α) (c : Array Bool) : Array α :=
+  c.zipWithIndex.foldr (fun bp as => as.swap! (2 * bp.2) (2 * bp.2 + bp.1.toNat)) as
+-/
+
+@[simp]
+theorem size_swap_indices (as : Array α) {i : ℕ} {c : Array Bool} :
+    (swap_indices as i c).size = as.size := by
+  unfold swap_indices
+  refine Array.foldr_induction (fun _ (as' : Array α) => as'.size = as.size) rfl ?_
+  intro i as' h
+  simp_rw [size_swap!, h]
 
 theorem getElem_swap_indices (as : Array ℕ) (i : ℕ) (c : Array Bool) (k : ℕ)
-    (hk : k < (swap_indices as i c).size) :
+    (hk : k < (swap_indices as i c).size) (hasc : ):
     (swap_indices as i c)[k] =
-    if h : (k.testRes i) < c.size then
-      (as.swap! ((k.testRes i).mergeBit i false)
-      ((k.testRes i).mergeBit i c[k.testRes i]))[k]'(hk.trans_eq (by simp only [size_swap_indices,
-        size_swap!])) else as[k]'(hk.trans_eq (by simp)) := sorry
+    if k.testRes i < c.size then
+    as[k.condFlipBit i c]'_
+    else as[k]'(hk.trans_eq as.size_swap_indices) := sorry
 
 def swap_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) : Array ℕ :=
   as.map (fun q => q.condFlipBit i c)
 
+@[simp]
 theorem size_swap_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) :
     (swap_vals as i c).size = as.size := size_map _ _
 
@@ -1396,12 +1491,12 @@ theorem mem_bitInvarGE_iff_div_two_pow_eq : f ∈ bitInvarGE i ↔
   imp_forall_iff, forall_swap (α := ℕ)]
 
 theorem lt_iff_apply_lt_of_mem_bitInvarGE (hf : f ∈ bitInvarGE i) {p : ℕ}:
-    p < 2^i ↔ f p < 2^i := by
+    f p < 2^i ↔ p < 2^i := by
   rw [mem_bitInvarGE_iff] at hf
   simp_rw [lt_pow_two_iff_ge_imp_testBit_eq_false]
   exact forall₂_congr (fun _ h => by
     simp_rw [Bool.coe_false_iff_false, Bool.not_inj_iff]
-    exact (hf _ h).testBit_apply_eq_testBit.symm)
+    exact (hf _ h).testBit_apply_eq_testBit)
 
 @[simp]
 theorem bitInvarGE_zero :
