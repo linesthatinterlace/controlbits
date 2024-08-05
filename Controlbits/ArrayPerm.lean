@@ -481,15 +481,15 @@ We can make an `ArrayPerm` using the right-inverse hypothesis instead of the lef
 hypothesis, and we called this `ArrayPerm.mk'`.
 -/
 protected def mk' (toArray : Array ℕ) (invArray : Array ℕ)
-  (size_toArray' : toArray.size = n := by rfl)
-  (size_invArray' : invArray.size = n := by rfl)
+  (size_toArray' : toArray.size = n)
+  (size_invArray' : invArray.size = n)
   (getElem_toArray_lt' :
-    ∀ {i : ℕ} (hi : i < n), toArray[i] < n := by decide)
+    ∀ {i : ℕ} (hi : i < n), toArray[i] < n)
   (getElem_invArray_lt' :
-  ∀ {i : ℕ} (hi : i < n), invArray[i] < n := by decide)
+  ∀ {i : ℕ} (hi : i < n), invArray[i] < n)
   (getElem_toArray_getElem_invArray' : ∀ {i : ℕ} (hi : i < n),
       haveI := getElem_invArray_lt' hi;
-      toArray[invArray[i]] = i := by decide): ArrayPerm n where
+      toArray[invArray[i]] = i) : ArrayPerm n where
   toArray := toArray
   invArray := invArray
   size_toArray := size_toArray'
@@ -572,7 +572,6 @@ theorem size_invArray_eq_size_invArray (a b : ArrayPerm n) :
 theorem size_invArray_eq_size_toArray (a b : ArrayPerm n) :
     a.invArray.size = b.toArray.size := a.size_invArray.trans b.size_toArray.symm-/
 
-@[simp]
 theorem getElem_lt (a : ArrayPerm n) {i : ℕ} (hi : i < n) : a[i] < n :=
   a.getElem_toArray_lt' hi
 
@@ -625,15 +624,15 @@ theorem getElem_invArray_lt_size_invArray (a b : ArrayPerm n) {i : ℕ} (hi : i 
 
 @[simp]
 theorem getElem_inv_getElem (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
-    a⁻¹[a[i]] = i := a.getElem_invArray_getElem_toArray' hi
+    a⁻¹[a[i]]'(getElem_lt _ _) = i := a.getElem_invArray_getElem_toArray' hi
 
 @[simp]
 theorem getElem_getElem_inv (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
-  a[a⁻¹[i]] = i := a.getElem_toArray_getElem_invArray' hi
+  a[a⁻¹[i]]'(getElem_lt _ _) = i := a.getElem_toArray_getElem_invArray' hi
 
 @[simp]
 theorem getElem?_getElem_eq_getElem_getElem (a b : ArrayPerm n) {i : ℕ} (hi : i < n) :
-    a[b[i]]? = a[b[i]] := a.getElem?_lt <| b.getElem_lt _
+    a[b[i]]? = some (a[b[i]]'(getElem_lt _ _)) := a.getElem?_lt <| b.getElem_lt _
 
 /-
 @[simp]
@@ -698,49 +697,24 @@ theorem lt_of_mem_invArray (a : ArrayPerm n) (i : ℕ) (hi : i ∈ a.invArray) :
 theorem lt_of_mem_toArray (a : ArrayPerm n) (i : ℕ) (hi : i ∈ a.toArray) : i < n := by
   rwa [mem_toArray_iff] at hi-/
 
-instance : One (ArrayPerm n) where
-  one := {
-    toArray := range n
-    invArray := range n
-    size_toArray := size_range
-    size_invArray := size_range
-    getElem_toArray_lt' := fun _ => getElem_range_lt
-    getElem_invArray_lt' := fun _ => getElem_range_lt
-    getElem_invArray_getElem_toArray' := fun _ => by simp_rw [Array.getElem_range]}
+instance : SMul (ArrayPerm n) ℕ where
+  smul a i := if h : i < n then a[i] else i
 
-theorem one_toArray : (1 : ArrayPerm n).toArray = Array.range n := rfl
-theorem one_invArray : (1 : ArrayPerm n).invArray = Array.range n := rfl
+theorem smul_nat_def (a : ArrayPerm n) (i : ℕ) :
+    a • i = if h : i < n then a[i] else i := rfl
 
-@[simp]
-theorem getElem_one {i : ℕ} (hi : i < (1 : ArrayPerm n).toArray.size) :
-  (1 : ArrayPerm n).toArray[i] = i := getElem_range _
+theorem smul_of_lt (a : ArrayPerm n) {i : ℕ} (h : i < n) : a • i = a[i] := dif_pos h
 
-instance : Mul (ArrayPerm n) where
-  mul a b := {
-    toArray := b.toArray.map fun i => a[i]?.getD 0
-    invArray := a.invArray.map fun i => b⁻¹[i]?.getD 0
-    size_toArray := by rw [size_map, size_toArray]
-    size_invArray := by rw [size_map, size_invArray]
-    getElem_toArray_lt' := fun _ => by
-      simp_rw [Array.getElem_map, getElem_toArray,
-        getElem?_getElem_eq_getElem_getElem, Option.getD_some, getElem_lt]
-    getElem_invArray_lt' := fun _ => by
-      simp_rw [Array.getElem_map, getElem_invArray,
-        getElem?_getElem_eq_getElem_getElem, Option.getD_some, getElem_lt]
-    getElem_invArray_getElem_toArray' := by simp only [Array.getElem_map, getElem_toArray,
-      getElem?_getElem_eq_getElem_getElem, Option.getD_some, getElem_invArray, getElem_inv_getElem,
-      implies_true]}
+theorem smul_of_ge (a : ArrayPerm n) {i : ℕ} (h : n ≤ i) : a • i = i := dif_neg (not_lt_of_le h)
 
-theorem mul_toArray (a b : ArrayPerm n) : (a * b).toArray =
-    b.toArray.map fun i => a[i]?.getD 0 := rfl
-theorem mul_invArray (a b : ArrayPerm n) : (a * b).invArray =
-    a.invArray.map fun i => b⁻¹[i]?.getD 0 := rfl
+theorem smul_lt_iff_lt (a : ArrayPerm n) {i : ℕ} : a • i < n ↔ i < n := by
+  rcases lt_or_le i n with h | h
+  · simp_rw [h, iff_true, a.smul_of_lt h]
+    apply a.getElem_lt
+  · simp_rw [h.not_lt, iff_false, a.smul_of_ge h]
+    exact h.not_lt
 
-@[simp]
-theorem getElem_mul (a b : ArrayPerm n) {i : ℕ} (hi : i < n) :
-    (a * b)[i] = a[b[i]] := by
-  refine (Array.getElem_map _ _ _ _).trans ?_
-  simp_rw [getElem_toArray, getElem?_getElem_eq_getElem_getElem, Option.getD_some]
+theorem smul_lt_of_lt (a : ArrayPerm n) {i : ℕ} (h : i < n) : a • i < n := a.smul_lt_iff_lt.mpr h
 
 theorem invArray_eq_iff_toArray_eq (a b : ArrayPerm n) :
     a.invArray = b.invArray ↔ a.toArray = b.toArray := by
@@ -761,58 +735,21 @@ theorem eq_iff_getElem_toArray_eq (a b : ArrayPerm n):
   simp_rw [eq_iff_toArray_eq, toArray_eq_iff_forall_getElem_eq]
 
 theorem eq_of_getElem_toArray_eq (a b : ArrayPerm n)
-  (h : ∀ (i : ℕ) (hi₁ : i < n), a[i] = b[i]) : a = b := (a.eq_iff_getElem_toArray_eq b).mpr h
-
-instance : Group (ArrayPerm n) where
-  mul_assoc a b c := (a * b * c).eq_of_getElem_toArray_eq (a * (b * c)) fun _ _ => by
-    simp_rw [getElem_mul]
-  one_mul a := (1 * a).eq_of_getElem_toArray_eq a fun _ _ => by
-    simp_rw [getElem_mul, getElem_one] /- by
-    simp_rw [getElem_mul_toArray, getElem_one_toArray]-/
-  mul_one a := (a * 1).eq_of_getElem_toArray_eq a fun _ => sorry /- by
-    simp_rw [getElem_mul_toArray, getElem_one_toArray]-/
-  mul_left_inv a := (a⁻¹ * a).eq_of_getElem_toArray_eq 1 fun _ => sorry /-by
-    simp_rw [getElem_mul_toArray, inv_toArray, getElem_one_toArray,
-    getElem_invArray_getElem_toArray]-/
-
-instance : SMul (ArrayPerm n) ℕ where
-  smul a i := if h : i < n then haveI := a.size_toArray; a.toArray[i] else i
-
-theorem smul_nat_def (a : ArrayPerm n) (i : ℕ) :
-    a • i = if h : i < n then haveI := a.size_toArray; a.toArray[i] else i := rfl
-
-theorem smul_of_lt (a : ArrayPerm n) {i : ℕ} (h : i < n) :
-    haveI := a.size_toArray ; a • i = a.toArray[i] := dif_pos h
-
-theorem smul_of_ge (a : ArrayPerm n) {i : ℕ} (h : n ≤ i) :
-    a • i = i := dif_neg (not_lt_of_le h)
+  (h : ∀ (i : ℕ) (hi : i < n), a[i] = b[i]) : a = b := (a.eq_iff_getElem_toArray_eq b).mpr h
 
 instance : FaithfulSMul (ArrayPerm n) ℕ where
   eq_of_smul_eq_smul := by
     simp_rw [eq_iff_getElem_toArray_eq, smul_nat_def]
-    rintro a b h i hi₁ hi₂
-    have h := h i
-    simp_rw [a.size_toArray] at hi₁
-    simp_rw [b.size_toArray] at hi₂
-    simp_rw [hi₁, dite_true] at h
-    exact h
+    intro a b H i hi
+    specialize H i
+    simp_rw [hi, dite_true] at H
+    exact H
 
 theorem ext' {a b : ArrayPerm n} (h : ∀ i : ℕ, a • i = b • i) : a = b :=
   FaithfulSMul.eq_of_smul_eq_smul h
 
 theorem ext_iff' (a b : ArrayPerm n) : a = b ↔ ∀ i : ℕ, a • i = b • i :=
   ⟨fun h _ => h ▸ rfl, ext'⟩
-
-theorem smul_lt_iff_lt (a : ArrayPerm n) {i : ℕ} : a • i < n ↔ i < n := by
-  rcases lt_or_le i n with h | h
-  · simp_rw [h, iff_true, a.smul_of_lt h]
-    apply a.getElem_toArray_lt
-  · simp_rw [h.not_lt, iff_false, a.smul_of_ge h]
-    exact h.not_lt
-
-theorem le_smul_iff_le (a : ArrayPerm n) {i : ℕ} : n ≤ a • i ↔ n ≤ i := by
-  simp_rw [← not_lt]
-  exact a.smul_lt_iff_lt.not
 
 @[ext]
 theorem ext {a b : ArrayPerm n} (h : ∀ i < n, a • i = b • i) : a = b := by
@@ -827,14 +764,71 @@ theorem ext_iff (a b : ArrayPerm n) : a = b ↔ ∀ i < n, a • i = b • i :=
 
 theorem smul_right_inj (a : ArrayPerm n) {i j : ℕ} : a • i = a • j ↔ i = j := by
   refine ⟨fun h => ?_, fun h => h ▸ rfl⟩
-  rcases lt_or_le i n with hi | hi
+  by_cases hi : i < n
   · have hj := hi
     rw [← a.smul_lt_iff_lt, h, smul_lt_iff_lt] at hj
-    refine a.toArray_injective hi hj ?_
+    refine a.getElem_injective hi hj ?_
     rwa [a.smul_of_lt hi, a.smul_of_lt hj] at h
-  · have hj := hi
-    rw [← a.le_smul_iff_le, h, le_smul_iff_le] at hj
-    rwa [a.smul_of_ge hi, a.smul_of_ge hj] at h
+  · rw [a.smul_of_ge (le_of_not_lt hi)] at h
+    rw [h, a.smul_lt_iff_lt] at hi
+    rwa [a.smul_of_ge (le_of_not_lt hi)] at h
+
+instance : One (ArrayPerm n) where
+  one := {
+    toArray := range n
+    invArray := range n
+    size_toArray := size_range
+    size_invArray := size_range
+    getElem_toArray_lt' := fun _ => getElem_range_lt
+    getElem_invArray_lt' := fun _ => getElem_range_lt
+    getElem_invArray_getElem_toArray' := fun _ => by simp_rw [Array.getElem_range]}
+
+theorem one_toArray : (1 : ArrayPerm n).toArray = Array.range n := rfl
+theorem one_invArray : (1 : ArrayPerm n).invArray = Array.range n := rfl
+
+@[simp]
+theorem getElem_one {i : ℕ} (hi : i < n) : (1 : ArrayPerm n)[i] = i := getElem_range _
+
+instance : Mul (ArrayPerm n) where
+  mul a b := {
+    toArray := (Array.range n).map fun i => a • b • i
+    invArray := (Array.range n).map fun i => b⁻¹ • a⁻¹ • i
+    size_toArray := by rw [size_map, size_range]
+    size_invArray := by rw [size_map, size_range]
+    getElem_toArray_lt' := fun hi => by
+      rw [Array.getElem_map, Array.getElem_range]
+      exact smul_lt_of_lt _ (smul_lt_of_lt _ hi)
+    getElem_invArray_lt' := fun hi => by
+      rw [Array.getElem_map, Array.getElem_range]
+      exact smul_lt_of_lt _ (smul_lt_of_lt _ hi)
+    getElem_invArray_getElem_toArray' := fun hi => by
+      simp_rw [Array.getElem_map, Array.getElem_range, smul_of_lt _ hi,
+      (smul_of_lt _ (getElem_lt _ _)), getElem_inv_getElem]}
+
+theorem mul_toArray (a b : ArrayPerm n) : (a * b).toArray =
+    (Array.range n).map fun i => a • b • i := rfl
+theorem mul_invArray (a b : ArrayPerm n) : (a * b).invArray =
+    (Array.range n).map fun i => b⁻¹ • a⁻¹ • i := rfl
+
+@[simp]
+theorem getElem_mul (a b : ArrayPerm n) {i : ℕ} (hi : i < n) :
+    (a * b)[i] = a[b[i]]'(getElem_lt _ _) := by
+  refine (Array.getElem_map _ _ _ _).trans ?_
+  simp_rw [Array.getElem_range, smul_of_lt _ hi, (smul_of_lt _ (getElem_lt _ _))]
+
+
+instance : Group (ArrayPerm n) where
+  mul_assoc a b c := ext <| fun _ => by
+    simp_rw [getElem_mul]
+  one_mul a := (1 * a).eq_of_getElem_toArray_eq a fun _ _ => by
+    simp_rw [getElem_mul, getElem_one] /- by
+    simp_rw [getElem_mul_toArray, getElem_one_toArray]-/
+  mul_one a := (a * 1).eq_of_getElem_toArray_eq a fun _ _ => by
+    simp_rw [getElem_mul, getElem_one] /- by
+    simp_rw [getElem_mul_toArray, getElem_one_toArray]-/
+  mul_left_inv a := (a⁻¹ * a).eq_of_getElem_toArray_eq 1 fun _ _ => by
+    simp_rw [getElem_mul, getElem_one]
+
 
 instance : MulAction (ArrayPerm n) ℕ where
   one_smul k := (k.lt_or_ge n).by_cases
