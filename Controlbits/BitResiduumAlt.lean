@@ -654,11 +654,11 @@ theorem mergeBit_mod_two_pow_eq (h : k ≤ i) : q.mergeBit i n % 2^k = q % 2^k :
 theorem mergeBit_modEq_two_pow (h : k ≤ i) : q.mergeBit i b ≡ q [MOD 2^k] :=
   mergeBit_mod_two_pow_eq h
 
-theorem mergeBit_lt_iff_lt_div_two (n : ℕ) (hn : 2^(i + 1) ∣ n) :
+theorem mergeBit_lt_iff_lt_div_two (hn : 2^(i + 1) ∣ n) :
     q.mergeBit i b < n ↔ q < n / 2 := by
   rw [← testRes_lt_div_two_iff_lt hn, testRes_mergeBit_of_eq]
 
-theorem mergeBit_lt_two_mul_iff_lt (n : ℕ) (hn : 2^i ∣ n) :
+theorem mergeBit_lt_two_mul_iff_lt (hn : 2^i ∣ n) :
     q.mergeBit i b < 2 * n ↔ q < n := by
   rw [← testRes_lt_iff_lt_two_mul hn, testRes_mergeBit_of_eq]
 
@@ -670,6 +670,9 @@ theorem mergeBit_lt_two_pow_iff_lt_two_pow (h : i ≤ k) :
     q.mergeBit i b < 2^(k + 1) ↔ q < 2^k := by
   simp_rw [← testRes_lt_two_pow_iff_lt_two_pow h, testRes_mergeBit_of_eq]
 
+theorem mergeBit_testRes_lt_iff_lt (hn : 2^(i + 1) ∣ n) :
+    (q.testRes i).mergeBit i b < n ↔ q < n := by
+  rw [mergeBit_lt_iff_lt_div_two hn, testRes_lt_div_two_iff_lt hn]
 
 -- zero/succ
 
@@ -730,12 +733,14 @@ theorem flipBit_def : ∀ (i q : ℕ), q.flipBit i = q ^^^ 1 <<< i := fun _ _ =>
 
 -- testBit_flipBit
 
+variable {p q : ℕ}
+
 @[simp]
-theorem testBit_flipBit_of_eq {q : ℕ} : (q.flipBit i).testBit i = !(q.testBit i) := by
+theorem testBit_flipBit_of_eq : (q.flipBit i).testBit i = !(q.testBit i) := by
   simp_rw [flipBit_def, testBit_xor, testBit_shiftLeft, le_rfl,
     decide_true_eq_true, Bool.true_and, Nat.sub_self, testBit_one_zero, Bool.xor_true]
 
-theorem testBit_flipBit_of_ne {i j q : ℕ} (hij : i ≠ j) :
+theorem testBit_flipBit_of_ne {i j : ℕ} (hij : i ≠ j) :
     (q.flipBit j).testBit i = q.testBit i := by
   simp_rw [flipBit_def, testBit_xor, testBit_shiftLeft]
   rcases hij.lt_or_lt with hij | hij
@@ -743,14 +748,14 @@ theorem testBit_flipBit_of_ne {i j q : ℕ} (hij : i ≠ j) :
   · simp_rw [testBit_one, Nat.sub_eq_zero_iff_le, hij.not_le, decide_false_eq_false,
     Bool.and_false, Bool.xor_false]
 
-theorem testBit_flipBit {q : ℕ} : (q.flipBit j).testBit i = (q.testBit i).xor (i = j) := by
+theorem testBit_flipBit : (q.flipBit j).testBit i = (q.testBit i).xor (i = j) := by
   rcases eq_or_ne i j with rfl | hij
   · simp_rw [testBit_flipBit_of_eq, decide_true_eq_true, Bool.xor_true]
   · simp_rw [testBit_flipBit_of_ne hij, hij, decide_false_eq_false, Bool.xor_false]
 
 -- representations of flipBit
 
-theorem flipBit_eq_mergeBit {i q : ℕ} :
+theorem flipBit_eq_mergeBit {i : ℕ} :
     q.flipBit i = (q.testRes i).mergeBit i (!(testBit q i))  := by
   simp_rw [testBit_ext_iff]
   intro j
@@ -759,16 +764,16 @@ theorem flipBit_eq_mergeBit {i q : ℕ} :
   · rw [testBit_flipBit_of_eq, testBit_mergeBit_of_eq]
   · rw [testBit_flipBit_of_ne hij.ne, testBit_mergeBit_of_lt hij, testBit_testRes_of_lt hij]
 
-theorem flipBit_eq_cond {i q : ℕ} : q.flipBit i = bif testBit q i then q - 2^i else q + 2^i := by
+theorem flipBit_eq_cond {i : ℕ} : q.flipBit i = bif testBit q i then q - 2^i else q + 2^i := by
   rw [flipBit_eq_mergeBit, mergeBit_not_testBit_testRes_of_eq]
 
 -- flipBit equalities and inequalities
 
-theorem flipBit_div_eq {i q : ℕ} (h : i < k) : q.flipBit i / 2^k = q / 2^k := by
+theorem flipBit_div_eq {i : ℕ} (h : i < k) : q.flipBit i / 2^k = q / 2^k := by
   simp_rw [testBit_ext_iff, testBit_div_two_pow,
   testBit_flipBit_of_ne (h.trans_le (Nat.le_add_right _ _)).ne', implies_true]
 
-theorem flipBit_mod_two_pow_eq {i q : ℕ} (h : k ≤ i) : q.flipBit i % 2^k = q % 2^k := by
+theorem flipBit_mod_two_pow_eq {i : ℕ} (h : k ≤ i) : q.flipBit i % 2^k = q % 2^k := by
   simp_rw [testBit_ext_iff, testBit_mod_two_pow]
   intro j
   rcases eq_or_ne j i with rfl | hji
@@ -777,16 +782,16 @@ theorem flipBit_mod_two_pow_eq {i q : ℕ} (h : k ≤ i) : q.flipBit i % 2^k = q
 
 theorem flipBit_modEq_two_pow (h : k ≤ i) : q.flipBit i ≡ q [MOD 2^k] := flipBit_mod_two_pow_eq h
 
-theorem flipBit_lt_iff_lt {q : ℕ} (n : ℕ) (hn : 2^(i + 1) ∣ n) : q.flipBit i < n ↔ q < n := by
+theorem flipBit_lt_iff_lt (hn : 2^(i + 1) ∣ n) : q.flipBit i < n ↔ q < n := by
   rcases hn with ⟨k, rfl⟩
   simp_rw [mul_comm _ k, ← Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _),
      flipBit_div_eq i.lt_succ_self]
 
-theorem flipBit_lt_two_pow_mul_iff_lt_two_pow_mul {q : ℕ} (h : i < k) (n : ℕ) :
+theorem flipBit_lt_two_pow_mul_iff_lt_two_pow_mul (h : i < k) (n : ℕ) :
     q.flipBit i < 2^k * n ↔ q < 2^k * n :=
-  flipBit_lt_iff_lt _ (dvd_mul_of_dvd_left (pow_dvd_pow _ h) _)
+  flipBit_lt_iff_lt (dvd_mul_of_dvd_left (pow_dvd_pow _ h) _)
 
-theorem flipBit_lt_two_pow_iff_lt_two_pow {q m : ℕ} (h : i < m) :
+theorem flipBit_lt_two_pow_iff_lt_two_pow {m : ℕ} (h : i < m) :
     q.flipBit i < 2^m ↔ q < 2^m := by
   have H := flipBit_lt_two_pow_mul_iff_lt_two_pow_mul h 1 (q := q)
   simp_rw [mul_one] at H
@@ -794,17 +799,17 @@ theorem flipBit_lt_two_pow_iff_lt_two_pow {q m : ℕ} (h : i < m) :
 
 -- flipBit_testRes
 
-theorem flipBit_testRes_of_lt {q : ℕ} (hij : i < j):
+theorem flipBit_testRes_of_lt (hij : i < j):
     (q.testRes j).flipBit i = (q.flipBit i).testRes j := by
   simp_rw [flipBit_eq_mergeBit, testRes_testRes_of_lt hij, testBit_testRes_of_lt hij,
   testRes_mergeBit_of_gt hij]
 
-theorem flipBit_testRes_of_ge {q : ℕ} (hij : j ≤ i):
+theorem flipBit_testRes_of_ge (hij : j ≤ i):
     (q.testRes j).flipBit i = (q.flipBit (i + 1)).testRes j := by
   simp_rw [flipBit_eq_mergeBit, testRes_testRes_of_ge hij, testBit_testRes_of_ge hij,
   mergeBit_testRes_of_ge hij]
 
-theorem flipBit_testRes {q : ℕ} :
+theorem flipBit_testRes :
     (q.testRes j).flipBit i = (q.flipBit (i + (decide (j ≤ i)).toNat)).testRes j := by
   rcases lt_or_le i j with hij | hij
   · simp_rw [flipBit_testRes_of_lt hij, hij.not_le, decide_false_eq_false, Bool.toNat_false, add_zero]
@@ -812,14 +817,14 @@ theorem flipBit_testRes {q : ℕ} :
 
 -- testRes_flipBit
 
-theorem testRes_flipBit_of_gt {q : ℕ} (hij : j < i):
+theorem testRes_flipBit_of_gt (hij : j < i):
     (q.flipBit j).testRes i = (q.testRes i).flipBit j := (flipBit_testRes_of_lt hij).symm
 
-theorem testRes_flipBit_of_lt {q : ℕ} (hij : i < j):
+theorem testRes_flipBit_of_lt (hij : i < j):
     (q.flipBit j).testRes i = (q.testRes i).flipBit (j - 1) := by
   rw [flipBit_testRes_of_ge (Nat.le_sub_one_of_lt hij), Nat.sub_add_cancel (one_le_of_lt hij)]
 
-theorem testRes_flipBit_of_ne {q : ℕ} (hij : i ≠ j) :
+theorem testRes_flipBit_of_ne (hij : i ≠ j) :
     (q.flipBit j).testRes i = (q.testRes i).flipBit (j - (decide (i < j)).toNat) := by
   rcases hij.lt_or_lt with hij | hij
   · simp only [testRes_flipBit_of_lt hij, hij, not_lt_of_lt, decide_false_eq_false, Bool.toNat_false,
@@ -828,11 +833,10 @@ theorem testRes_flipBit_of_ne {q : ℕ} (hij : i ≠ j) :
     decide_false_eq_false, Bool.toNat_false, Nat.sub_zero]
 
 @[simp]
-theorem testRes_flipBit_of_eq {q : ℕ} :
-    (q.flipBit i).testRes i = q.testRes i := by
+theorem testRes_flipBit_of_eq : (q.flipBit i).testRes i = q.testRes i := by
   rw [flipBit_eq_mergeBit, testRes_mergeBit_of_eq]
 
-theorem testRes_flipBit {q : ℕ} : (q.flipBit j).testRes i = bif i = j then q.testRes i else
+theorem testRes_flipBit : (q.flipBit j).testRes i = bif i = j then q.testRes i else
     (q.testRes i).flipBit (j - (decide (i < j)).toNat) := by
   rcases eq_or_ne i j with rfl | hij
   · simp_rw [testRes_flipBit_of_eq, decide_true_eq_true, cond_true]
@@ -840,27 +844,27 @@ theorem testRes_flipBit {q : ℕ} : (q.flipBit j).testRes i = bif i = j then q.t
 
 -- flipBit_mergeBit
 
-theorem flipBit_mergeBit_of_eq {p : ℕ} : (p.mergeBit i b).flipBit i = p.mergeBit i (!b) := by
+theorem flipBit_mergeBit_of_eq : (p.mergeBit i b).flipBit i = p.mergeBit i (!b) := by
   rw [flipBit_eq_mergeBit, testBit_mergeBit_of_eq, testRes_mergeBit_of_eq]
 
-theorem flipBit_mergeBit_of_lt {p : ℕ} (hij : i < j) :
+theorem flipBit_mergeBit_of_lt (hij : i < j) :
     (p.mergeBit j b).flipBit i = (p.flipBit i).mergeBit j b := by
   rw [flipBit_eq_mergeBit, flipBit_eq_mergeBit, testBit_mergeBit_of_lt hij,
   testRes_mergeBit_of_lt hij, mergeBit_mergeBit_pred_of_lt hij]
 
-theorem flipBit_mergeBit_of_gt {p : ℕ} (hij : j < i) :
+theorem flipBit_mergeBit_of_gt (hij : j < i) :
     (p.mergeBit j b).flipBit i = (p.flipBit (i - 1)).mergeBit j b := by
   rw [flipBit_eq_mergeBit, flipBit_eq_mergeBit, testBit_mergeBit_of_gt hij,
   testRes_mergeBit_of_gt hij, mergeBit_mergeBit_pred_of_lt hij]
 
-theorem flipBit_mergeBit_of_ne {p : ℕ} (hij : i ≠ j) :
+theorem flipBit_mergeBit_of_ne (hij : i ≠ j) :
     (p.mergeBit j b).flipBit i = (p.flipBit (i - (decide (j < i)).toNat)).mergeBit j b := by
   rcases hij.lt_or_lt with hij | hij
   · simp_rw [flipBit_mergeBit_of_lt hij, hij.not_lt, decide_false_eq_false, Bool.toNat_false,
     Nat.sub_zero]
   · simp_rw [flipBit_mergeBit_of_gt hij, hij, decide_true_eq_true, Bool.toNat_true]
 
-theorem flipBit_mergeBitRes {p : ℕ}:
+theorem flipBit_mergeBitRes :
     (p.mergeBit j b).flipBit i = if i = j then p.mergeBit i (!b) else
     (p.flipBit (i - (decide (j < i)).toNat)).mergeBit j b := by
   rcases eq_or_ne i j with rfl | hij
@@ -869,7 +873,7 @@ theorem flipBit_mergeBitRes {p : ℕ}:
 
 -- properties of flipBit
 
-theorem testRes_eq_iff {q r : ℕ} :
+theorem testRes_eq_iff {r : ℕ} :
     q.testRes i = r.testRes i ↔ q = r ∨ q = r.flipBit i := by
   refine ⟨fun h => ?_, ?_⟩
   · simp_rw [testBit_ext_iff] at h ⊢
@@ -892,15 +896,15 @@ theorem testRes_eq_iff {q r : ℕ} :
     · rw [testRes_flipBit_of_eq]
 
 @[simp]
-theorem flipBit_flipBit_of_eq {q : ℕ} : (q.flipBit i).flipBit i  = q := by
+theorem flipBit_flipBit_of_eq : (q.flipBit i).flipBit i  = q := by
   simp_rw [flipBit_def, Nat.xor_cancel_right]
 
 @[simp]
-theorem flipBit_ne_self : ∀ q : ℕ, q.flipBit i ≠ q := by
+theorem flipBit_ne_self : q.flipBit i ≠ q := by
   simp_rw [ne_eq, testBit_ext_iff, not_forall]
-  exact fun _ => ⟨i, by simp_rw [testBit_flipBit_of_eq, Bool.not_eq_self, not_false_eq_true]⟩
+  exact ⟨i, by simp_rw [testBit_flipBit_of_eq, Bool.not_eq_self, not_false_eq_true]⟩
 
-theorem testBit_eq_false_true_of_lt_of_flipBit_ge {q r : ℕ} (hrq : r < q)
+theorem testBit_eq_false_true_of_lt_of_flipBit_ge {r : ℕ} (hrq : r < q)
     (hf : q.flipBit i ≤ r.flipBit i) : r.testBit i = false ∧ q.testBit i = true := by
   simp_rw [flipBit_eq_cond] at hf
   rcases hr : r.testBit i <;> rcases hq : q.testBit i <;> simp_rw [hr, hq] at hf
@@ -912,7 +916,7 @@ theorem testBit_eq_false_true_of_lt_of_flipBit_ge {q r : ℕ} (hrq : r < q)
   · simp_rw [Bool.cond_true, tsub_le_iff_right, Nat.sub_add_cancel (testBit_implies_ge hr)] at hf
     exact (hf.not_lt hrq).elim
 
-theorem testBit_eq_of_le_of_flipBit_lt_ge {q r : ℕ} (hrq : r ≤ q)
+theorem testBit_eq_of_le_of_flipBit_lt_ge {r : ℕ} (hrq : r ≤ q)
     (hf : q.flipBit i ≤ r.flipBit i) (hik : i < k) : r.testBit k = q.testBit k := by
   simp_rw [testBit_to_div_mod, decide_eq_decide]
   suffices hs : r / 2^k = q / 2 ^ k by rw [hs]
@@ -920,7 +924,7 @@ theorem testBit_eq_of_le_of_flipBit_lt_ge {q r : ℕ} (hrq : r ≤ q)
   rw [← flipBit_div_eq hik, ← flipBit_div_eq (q := r) hik]
   exact Nat.div_le_div_right hf
 
-theorem testBit_eq_flipBit_testBit_of_le_of_flipBit_le_ge {q r : ℕ} (hrq : r < q)
+theorem testBit_eq_flipBit_testBit_of_le_of_flipBit_le_ge {r : ℕ} (hrq : r < q)
     (hf : q.flipBit i ≤ r.flipBit i) (hik : i ≤ k) : r.testBit k = (q.flipBit i).testBit k := by
   rcases hik.lt_or_eq with hik | rfl
   · rw [testBit_flipBit_of_ne hik.ne']
@@ -929,7 +933,7 @@ theorem testBit_eq_flipBit_testBit_of_le_of_flipBit_le_ge {q r : ℕ} (hrq : r <
     testBit_eq_false_true_of_lt_of_flipBit_ge hrq hf]
     exact Bool.false_ne_true
 
-theorem eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq {q r : ℕ} (hrq : r < q)
+theorem eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq {r : ℕ} (hrq : r < q)
     (hf : q.flipBit i ≤ r.flipBit i) (h : ∀ {k}, k < i → r.testBit k = q.testBit k) :
     r = q.flipBit i := by
   rw [testBit_ext_iff]
@@ -943,7 +947,7 @@ def flipBitPerm (i : ℕ) : Equiv.Perm ℕ :=
   ⟨(flipBit · i), (flipBit · i), xor_cancel_right _, xor_cancel_right _⟩
 
 @[simp]
-theorem flipBitPerm_inv_apply : ∀ (i x : ℕ), (flipBitPerm i)⁻¹ x = x.flipBit i := fun _ _ => rfl
+theorem flipBitPerm_inv_apply : ∀ (x i: ℕ), (flipBitPerm i)⁻¹ x = x.flipBit i := fun _ _ => rfl
 
 theorem flipBitPerm_eq_permCongr (i : ℕ) :
     flipBitPerm i = (testBitRes i).symm.permCongr (boolInversion.prodCongr (Equiv.refl _)) := by
@@ -959,7 +963,9 @@ section CondFlipBit
 def condFlipBit (q : ℕ) (i : ℕ) (c : Array Bool) : ℕ :=
   q ^^^ ((c[q.testRes i]?.getD false).toNat <<< i)
 
-theorem condFlipBit_apply_of_testRes_lt {q : ℕ} (h : q.testRes i < c.size) :
+variable {p q : ℕ}
+
+theorem condFlipBit_apply_of_testRes_lt (h : q.testRes i < c.size) :
     q.condFlipBit i c = bif c[q.testRes i] then q.flipBit i else q := by
   unfold condFlipBit
   rw [c.getElem?_lt h, Option.getD_some]
@@ -967,69 +973,78 @@ theorem condFlipBit_apply_of_testRes_lt {q : ℕ} (h : q.testRes i < c.size) :
   · rw [cond_false, Bool.toNat_false, zero_shiftLeft, xor_zero]
   · rw [cond_true, Bool.toNat_true, flipBit_def]
 
-theorem condFlipBit_apply_of_le_testRes {q : ℕ} {c : Array Bool} (h : c.size ≤ q.testRes i) :
+theorem condFlipBit_apply_of_le_testRes {c : Array Bool} (h : c.size ≤ q.testRes i) :
     q.condFlipBit i c = q := by
   unfold condFlipBit
   rw [c.getElem?_ge h, Option.getD_none, Bool.toNat_false, zero_shiftLeft, xor_zero]
 
-theorem condFlipBit_apply {q : ℕ} :
+theorem condFlipBit_apply :
     q.condFlipBit i c = bif c[q.testRes i]?.getD false then q.flipBit i else q := by
   rcases lt_or_le (q.testRes i) c.size with h | h
   · rw [condFlipBit_apply_of_testRes_lt h, c.getElem?_lt h, Option.getD_some]
   · rw [condFlipBit_apply_of_le_testRes h, c.getElem?_ge h, Option.getD_none, Bool.cond_false]
 
-theorem testRes_condFlipBit_of_eq {q : ℕ} : (q.condFlipBit i c).testRes i = q.testRes i := by
+theorem testRes_condFlipBit_of_eq : (q.condFlipBit i c).testRes i = q.testRes i := by
   rw [condFlipBit_apply, Bool.apply_cond (testRes · i), testRes_flipBit_of_eq, Bool.cond_self]
 
-theorem testBit_condFlipBit_of_ne {q : ℕ} (hij : i ≠ j) :
+theorem testBit_condFlipBit_of_ne (hij : i ≠ j) :
     (q.condFlipBit j c).testBit i = q.testBit i := by
   rw [condFlipBit_apply, Bool.apply_cond (testBit · i), testBit_flipBit_of_ne hij, Bool.cond_self]
 
-theorem testBit_condFlipBit_of_eq {q : ℕ} :
+theorem testBit_condFlipBit_of_eq :
     (q.condFlipBit i c).testBit i = (c[q.testRes i]?.getD false).xor (q.testBit i) := by
   rw [condFlipBit_apply, Bool.apply_cond (testBit · i), testBit_flipBit_of_eq]
   rcases (c[q.testRes i]?.getD false)
   · rw [cond_false, Bool.xor, Bool.false_xor]
   · rw [cond_true, Bool.xor, Bool.true_xor]
 
-theorem testBit_condFlipBit_of_le_testRes {q : ℕ} (h : c.size ≤ q.testRes i) :
+theorem testBit_condFlipBit_of_le_testRes (h : c.size ≤ q.testRes i) :
     (q.condFlipBit i c).testBit j = q.testBit j := by
   rw [condFlipBit_apply_of_le_testRes h]
 
-theorem testBit_condFlipBit_of_testRes_lt_of_eq {q : ℕ} (h : q.testRes i < c.size) :
+theorem testBit_condFlipBit_of_testRes_lt_of_eq (h : q.testRes i < c.size) :
   (q.condFlipBit i c).testBit i = (c[q.testRes i]).xor (q.testBit i) := by
   rw [testBit_condFlipBit_of_eq, c.getElem?_lt h, Option.getD_some]
 
-theorem condFlipBit_apply_eq_mergeBit {q : ℕ} : q.condFlipBit i c =
+theorem condFlipBit_eq_mergeBit : q.condFlipBit i c =
     (q.testRes i).mergeBit i ((c[q.testRes i]?.getD false).xor (q.testBit i)) := by
   simp_rw [eq_mergeBit_iff, testRes_condFlipBit_of_eq, testBit_condFlipBit_of_eq, true_and]
 
-theorem condFlipBit_apply_comm {q : ℕ} :
+theorem condFlipBit_eq_mergeBit_of_testRes_lt (h : q.testRes i < c.size) :
+    q.condFlipBit i c = (q.testRes i).mergeBit i (c[q.testRes i].xor (q.testBit i)) := by
+  simp_rw [eq_mergeBit_iff, testRes_condFlipBit_of_eq, testBit_condFlipBit_of_testRes_lt_of_eq h,
+    true_and]
+
+theorem condFlipBit_apply_comm :
 (q.condFlipBit i d).condFlipBit i c = (q.condFlipBit i c).condFlipBit i d := by
-simp_rw [condFlipBit_apply_eq_mergeBit, testRes_mergeBit_of_eq,
+simp_rw [condFlipBit_eq_mergeBit, testRes_mergeBit_of_eq,
   testBit_mergeBit_of_eq, Bool.xor_left_comm]
 
-theorem condFlipBit_mergeBit {p : ℕ} :
+theorem condFlipBit_mergeBit :
     (p.mergeBit i b).condFlipBit i c = p.mergeBit i ((c[p]?.getD false).xor b) := by
-  rw [condFlipBit_apply_eq_mergeBit, testRes_mergeBit_of_eq, testBit_mergeBit_of_eq]
+  rw [condFlipBit_eq_mergeBit, testRes_mergeBit_of_eq, testBit_mergeBit_of_eq]
 
-theorem condFlipBit_eq_dite {q : ℕ} : q.condFlipBit i c = if h : q.testRes i < c.size then
+theorem condFlipBit_eq_dite : q.condFlipBit i c = if h : q.testRes i < c.size then
     bif c[q.testRes i] then q.flipBit i else q else q := by
   symm
   rw [dite_eq_iff']
   exact ⟨fun h => (condFlipBit_apply_of_testRes_lt h).symm,
   fun h => (condFlipBit_apply_of_le_testRes (le_of_not_lt h)).symm⟩
 
-theorem condFlipBit_condFlipBit_of_eq {q : ℕ} : (q.condFlipBit i c).condFlipBit i c = q := by
-  simp_rw [condFlipBit_apply_eq_mergeBit, testRes_mergeBit_of_eq, testBit_mergeBit_of_eq,
+theorem condFlipBit_condFlipBit_of_eq : (q.condFlipBit i c).condFlipBit i c = q := by
+  simp_rw [condFlipBit_eq_mergeBit, testRes_mergeBit_of_eq, testBit_mergeBit_of_eq,
     Bool.xor, ← Bool.xor_assoc, Bool.xor_self, Bool.false_xor, mergeBit_testBit_testRes_of_eq]
 
-theorem condFlipBit_of_all_of_lt_c.size {q : ℕ} (hq : q.testRes i < c.size) (hc : c.all (fun x => x)) :
+theorem condFlipBit_of_all_of_lt_c.size (hq : q.testRes i < c.size)
+    (hc : ∀ (i : ℕ) (h : i < c.size), c[i] = true) :
     q.condFlipBit i c = q.flipBit i := by
-  simp_rw [Array.all_eq_true, Fin.forall_iff, Fin.getElem_fin] at hc
   simp_rw [condFlipBit_eq_dite, hq, dite_true, hc _ hq, cond_true]
 
-theorem condFlipBit_of_all_not {q : ℕ} (hc : c.all (fun x => !x)) :
+theorem condFlipBit_of_mkArray_true :
+    q.condFlipBit i (mkArray n true) = if q.testRes i < n then q.flipBit i else q := by
+  simp_rw [condFlipBit_eq_dite, Array.getElem_mkArray, cond_true, Array.size_mkArray, dite_eq_ite]
+
+theorem condFlipBit_of_all_not (hc : c.all (fun x => !x)) :
     q.condFlipBit i c = q := by
   simp_rw [Array.all_eq_true, Fin.forall_iff, Fin.getElem_fin, Bool.not_eq_true'] at hc
   simp_rw [condFlipBit_eq_dite]
@@ -1037,19 +1052,27 @@ theorem condFlipBit_of_all_not {q : ℕ} (hc : c.all (fun x => !x)) :
   · simp_rw [hc _ hq, cond_false]
   · rfl
 
-theorem condFlipBit_lt_iff_lt {q : ℕ} (n : ℕ) (hn : 2^(i + 1) ∣ n) :
+theorem condFlipBit_of_mkArray_false :
+    q.condFlipBit i (mkArray n false) = q := by
+  simp_rw [condFlipBit_eq_dite, Array.getElem_mkArray, cond_false, dite_eq_ite, ite_self]
+
+theorem condFlipBit_lt_iff_lt (hn : 2^(i + 1) ∣ n) :
     q.condFlipBit i c < n ↔ q < n := by
   rw [condFlipBit_apply]
   cases' c[q.testRes i]?.getD false
   · rw [cond_false]
-  · rw [cond_true, flipBit_lt_iff_lt _ hn]
+  · rw [cond_true, flipBit_lt_iff_lt hn]
 
-theorem condFlipBit_lt_two_pow_iff_lt_two_pow {q : ℕ} (h : i < m) :
+theorem condFlipBit_lt_two_pow_mul_iff_lt_two_pow_mul (h : i < m) (n : ℕ):
+    q.condFlipBit i c < 2^m * n ↔ q < 2^m * n := by
+  rw [condFlipBit_lt_iff_lt (dvd_mul_of_dvd_left (pow_dvd_pow _ h) _)]
+
+theorem condFlipBit_lt_two_pow_iff_lt_two_pow (h : i < m) :
     q.condFlipBit i c < 2^m ↔ q < 2^m := by
-  rw [condFlipBit_lt_iff_lt _ (pow_dvd_pow _ h)]
+  rw [condFlipBit_lt_iff_lt (pow_dvd_pow _ h)]
 
 @[pp_nodot, simps!]
-def condFlipBitPerm (c : Array Bool) (i : ℕ) : Equiv.Perm ℕ where
+def condFlipBitPerm (i : ℕ) (c : Array Bool) : Equiv.Perm ℕ where
   toFun := (condFlipBit · i c)
   invFun := (condFlipBit · i c)
   left_inv _ := condFlipBit_condFlipBit_of_eq
@@ -1061,58 +1084,364 @@ end Nat
 
 namespace Array
 
-def swap_indices (as : Array α) (i : ℕ) (c : Array Bool) : Array α :=
-  c.zipWithIndex.foldr (fun bp as => as.swap! (bp.2.mergeBit i false) (bp.2.mergeBit i bp.1)) as
+section FlipBit
 
-/-
-def swap_indices (as : Array α) (c : Array Bool) : Array α :=
-  c.zipWithIndex.foldr (fun bp as => as.swap! (2 * bp.2) (2 * bp.2 + bp.1.toNat)) as
--/
+def flipBit_indices (as : Array α) (i : ℕ) : Array α :=
+  (Array.range (as.size / 2)).foldr
+  (fun k as => as.swap! (k.mergeBit i false) (k.mergeBit i true)) as
 
 @[simp]
-theorem size_swap_indices (as : Array α) {i : ℕ} {c : Array Bool} :
-    (swap_indices as i c).size = as.size := by
-  unfold swap_indices
-  refine Array.foldr_induction (fun _ (as' : Array α) => as'.size = as.size) rfl ?_
-  intro i as' h
+theorem size_flipBit_indices (a : Array α) {i : ℕ} :
+    (flipBit_indices a i).size = a.size := by
+  refine Array.foldr_induction (fun _ (a' : Array α) => a'.size = a.size) rfl (fun _ _ h => ?_)
   simp_rw [size_swap!, h]
 
-theorem getElem_swap_indices (as : Array ℕ) (i : ℕ) (c : Array Bool) (k : ℕ)
-    (hk : k < (swap_indices as i c).size) (hasc : ):
-    (swap_indices as i c)[k] =
-    if k.testRes i < c.size then
-    as[k.condFlipBit i c]'_
-    else as[k]'(hk.trans_eq as.size_swap_indices) := sorry
+theorem getElem_flipBit_indices (a : Array α) (i : ℕ) (ha : 2^(i + 1) ∣ a.size)
+    (k : ℕ) (hk : k < (flipBit_indices a i).size) :
+    (flipBit_indices a i)[k] = a[k.flipBit i]'((Nat.flipBit_lt_iff_lt ha).mpr
+      (hk.trans_eq a.size_flipBit_indices)) := by
+  revert k
+  suffices h : ∀ (_ : (a.flipBit_indices i).size = a.size) (k : ℕ)
+    (hk : k < (a.flipBit_indices i).size), (a.flipBit_indices i)[k] =
+    if 0 ≤ k.testRes i then a[k.flipBit i]'((Nat.flipBit_lt_iff_lt ha).mpr
+    (hk.trans_eq a.size_flipBit_indices)) else a[k]'(hk.trans_eq a.size_flipBit_indices)
+  · simp_rw [zero_le, ite_true] at h
+    exact h a.size_flipBit_indices
+  · refine Array.foldr_induction (fun n (a' : Array α) =>
+    ∀ ha' k (hk : k < a'.size), a'[k] =
+    if n ≤ k.testRes i then a[k.flipBit i]'((Nat.flipBit_lt_iff_lt ha).mpr
+    (hk.trans_eq ha')) else a[k]'(hk.trans_eq ha')) (fun _ _ hk => ?_) ?_
+    · simp_rw [size_range, ← not_lt, Nat.testRes_lt_div_two_iff_lt ha, hk, not_true, if_false]
+    · simp_rw [Fin.getElem_fin, size_swap!, Nat.succ_le_iff, getElem_range,
+        Fin.forall_iff, size_range]
+      intro t ht a' h ha' k hk
+      specialize h ha'
+      rcases eq_or_ne (k.testRes i) t with htk | htk
+      · specialize h (k.flipBit i)
+          ((Nat.flipBit_lt_iff_lt (ha.trans (dvd_of_eq ha'.symm))).mpr hk)
+        simp_rw [Nat.testRes_flipBit_of_eq, htk, lt_irrefl, if_false] at h
+        simp_rw [htk, le_rfl, if_true, ← h, ← htk, Nat.flipBit_eq_mergeBit]
+        rcases eq_or_ne (k.testBit i) false with hb | hb
+        · simp_rw [hb, Bool.not_false, ← hb, Nat.mergeBit_testBit_testRes_of_eq]
+          exact Array.getElem_swap!_left _ _
+        · simp_rw [hb, Bool.not_true, ← eq_true_of_ne_false hb, Nat.mergeBit_testBit_testRes_of_eq]
+          exact Array.getElem_swap!_right _ _
+      · simp_rw [getElem_swap!_of_ne_ne
+          (ne_of_apply_ne (Nat.testRes · i) <| htk.trans_eq Nat.testRes_mergeBit_of_eq.symm)
+          (ne_of_apply_ne (Nat.testRes · i) <| htk.trans_eq Nat.testRes_mergeBit_of_eq.symm), h,
+          htk.symm.le_iff_lt]
 
-def swap_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) : Array ℕ :=
+def flipBit_vals (as : Array ℕ) (i : ℕ) : Array ℕ := as.map (Nat.flipBit · i)
+
+@[simp]
+theorem size_flipBit_vals (as : Array ℕ) (i : ℕ) : (flipBit_vals as i).size = as.size :=
+  size_map _ _
+
+theorem getElem_flipBit_vals (as : Array ℕ) (i : ℕ) (k : ℕ)
+    (hk : k < (flipBit_vals as i).size) :
+    (flipBit_vals as i)[k] = (as[k]'(hk.trans_eq (by simp))).flipBit i := getElem_map _ _ _ _
+
+end FlipBit
+
+section CondFlipBit
+
+def condFlipBit_indices (as : Array α) (i : ℕ) (c : Array Bool) : Array α :=
+  c.zipWithIndex.foldr (fun bp as => as.swap! (bp.2.mergeBit i false) (bp.2.mergeBit i bp.1)) as
+
+@[simp]
+theorem size_condFlipBit_indices (a : Array α) {i : ℕ} {c : Array Bool} :
+    (condFlipBit_indices a i c).size = a.size := by
+  refine Array.foldr_induction (fun _ (a' : Array α) => a'.size = a.size) rfl (fun _ _ h => ?_)
+  simp_rw [size_swap!, h]
+
+theorem getElem_condFlipBit_indices (a : Array α) (i : ℕ) (ha : 2^(i + 1) ∣ a.size)
+    (c : Array Bool) (k : ℕ) (hk : k < (condFlipBit_indices a i c).size) :
+    (condFlipBit_indices a i c)[k] = a[k.condFlipBit i c]'((Nat.condFlipBit_lt_iff_lt ha).mpr
+      (hk.trans_eq a.size_condFlipBit_indices)) := by
+  revert k
+  suffices h : ∀ (_ : (a.condFlipBit_indices i c).size = a.size) (k : ℕ)
+    (hk : k < (a.condFlipBit_indices i c).size), (a.condFlipBit_indices i c)[k] =
+    if 0 ≤ k.testRes i then a[k.condFlipBit i c]'((Nat.condFlipBit_lt_iff_lt ha).mpr
+    (hk.trans_eq a.size_condFlipBit_indices)) else a[k]'(hk.trans_eq a.size_condFlipBit_indices)
+  · simp_rw [zero_le, ite_true] at h
+    exact h a.size_condFlipBit_indices
+  · refine Array.foldr_induction (fun n (a' : Array α) =>
+    ∀ ha' k (hk : k < a'.size), a'[k] =
+    if n ≤ k.testRes i then a[k.condFlipBit i c]'((Nat.condFlipBit_lt_iff_lt ha).mpr
+    (hk.trans_eq ha')) else a[k]'(hk.trans_eq ha')) (fun _ _ _ => ?_) ?_
+    · split_ifs with hc
+      · simp_rw [Nat.condFlipBit_apply_of_le_testRes (c.size_zipWithIndex ▸ hc)]
+      · rfl
+    · simp_rw [Fin.getElem_fin, size_swap!, Nat.succ_le_iff, getElem_zipWithIndex,
+        Fin.forall_iff, c.size_zipWithIndex]
+      intro t ht a' h ha' k hk
+      specialize h ha'
+      rcases eq_or_ne (k.testRes i) t with htk | htk
+      · have hki : k.testRes i < c.size := htk ▸ ht
+        specialize h (k.condFlipBit i c)
+          ((Nat.condFlipBit_lt_iff_lt (ha.trans (dvd_of_eq ha'.symm))).mpr hk)
+        simp_rw [Nat.testRes_condFlipBit_of_eq, htk, lt_irrefl, if_false] at h
+        simp_rw [htk, le_rfl, if_true, ← h, ← htk, Nat.condFlipBit_eq_mergeBit_of_testRes_lt hki]
+        rcases eq_or_ne c[k.testRes i] false with hb | hb
+        · simp_rw [hb, getElem_swap!_of_eq, Bool.false_xor, Nat.mergeBit_testBit_testRes_of_eq]
+        · simp_rw [hb, Bool.true_xor]
+          rcases eq_or_ne (k.testBit i) false with hb | hb
+          · simp_rw [hb, Bool.not_false, ← hb, Nat.mergeBit_testBit_testRes_of_eq]
+            exact Array.getElem_swap!_left _ _
+          · simp_rw [Bool.not_eq_false] at hb
+            simp_rw [hb, Bool.not_true, ← hb, Nat.mergeBit_testBit_testRes_of_eq]
+            exact Array.getElem_swap!_right _ _
+      · simp_rw [getElem_swap!_of_ne_ne
+          (ne_of_apply_ne (Nat.testRes · i) <| htk.trans_eq Nat.testRes_mergeBit_of_eq.symm)
+          (ne_of_apply_ne (Nat.testRes · i) <| htk.trans_eq Nat.testRes_mergeBit_of_eq.symm), h,
+          htk.symm.le_iff_lt]
+
+theorem condFlipBit_indices_of_mkArray_true (a : Array α) (i : ℕ) (ha : 2^(i + 1) ∣ a.size) :
+    a.condFlipBit_indices i (mkArray (a.size / 2) true) = a.flipBit_indices i := by
+  refine Array.ext _ _ (by simp only [size_condFlipBit_indices, size_flipBit_indices]) ?_
+  simp_rw [getElem_condFlipBit_indices _ _ ha, getElem_flipBit_indices _ _ ha,
+  Nat.condFlipBit_of_mkArray_true, Nat.testRes_lt_div_two_iff_lt ha, size_condFlipBit_indices]
+  intro _ h
+  simp_rw [h, if_true, implies_true]
+
+def condFlipBit_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) : Array ℕ :=
   as.map (fun q => q.condFlipBit i c)
 
 @[simp]
-theorem size_swap_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) :
-    (swap_vals as i c).size = as.size := size_map _ _
+theorem size_condFlipBit_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) :
+    (condFlipBit_vals as i c).size = as.size := size_map _ _
 
-theorem getElem_swap_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) (k : ℕ)
-    (hk : k < (swap_vals as i c).size) :
-    (swap_vals as i c)[k] = (as[k]'(hk.trans_eq (by simp))).condFlipBit i c := sorry
+theorem getElem_condFlipBit_vals (as : Array ℕ) (i : ℕ) (c : Array Bool) (k : ℕ)
+    (hk : k < (condFlipBit_vals as i c).size) :
+    (condFlipBit_vals as i c)[k] = (as[k]'(hk.trans_eq (by simp))).condFlipBit i c :=
+  getElem_map _ _ _ _
+
+end CondFlipBit
 
 end Array
 
 namespace ArrayPerm
 
-def condFlipBit : ArrayPerm 8 where
-  toArray := #[0, 1, 2, 3, 4, 5, 6, 7].swap_indices 1 #[false, true, true, false]
-  invArray := #[0, 1, 2, 3, 4, 5, 6, 7].swap_vals 1 #[false, true, true, false]
-  size_toArray := _
-  size_invArray := _
-  getElem_toArray_lt' := _
-  /-size_toArray := (a.toArray.size_swap_indices i c).trans a.size_toArray
-  size_invArray := (a.invArray.size_swap_vals i c).trans a.size_invArray
-  getElem_toArray_lt' := sorry
-  getElem_invArray_lt' := sorry
-  getElem_invArray_getElem_toArray' := sorry-/
+section FlipBit
 
-#eval #[0, 1, 2, 3, 4, 5, 6, 7].swap_indices 1 #[false, true, true, false]
-#eval #[0, 1, 2, 3, 4, 5, 6, 7].swap_vals 1 #[false, true, true, false]
+def flipBit (a : ArrayPerm n) {i : ℕ} (hn : 2^(i + 1) ∣ n) : ArrayPerm n where
+  toArray := a.toArray.flipBit_indices i
+  invArray := a.invArray.flipBit_vals i
+  size_toArray := by simp_rw [Array.size_flipBit_indices, a.size_toArray]
+  size_invArray := by simp_rw [Array.size_flipBit_vals, a.size_invArray]
+  getElem_toArray_lt' := fun hk => by
+    simp_rw [Array.getElem_flipBit_indices a.toArray i
+      (hn.trans (dvd_of_eq a.size_toArray.symm)), a.getElem_toArray_lt]
+  getElem_invArray_lt' := fun hk => by
+    simp_rw [Array.getElem_flipBit_vals, Nat.flipBit_lt_iff_lt hn, a.getElem_invArray_lt]
+  getElem_invArray_getElem_toArray' := fun hk => by
+    simp_rw [Array.getElem_flipBit_vals, Array.getElem_flipBit_indices a.toArray i
+      (hn.trans (dvd_of_eq a.size_toArray.symm)), a.getElem_invArray_getElem_toArray,
+      Nat.flipBit_flipBit_of_eq]
+
+variable (a : ArrayPerm n) {i k : ℕ} (hn : 2^(i + 1) ∣ n)
+
+theorem flipBit_toArray : (a.flipBit hn).toArray = a.toArray.flipBit_indices i := rfl
+
+theorem flipBit_invArray : (a.flipBit hn).invArray = a.invArray.flipBit_vals i := rfl
+
+theorem flipBit_smul_eq_ite_smul_flipBit :
+    (a.flipBit hn) • k = if k < n then a • k.flipBit i else k := by
+  split_ifs with hk
+  · simp_rw [smul_of_lt _ hk, smul_of_lt _ ((k.flipBit_lt_iff_lt hn).mpr hk)]
+    exact a.toArray.getElem_flipBit_indices _ (hn.trans (dvd_of_eq a.size_toArray.symm)) _ _
+  · simp_rw [smul_of_ge _ (le_of_not_lt hk)]
+
+theorem flipBit_inv_smul_eq_ite_flipBit_inv_smul (a : ArrayPerm n) :
+  (a.flipBit hn)⁻¹ • k = if k < n then (a⁻¹ • k).flipBit i else k := by
+  split_ifs with hk
+  · simp_rw [smul_of_lt _ hk, inv_toArray]
+    exact a.invArray.getElem_flipBit_vals _ _ _
+  · simp_rw [smul_of_ge _ (le_of_not_lt hk)]
+
+theorem flipBit_smul_flipBit (a : ArrayPerm n) :
+    (a.flipBit hn) • (k.flipBit i) = if k < n then a • k else k.flipBit i := by
+  simp_rw [flipBit_smul_eq_ite_smul_flipBit, k.flipBit_flipBit_of_eq, k.flipBit_lt_iff_lt hn]
+
+theorem flipBit_inv_smul_smul_flipBit (a : ArrayPerm n) :
+    (a.flipBit hn)⁻¹ • (a • k.flipBit i) = if k < n then k else k.flipBit i := by
+  simp_rw [flipBit_inv_smul_eq_ite_flipBit_inv_smul, inv_smul_smul,
+    k.flipBit_flipBit_of_eq, smul_lt_iff_lt, k.flipBit_lt_iff_lt hn]
+  split_ifs with hk
+  · rfl
+  · rw [smul_of_ge _ (le_of_not_lt ((k.flipBit_lt_iff_lt hn).not.mpr hk))]
+
+@[simp]
+theorem flipBit_flipBit (a : ArrayPerm n) :
+    (a.flipBit hn).flipBit hn = a := by
+  ext k hk : 1
+  simp_rw [flipBit_smul_eq_ite_smul_flipBit, k.flipBit_lt_iff_lt hn,
+    k.flipBit_flipBit_of_eq, hk, if_true]
+
+@[simp]
+theorem one_flipBit_smul : (flipBit 1 hn) • k = if k < n then k.flipBit i else k := by
+  rw [flipBit_smul_eq_ite_smul_flipBit, one_smul]
+
+theorem one_flipBit_inv_smul : (flipBit 1 hn)⁻¹ • k = if k < n then k.flipBit i else k := by
+  simp_rw [flipBit_inv_smul_eq_ite_flipBit_inv_smul, inv_one, one_smul]
+
+@[simp]
+theorem one_flipBit_mul_self : flipBit 1 hn * flipBit 1 hn = 1 := by
+  ext : 1
+  rw [mul_smul, ← eq_inv_smul_iff, one_flipBit_smul, one_flipBit_inv_smul, one_smul]
+
+@[simp]
+theorem one_flipBit_inverse : (flipBit 1 hn)⁻¹ = flipBit 1 hn := by
+  ext : 1
+  rw [one_flipBit_smul, one_flipBit_inv_smul]
+
+theorem flipBit_eq_mul_one_flipBit (a : ArrayPerm n) : a.flipBit hn = a * flipBit 1 hn := by
+  ext k hk : 1
+  simp only [flipBit_smul_eq_ite_smul_flipBit, mul_smul, one_flipBit_smul, one_smul, hk, if_true]
+
+theorem flipBit_inv_eq_one_swap_mul (a : ArrayPerm n) :
+    (a.flipBit hn)⁻¹ = flipBit 1 hn * a⁻¹ := by
+  rw [flipBit_eq_mul_one_flipBit, mul_inv_rev, one_flipBit_inverse]
+
+open Equiv.Perm in
+theorem natPerm_flipBit (a : ArrayPerm n) :
+    natPerm (a.flipBit hn) = natPerm a *
+    ofSubtype ((Nat.flipBitPerm i).subtypePerm (fun k => (k.flipBit_lt_iff_lt hn).symm)) := by
+  ext k : 1
+  simp only [natPerm_apply_apply, Equiv.Perm.coe_mul, Function.comp_apply,
+  flipBit_smul_eq_ite_smul_flipBit, ofSubtype_subtypePerm_apply, smul_ite, Nat.flipBitPerm_apply]
+  split_ifs with hk
+  · rfl
+  · simp_rw [smul_of_ge _ (le_of_not_lt hk)]
+
+open Equiv.Perm in
+theorem natPerm_one_flipBit :
+    natPerm (flipBit 1 hn) =
+    ofSubtype ((Nat.flipBitPerm i).subtypePerm (fun k => (k.flipBit_lt_iff_lt hn).symm)) := by
+  simp_rw [natPerm_flipBit, map_one, one_mul]
+
+theorem ofPerm_flipBit :
+    ofPerm (Nat.flipBitPerm i) (fun k => k.flipBit_lt_iff_lt hn) = flipBit 1 hn := by
+  simp_rw [ofPerm_eq_iff, Nat.flipBitPerm_apply, one_flipBit_smul]
+  intros _ hi
+  simp_rw [hi, if_true]
+
+end FlipBit
+
+section CondFlipBit
+
+def condFlipBit (a : ArrayPerm n) (hn : 2^(i + 1) ∣ n) (c : Array Bool) : ArrayPerm n where
+  toArray := a.toArray.condFlipBit_indices i c
+  invArray := a.invArray.condFlipBit_vals i c
+  size_toArray := by simp_rw [Array.size_condFlipBit_indices, a.size_toArray]
+  size_invArray := by simp_rw [Array.size_condFlipBit_vals, a.size_invArray]
+  getElem_toArray_lt' := fun hk => by
+    simp_rw [Array.getElem_condFlipBit_indices a.toArray i
+      (hn.trans (dvd_of_eq a.size_toArray.symm)), a.getElem_toArray_lt]
+  getElem_invArray_lt' := fun hk => by
+    simp_rw [Array.getElem_condFlipBit_vals, Nat.condFlipBit_lt_iff_lt hn, a.getElem_invArray_lt]
+  getElem_invArray_getElem_toArray' := fun hk => by
+    simp_rw [Array.getElem_condFlipBit_vals, Array.getElem_condFlipBit_indices a.toArray i
+      (hn.trans (dvd_of_eq a.size_toArray.symm)), a.getElem_invArray_getElem_toArray,
+      Nat.condFlipBit_condFlipBit_of_eq]
+
+variable (a : ArrayPerm n) {i k : ℕ} (hn : 2^(i + 1) ∣ n)
+
+theorem condFlipBit_toArray : (a.condFlipBit hn c).toArray = a.toArray.condFlipBit_indices i c :=
+  rfl
+
+theorem condFlipBit_invArray : (a.condFlipBit hn c).invArray = a.invArray.condFlipBit_vals i c :=
+  rfl
+
+theorem condFlipBit_smul_eq_ite_smul_condFlipBit :
+    (a.condFlipBit hn c) • k = if k < n then a • k.condFlipBit i c else k := by
+  split_ifs with hk
+  · simp_rw [smul_of_lt _ hk, smul_of_lt _ ((k.condFlipBit_lt_iff_lt hn).mpr hk)]
+    exact a.toArray.getElem_condFlipBit_indices _ (hn.trans (dvd_of_eq a.size_toArray.symm)) _ _ _
+  · simp_rw [smul_of_ge _ (le_of_not_lt hk)]
+
+theorem condFlipBit_inv_eq_ite_condFlipBit_inv_smul (a : ArrayPerm n) :
+  (a.condFlipBit hn c)⁻¹ • k = if k < n then (a⁻¹ • k).condFlipBit i c else k := by
+  split_ifs with hk
+  · simp_rw [smul_of_lt _ hk, inv_toArray]
+    exact a.invArray.getElem_condFlipBit_vals _ _ _ _
+  · simp_rw [smul_of_ge _ (le_of_not_lt hk)]
+
+theorem flipBit_smul_condFlipBit (a : ArrayPerm n) :
+    (a.condFlipBit hn c) • (k.condFlipBit i c) = if k < n then a • k else k.condFlipBit i c := by
+  simp_rw [condFlipBit_smul_eq_ite_smul_condFlipBit, k.condFlipBit_condFlipBit_of_eq,
+  k.condFlipBit_lt_iff_lt hn]
+
+theorem condFlipBit_inv_smul_smul_condFlipBit (a : ArrayPerm n) :
+    (a.condFlipBit hn c)⁻¹ • (a • k.condFlipBit i c) = if k < n then k else k.condFlipBit i c := by
+  simp_rw [condFlipBit_inv_eq_ite_condFlipBit_inv_smul, inv_smul_smul,
+    k.condFlipBit_condFlipBit_of_eq, smul_lt_iff_lt, k.condFlipBit_lt_iff_lt hn]
+  split_ifs with hk
+  · rfl
+  · rw [smul_of_ge _ (le_of_not_lt ((k.condFlipBit_lt_iff_lt hn).not.mpr hk))]
+
+@[simp]
+theorem condFlipBit_condFlipBit (a : ArrayPerm n) :
+    (a.condFlipBit hn c).condFlipBit hn c = a := by
+  ext k hk : 1
+  simp_rw [condFlipBit_smul_eq_ite_smul_condFlipBit, k.condFlipBit_lt_iff_lt hn,
+    k.condFlipBit_condFlipBit_of_eq, hk, if_true]
+
+@[simp]
+theorem one_condFlipBit_smul :
+    (condFlipBit 1 hn c) • k = if k < n then k.condFlipBit i c else k := by
+  rw [condFlipBit_smul_eq_ite_smul_condFlipBit, one_smul]
+
+theorem one_condFlipBit_inv_smul : (condFlipBit 1 hn c)⁻¹ • k =
+    if k < n then k.condFlipBit i c else k := by
+  simp_rw [condFlipBit_inv_eq_ite_condFlipBit_inv_smul, inv_one, one_smul]
+
+@[simp]
+theorem one_condFlipBit_mul_self : condFlipBit 1 hn c * condFlipBit 1 hn c = 1 := by
+  ext : 1
+  rw [mul_smul, ← eq_inv_smul_iff, one_condFlipBit_smul, one_condFlipBit_inv_smul, one_smul]
+
+@[simp]
+theorem one_condFlipBit_inverse : (condFlipBit 1 hn c)⁻¹ = condFlipBit 1 hn c := by
+  ext : 1
+  rw [one_condFlipBit_smul, one_condFlipBit_inv_smul]
+
+theorem condFlipBit_eq_mul_one_condFlipBit (a : ArrayPerm n) :
+    a.condFlipBit hn c = a * condFlipBit 1 hn c := by
+  ext k hk : 1
+  simp only [condFlipBit_smul_eq_ite_smul_condFlipBit,
+    mul_smul, one_flipBit_smul, one_smul, hk, if_true]
+
+theorem condFlipBit_inv_eq_one_swap_mul (a : ArrayPerm n) :
+    (a.condFlipBit hn c)⁻¹ = condFlipBit 1 hn c * a⁻¹ := by
+  rw [condFlipBit_eq_mul_one_condFlipBit, mul_inv_rev, one_condFlipBit_inverse]
+
+open Equiv.Perm in
+theorem natPerm_condFlipBit (a : ArrayPerm n) :
+    natPerm (a.condFlipBit hn c) = natPerm a *
+    ofSubtype ((Nat.condFlipBitPerm i c).subtypePerm (fun k => (k.condFlipBit_lt_iff_lt hn).symm)) := by
+  ext k : 1
+  simp only [natPerm_apply_apply, Equiv.Perm.coe_mul, Function.comp_apply,
+  condFlipBit_smul_eq_ite_smul_condFlipBit, ofSubtype_subtypePerm_apply, smul_ite,
+  Nat.condFlipBitPerm_apply]
+  split_ifs with hk
+  · rfl
+  · simp_rw [smul_of_ge _ (le_of_not_lt hk)]
+
+open Equiv.Perm in
+theorem natPerm_one_condFlipBit : natPerm (condFlipBit 1 hn c) =
+    ofSubtype ((Nat.condFlipBitPerm i c).subtypePerm
+    (fun k => (k.condFlipBit_lt_iff_lt hn).symm)) := by
+  simp_rw [natPerm_condFlipBit, map_one, one_mul]
+
+theorem ofPerm_condFlipBit : ofPerm (Nat.condFlipBitPerm i c)
+    (fun k => k.condFlipBit_lt_iff_lt hn) = condFlipBit 1 hn c := by
+  simp_rw [ofPerm_eq_iff, Nat.condFlipBitPerm_apply, one_condFlipBit_smul]
+  intros _ hi
+  simp_rw [hi, if_true]
+
+end CondFlipBit
+
 end ArrayPerm
 
 namespace Fin
@@ -1128,12 +1457,12 @@ def testBit (q : BV (m + 1)) (i : Fin (m + 1)) := (q : ℕ).testBit i
 @[simps!]
 def testRes (q : BV (m + 1)) (i : Fin (m + 1)) : BV m where
   val := (q : ℕ).testRes i
-  isLt := (Nat.lt_iff_testRes_lt i.is_le).mp q.is_lt
+  isLt := (Nat.testRes_lt_two_pow_iff_lt_two_pow i.is_le).mpr q.is_lt
 
 @[simps!]
 def mergeBit (p : BV m) (i : Fin (m + 1)) (b : Bool) : BV (m + 1) where
   val := (p : ℕ).mergeBit i b
-  isLt := (Nat.lt_iff_mergeBit_lt i.is_le).mp p.is_lt
+  isLt := (Nat.mergeBit_lt_two_pow_iff_lt_two_pow i.is_le).mpr p.is_lt
 
 @[pp_nodot, simps!]
 def testBitRes (i : Fin (m + 1)) : BV (m + 1) ≃ Bool × BV m where
@@ -1171,7 +1500,7 @@ variable {m : ℕ} {i : Fin m} {q : BV m}
 @[simps!]
 def flipBit (q : BV m) (i : Fin m) : BV m where
   val := q.val.flipBit i.val
-  isLt := (Nat.lt_iff_flipBit_lt i.isLt).mp q.isLt
+  isLt := (Nat.flipBit_lt_two_pow_iff_lt_two_pow i.isLt).mpr q.isLt
 
 theorem flipBit_base {i} : ∀ q, flipBit (m := 1) q i = Equiv.swap 0 1 q := by
   simp_rw [Fin.ext_iff, flipBit_val, Fin.eq_zero i]
@@ -1195,7 +1524,7 @@ section CondFlipBit
 @[simps!]
 def condFlipBit (q : BV (m + 1)) (i : Fin (m + 1)) (c : BV m → Bool) : BV (m + 1) where
   val := q.val.condFlipBit i.val (Array.ofFn c)
-  isLt := (Nat.lt_iff_condFlipBit_lt i.isLt).mp q.isLt
+  isLt := (Nat.condFlipBit_lt_two_pow_iff_lt_two_pow i.isLt).mpr q.isLt
 
 variable {m : ℕ} {i : Fin (m + 1)} {q : BV (m + 1)} {p : BV m}
 
@@ -1209,17 +1538,18 @@ theorem condFlipBit_base {i q} : condFlipBit (m := 0) q i c =
     bif c 0 then Equiv.swap 0 1 q else q := by
   simp_rw [condFlipBit_apply, Fin.eq_zero, flipBit_base]
 
-theorem condFlipBit_apply_eq_mergeBit : q.condFlipBit i c =
+theorem condFlipBit_eq_mergeBit : q.condFlipBit i c =
     (q.testRes i).mergeBit i ((c (q.testRes i)).xor (q.testBit i))  := by
   ext
-  simp only [condFlipBit_val, Nat.condFlipBit_apply_eq_mergeBit, testBit_def, mergeBit_val,
+  simp only [condFlipBit_val, Nat.condFlipBit_eq_mergeBit, testBit_def, mergeBit_val,
     testRes_val]
   refine congrArg _ (congrArg₂ _ ?_ rfl)
-  simp_rw [Array.getD_eq_get, Array.size_ofFn, ← Nat.lt_iff_testRes_lt i.is_le, q.is_lt]
+  simp_rw [Array.getD_eq_get, Array.size_ofFn,
+    Nat.testRes_lt_two_pow_iff_lt_two_pow i.is_le, q.is_lt]
   exact Array.getElem_ofFn _ _ _
 
 theorem condFlipBit_mergeBit : (p.mergeBit i b).condFlipBit i c = p.mergeBit i ((c p).xor b) := by
-  simp only [condFlipBit_apply_eq_mergeBit, Fin.ext_iff, testRes_def, mergeBit_val,
+  simp only [condFlipBit_eq_mergeBit, Fin.ext_iff, testRes_def, mergeBit_val,
     Nat.testRes_mergeBit_of_eq, Fin.eta, testBit_def, Nat.testBit_mergeBit_of_eq]
 
 @[simp]
@@ -1234,7 +1564,7 @@ theorem condFlipBit_refl_of_all_false : q = q.condFlipBit i (Function.const _ fa
 
 theorem condFlipBit_apply_comm :
 (q.condFlipBit i d).condFlipBit i c = (q.condFlipBit i c).condFlipBit i d := by
-simp_rw [condFlipBit_apply_eq_mergeBit, testRes_mergeBit_of_eq,
+simp_rw [condFlipBit_eq_mergeBit, testRes_mergeBit_of_eq,
   testBit_mergeBit_of_eq, Bool.xor_left_comm]
 
 @[pp_nodot, simps! apply symm_apply]
@@ -1277,256 +1607,373 @@ theorem bitInvariant_of_testBit_apply_eq_testBit (h : ∀ q, (f q).testBit i = q
 theorem BitInvariant.testBit_apply_eq_testBit (h : f.BitInvariant i) :
     (f q).testBit i = q.testBit i := bitInvariant_iff.mp h _
 
-theorem BitInvariant.comp_bitInvariant (hf : f.BitInvariant i) (hg : g.BitInvariant i) :
-    (f ∘ g).BitInvariant i := bitInvariant_of_testBit_apply_eq_testBit <| fun q => by
-  simp_rw [Function.comp_apply, hf.testBit_apply_eq_testBit, hg.testBit_apply_eq_testBit]
-
-theorem BitInvariant.of_comp_bitInvariant (hf : f.BitInvariant i)
-    (hfg : (f ∘ g).BitInvariant i) : g.BitInvariant i :=
-  bitInvariant_of_testBit_apply_eq_testBit <| fun _ =>
-  hf.testBit_apply_eq_testBit ▸ hfg.testBit_apply_eq_testBit
+theorem bitInvariant_id : id.BitInvariant i :=
+  bitInvariant_of_testBit_apply_eq_testBit (fun _ => rfl)
 
 theorem forall_bitInvariant_iff_eq_id : (∀ i, f.BitInvariant i) ↔ f = id := by
   simp_rw [funext_iff, id_eq, testBit_ext_iff, bitInvariant_iff]
   exact forall_comm
 
-theorem id_bitInvariant : id.BitInvariant i := by
-  revert i
-  rw [forall_bitInvariant_iff_eq_id]
+theorem bitInvariant_flipBit_of_ne (h : i ≠ j) : (flipBit · j).BitInvariant i :=
+  bitInvariant_of_testBit_apply_eq_testBit (fun _ => testBit_flipBit_of_ne h)
+
+theorem not_bitInvariant_flipBit_of_eq : ¬ (flipBit · i).BitInvariant i := by
+  simp_rw [bitInvariant_iff, testBit_flipBit_of_eq, Bool.not_eq_self,
+    forall_const, not_false_eq_true]
+
+theorem bitInvariant_condFlipBit_of_ne (h : i ≠ j) (c : Array Bool) :
+    (condFlipBit · j c).BitInvariant i :=
+  bitInvariant_of_testBit_apply_eq_testBit (fun _ => testBit_condFlipBit_of_ne h)
+
+theorem BitInvariant.comp (hf : f.BitInvariant i) (hg : g.BitInvariant i) :
+    (f ∘ g).BitInvariant i := bitInvariant_of_testBit_apply_eq_testBit <| fun q => by
+  simp_rw [Function.comp_apply, hf.testBit_apply_eq_testBit, hg.testBit_apply_eq_testBit]
+
+theorem BitInvariant.of_comp (hf : f.BitInvariant i)
+    (hfg : (f ∘ g).BitInvariant i) : g.BitInvariant i :=
+  bitInvariant_of_testBit_apply_eq_testBit <| fun _ =>
+  hf.testBit_apply_eq_testBit ▸ hfg.testBit_apply_eq_testBit
 
 theorem RightInverse.bitInvariant_of_bitInvariant (hfg : RightInverse g f) (h : f.BitInvariant i) :
-  g.BitInvariant i := h.of_comp_bitInvariant (hfg.comp_eq_id ▸ id_bitInvariant)
+  g.BitInvariant i := h.of_comp (hfg.comp_eq_id ▸ bitInvariant_id)
 
 theorem LeftInverse.bitInvariant_of_bitInvariant (hfg : LeftInverse g f) (h : g.BitInvariant i) :
   f.BitInvariant i := RightInverse.bitInvariant_of_bitInvariant hfg h
 
-theorem flipBit_bitInvariant_of_ne (h : i ≠ j) : (flipBit · j).BitInvariant i :=
-  bitInvariant_of_testBit_apply_eq_testBit (fun _ => testBit_flipBit_of_ne h)
-
-theorem not_flipBit_bitInvariant_of_eq : ¬ (flipBit · i).BitInvariant i := by
-  simp_rw [bitInvariant_iff, testBit_flipBit_of_eq, Bool.not_eq_self,
-    forall_const, not_false_eq_true]
-
-theorem flipBitPerm_bitInvariant_of_ne (h : i ≠ j) : (⇑(flipBitPerm j)).BitInvariant i :=
-  flipBit_bitInvariant_of_ne h
-
-theorem not_flipBiPerm_bitInvariant_of_eq : ¬ (⇑(flipBitPerm i)).BitInvariant i :=
-  not_flipBit_bitInvariant_of_eq
-
-theorem BitInvariant.iterate_bitInvariant (hf : f.BitInvariant i) {n : ℕ} :
+theorem BitInvariant.bitInvariant_iterate (hf : f.BitInvariant i) {n : ℕ} :
    (f^[n]).BitInvariant i := by
   induction' n with n IH
-  · exact id_bitInvariant
-  · exact iterate_succ _ _ ▸ IH.comp_bitInvariant hf
+  · exact bitInvariant_id
+  · exact iterate_succ _ _ ▸ IH.comp hf
 
 theorem BitInvariant.mergeBit_testRes_apply_mergeBit {p : ℕ} (hf : f.BitInvariant i) :
     ((f (p.mergeBit i b)).testRes i).mergeBit i b = f (p.mergeBit i b) := by
   simp_rw [mergeBit_eq_iff, hf.testBit_apply_eq_testBit, testBit_mergeBit_of_eq, true_and]
 
-section End
+def BitInvariantLT (i : ℕ) (f : ℕ → ℕ) : Prop := ∀ k < i, BitInvariant k f
 
-variable {f g : Function.End ℕ}
+theorem bitInvariantLT_iff : BitInvariantLT i f ↔ ∀ k < i, f.BitInvariant k := Iff.rfl
 
-theorem End.one_bitInvariant : (1 : Function.End ℕ).BitInvariant i := id_bitInvariant
-
-theorem End.forall_bitInvariant_iff_eq_one : (∀ i, f.BitInvariant i) ↔ f = 1 :=
-  forall_bitInvariant_iff_eq_id
-
-theorem BitInvariant.mulEnd_bitInvariant  (hf : f.BitInvariant i)
-    (hg : g.BitInvariant i) : (f * g).BitInvariant i := hf.comp_bitInvariant hg
-
-theorem BitInvariant.of_mulEnd_bitInvariant (hf : f.BitInvariant i)
-    (hfg : (f * g).BitInvariant i) : g.BitInvariant i := hf.of_comp_bitInvariant hfg
-
-theorem BitInvariant.mulEnd_bitInvariant_iff (hf : f.BitInvariant i) :
-      (f * g).BitInvariant i ↔ g.BitInvariant i :=
-    ⟨hf.of_mulEnd_bitInvariant, hf.mulEnd_bitInvariant⟩
-
-theorem BitInvariant.pow_end_bitInvariant (hf : f.BitInvariant i) {n : ℕ} :
-   (f ^ n).BitInvariant i := hf.iterate_bitInvariant
-
-end End
-
-section Equiv
-
-variable {π ρ : Equiv.Perm ℕ}
-
-theorem BitInvariant.symm_bitInvariant (h : (⇑π).BitInvariant i) : (⇑π.symm).BitInvariant i :=
-  π.right_inv.bitInvariant_of_bitInvariant h
-
-theorem BitInvariant.of_symm_bitInvariant (h : (⇑π.symm).BitInvariant i) : (⇑π).BitInvariant i :=
-  h.symm_bitInvariant
-
-theorem BitInvariant.trans_bitInvariant (hπ : (⇑π).BitInvariant i)
-    (hg : (⇑ρ).BitInvariant i) : (⇑(ρ.trans π)).BitInvariant i := hπ.comp_bitInvariant hg
-
-theorem BitInvariant.of_trans_bitInvariant (hπ : (⇑π).BitInvariant i)
-    (hπρ : (⇑(ρ.trans π)).BitInvariant i) : (⇑ρ).BitInvariant i := hπ.of_comp_bitInvariant hπρ
-
-theorem BitInvariant.trans_bitInvariant_iff (hπ : (⇑π).BitInvariant i) :
-      (⇑(ρ.trans π)).BitInvariant i ↔ (⇑ρ).BitInvariant i :=
-    ⟨hπ.of_trans_bitInvariant, hπ.trans_bitInvariant⟩
-
-theorem _root_.Equiv.symm_bitInvar_iff_bitInvar :
-    (⇑π.symm).BitInvariant i ↔ (⇑π).BitInvariant i :=
-  ⟨BitInvariant.symm_bitInvariant, BitInvariant.symm_bitInvariant⟩
-
-theorem _root_.Equiv.refl_bitInvariant : (⇑(Equiv.refl ℕ)).BitInvariant i := id_bitInvariant
-
-theorem _root_.Equiv.forall_bitInvariant_iff_eq_refl :
-    (∀ i, (⇑π).BitInvariant i) ↔ π = Equiv.refl ℕ := by
-  rw [DFunLike.ext'_iff]
-  exact forall_bitInvariant_iff_eq_id
-
-section Perm
-
-theorem BitInvariant.inv_bitInvariant (h : (⇑π).BitInvariant i) : (⇑π⁻¹).BitInvariant i :=
-  h.symm_bitInvariant
-
-theorem BitInvariant.of_inv_bitInvariant (h : (⇑π⁻¹).BitInvariant i) : (⇑π).BitInvariant i :=
-  h.symm_bitInvariant
-
-theorem _root_.Equiv.Perm.inv_bitInvar_iff_bitInvar :
-    (⇑π⁻¹).BitInvariant i ↔ (⇑π).BitInvariant i :=
-  ⟨BitInvariant.inv_bitInvariant, BitInvariant.inv_bitInvariant⟩
-
-theorem BitInvariant.mulPerm_bitInvariant (hπ : (⇑π).BitInvariant i)
-    (hg : (⇑ρ).BitInvariant i) : (⇑(π * ρ)).BitInvariant i := hπ.comp_bitInvariant hg
-
-theorem BitInvariant.right_mulPerm_bitInvariant (hπ : (⇑π).BitInvariant i)
-    (hπρ : (⇑(π * ρ)).BitInvariant i) : (⇑ρ).BitInvariant i := hπ.of_comp_bitInvariant hπρ
-
-theorem BitInvariant.mulPerm_bitInvariant_iff_right (hπ : (⇑π).BitInvariant i) :
-      (⇑(π * ρ)).BitInvariant i ↔ (⇑ρ).BitInvariant i :=
-    ⟨hπ.right_mulPerm_bitInvariant, hπ.mulPerm_bitInvariant⟩
-
-theorem BitInvariant.left_mulPerm_bitInvariant (hρ : (⇑ρ).BitInvariant i)
-    (hπρ : (⇑(π * ρ)).BitInvariant i) : (⇑π).BitInvariant i :=
-  (hρ.inv_bitInvariant.right_mulPerm_bitInvariant
-    (mul_inv_rev π ρ ▸ hπρ.inv_bitInvariant)).of_inv_bitInvariant
-
-theorem BitInvariant.mulPerm_bitInvariant_iff_left (hρ : (⇑ρ).BitInvariant i):
-    (⇑(π * ρ)).BitInvariant i ↔ (⇑π).BitInvariant i :=
-  ⟨hρ.left_mulPerm_bitInvariant, (BitInvariant.mulPerm_bitInvariant · hρ)⟩
-
-theorem BitInvariant.commutatorElement (hπ : (⇑π).BitInvariant i) (hρ : (⇑ρ).BitInvariant i) :
-    (⇑⁅π, ρ⁆).BitInvariant i := by
-  rw [commutatorElement_def, hρ.inv_bitInvariant.mulPerm_bitInvariant_iff_left,
-    hπ.inv_bitInvariant.mulPerm_bitInvariant_iff_left]
-  exact hπ.mulPerm_bitInvariant hρ
-
-theorem _root_.Equiv.Perm.one_bitInvariant : (⇑(1 : Equiv.Perm ℕ)).BitInvariant i := id_bitInvariant
-
-theorem _root_.Equiv.Perm.forall_bitInvariant_iff_eq_one : (∀ i, (⇑π).BitInvariant i) ↔ π = 1 :=
-  π.forall_bitInvariant_iff_eq_refl
-
-theorem BitInvariant.pow_perm_bitInvariant (hπ : (⇑π).BitInvariant i) {n : ℕ} :
-   (⇑(π ^ n)).BitInvariant i := hπ.iterate_bitInvariant
-
-theorem BitInvariant.zpow_perm_bitInvariant (hπ : (⇑π).BitInvariant i) {n : ℤ} :
-   (⇑(π ^ n)).BitInvariant i := by
-  cases' n with n n
-  · exact hπ.pow_perm_bitInvariant
-  · exact hπ.pow_perm_bitInvariant.inv_bitInvariant
-
-end Perm
-
-end Equiv
-
-end Function
-
-namespace Submonoid
-
-open Function Nat
-
-def bitInvarEQ (i : ℕ) : Submonoid (Function.End ℕ) where
-  carrier := BitInvariant i
-  mul_mem' ha hb := BitInvariant.mulEnd_bitInvariant ha hb
-  one_mem' := End.one_bitInvariant
-
-def bitInvarLT (i : ℕ) : Submonoid (Function.End ℕ) := ⨅ k : ℕ, ⨅ (_ : k < i), bitInvarEQ k
-def bitInvarGE (i : ℕ) : Submonoid (Function.End ℕ) := ⨅ k : ℕ, ⨅ (_ : i ≤ k), bitInvarEQ k
-
-variable {f : Function.End ℕ}
-
-@[simp]
-theorem mem_bitInvarEQ_iff : f ∈ bitInvarEQ i ↔ f.BitInvariant i := Iff.rfl
-
-@[simp]
-theorem mem_bitInvarLT_iff : f ∈ bitInvarLT i ↔ ∀ k < i, f.BitInvariant k := by
-  unfold bitInvarLT
-  simp_rw [mem_iInf, mem_bitInvarEQ_iff]
-
-@[simp]
-theorem mem_bitInvarGE_iff : f ∈ bitInvarGE i ↔ ∀ k ≥ i, f.BitInvariant k := by
-  unfold bitInvarGE
-  simp_rw [mem_iInf, mem_bitInvarEQ_iff]
-
-theorem mem_bitInvarLT_iff_mod_two_pow_eq {f : Function.End ℕ} :
-    f ∈ bitInvarLT i ↔ ∀ (p : ℕ), f p % 2 ^ i = p % 2 ^ i := by
-  simp_rw [testBit_ext_mod_two_pow_iff, mem_bitInvarLT_iff, bitInvariant_iff,
+theorem bitInvariantLT_iff_mod_two_pow_eq :
+    BitInvariantLT i f ↔ ∀ (p : ℕ), f p % 2 ^ i = p % 2 ^ i := by
+  simp_rw [testBit_ext_mod_two_pow_iff, bitInvariantLT_iff, bitInvariant_iff,
   imp_forall_iff, forall_swap (α := ℕ)]
 
 @[simp]
-theorem bitInvarLT_zero : bitInvarLT 0 = ⊤ :=
-  le_antisymm le_top (fun _ _ => by
-    simp only [mem_bitInvarLT_iff, not_lt_zero', false_implies, implies_true])
+theorem bitInvariantLT_zero : BitInvariantLT 0 f := by
+  simp_rw [bitInvariantLT_iff, not_lt_zero, false_implies, implies_true]
 
-theorem bitInvarLT_strictAnti : StrictAnti bitInvarLT := fun m _ h => by
-  simp_rw [SetLike.lt_iff_le_and_exists, SetLike.le_def, mem_bitInvarLT_iff,
-  not_forall, exists_prop]
-  exact ⟨fun _ hf _ hk => hf _ (hk.trans h),
-    ⟨(flipBit · m), fun k hk => flipBit_bitInvariant_of_ne hk.ne,
-    ⟨m, h, not_flipBit_bitInvariant_of_eq⟩⟩⟩
+theorem bitInvariantLT_id : BitInvariantLT i id := fun _ _ => bitInvariant_id
 
-theorem bitInvarLT_lt_iff_lt : bitInvarLT n < bitInvarLT m ↔ m < n :=
-  bitInvarLT_strictAnti.lt_iff_lt
+theorem bitInvariantLT_flipBit_of_ge (h : j ≤ i) : BitInvariantLT j (flipBit · i) :=
+  fun _ hk => bitInvariant_flipBit_of_ne (hk.trans_le h).ne
 
-theorem bitInvarLT_le_iff_le : bitInvarLT n ≤ bitInvarLT m ↔ m ≤ n :=
-  bitInvarLT_strictAnti.le_iff_le
+theorem bitInvariantLT_flipBit_of_eq : BitInvariantLT i (flipBit · i) :=
+  bitInvariantLT_flipBit_of_ge le_rfl
 
-theorem mem_bitInvarGE_iff_div_two_pow_eq : f ∈ bitInvarGE i ↔
+theorem not_bitInvariantLT_flipBit_of_lt (h : i < j) : ¬ BitInvariantLT j (flipBit · i) :=
+  not_forall_of_exists_not ⟨i, not_imp_of_and_not ⟨h, not_bitInvariant_flipBit_of_eq⟩⟩
+
+theorem BitInvariantLT.ge (h : BitInvariantLT j (flipBit · i)) : j ≤ i :=
+  le_of_not_lt (not_bitInvariantLT_flipBit_of_lt.mt <| not_not_intro h)
+
+theorem bitInvariantLT_flipBit_iff_ge : BitInvariantLT j (flipBit · i) ↔ j ≤ i :=
+  ⟨BitInvariantLT.ge, bitInvariantLT_flipBit_of_ge⟩
+
+theorem bitInvariantLT_condFlipBit_of_ge (h : j ≤ i) (c : Array Bool) :
+    BitInvariantLT j (condFlipBit · i c) :=
+  fun _ hk => bitInvariant_condFlipBit_of_ne (hk.trans_le h).ne c
+
+theorem bitInvariantLT_condFlipBit_of_eq (c : Array Bool) :
+    BitInvariantLT i (condFlipBit · i c) :=
+  bitInvariantLT_condFlipBit_of_ge le_rfl c
+
+theorem bitInvariantLT_imp_bitInvariantLT_iff_ge :
+    (∀ f, BitInvariantLT n f → BitInvariantLT m f) ↔ m ≤ n :=
+  ⟨fun h => (h _ bitInvariantLT_flipBit_of_eq).ge, fun hmn _ hf _ hk => hf _ (hk.trans_le hmn)⟩
+
+theorem exists_bitInvariantLT_and_not_bitInvariantLT_iff_lt :
+    (∃ f, BitInvariantLT n f ∧ ¬ BitInvariantLT m f) ↔ n < m := not_iff_not.mp <| by
+  simp_rw [not_exists, not_lt, not_and_not_right, bitInvariantLT_imp_bitInvariantLT_iff_ge]
+
+def BitInvariantGE (i : ℕ) (f : ℕ → ℕ) : Prop := ∀ k ≥ i, BitInvariant k f
+
+theorem bitInvariantGE_iff : BitInvariantGE i f ↔ ∀ k ≥ i, f.BitInvariant k := Iff.rfl
+
+theorem bitInvariantGE_iff_div_two_pow_eq : BitInvariantGE i f ↔
     ∀ (p : ℕ), f p / 2 ^ i = p / 2 ^ i := by
-  simp_rw [testBit_ext_div_two_pow_iff, mem_bitInvarGE_iff, bitInvariant_iff,
+  simp_rw [testBit_ext_div_two_pow_iff, bitInvariantGE_iff, bitInvariant_iff,
   imp_forall_iff, forall_swap (α := ℕ)]
 
-theorem lt_iff_apply_lt_of_mem_bitInvarGE (hf : f ∈ bitInvarGE i) {p : ℕ}:
+theorem BitInvariantGE.apply_lt_iff_lt (hf : BitInvariantGE i f) {p : ℕ}:
     f p < 2^i ↔ p < 2^i := by
-  rw [mem_bitInvarGE_iff] at hf
+  rw [bitInvariantGE_iff] at hf
   simp_rw [lt_pow_two_iff_ge_imp_testBit_eq_false]
   exact forall₂_congr (fun _ h => by
     simp_rw [Bool.coe_false_iff_false, Bool.not_inj_iff]
     exact (hf _ h).testBit_apply_eq_testBit)
 
+theorem bitInvariantGE_id : BitInvariantGE i id := fun _ _ => bitInvariant_id
+
+theorem bitInvariantGE_zero_iff_id : BitInvariantGE 0 f ↔ f = id := by
+  simp_rw [bitInvariantGE_iff, Nat.zero_le, true_implies, forall_bitInvariant_iff_eq_id]
+
+theorem bitInvariantGE_flipBit_of_lt (h : i < j) : BitInvariantGE j (flipBit · i) :=
+  fun _ hk => bitInvariant_flipBit_of_ne (hk.trans_lt' h).ne'
+
+theorem not_bitInvariantGE_flipBit_of_ge (h : j ≤ i) : ¬ BitInvariantGE j (flipBit · i) :=
+  not_forall_of_exists_not ⟨i, not_imp_of_and_not ⟨h, not_bitInvariant_flipBit_of_eq⟩⟩
+
+theorem BitInvariantGE.lt (h : BitInvariantGE j (flipBit · i)) : i < j :=
+  lt_of_not_le (not_bitInvariantGE_flipBit_of_ge.mt <| not_not_intro h)
+
+theorem not_bitInvariantGE_flipBit_of_eq : ¬ BitInvariantGE i (flipBit · i) :=
+  not_bitInvariantGE_flipBit_of_ge le_rfl
+
+theorem bitInvariantGE_flipBit_iff_lt : BitInvariantGE j (flipBit · i) ↔ i < j :=
+  ⟨BitInvariantGE.lt, bitInvariantGE_flipBit_of_lt⟩
+
+theorem bitInvariantGE_condFlipBit_of_lt (h : i < j) (c : Array Bool) :
+    BitInvariantGE j (condFlipBit · i c) :=
+  fun _ hk => bitInvariant_condFlipBit_of_ne (hk.trans_lt' h).ne' c
+
+theorem bitInvariantGE_imp_bitInvariantGE_iff_le :
+    (∀ f, BitInvariantGE n f → BitInvariantGE m f) ↔ n ≤ m :=
+  ⟨fun h => le_of_not_lt fun hmn =>
+    not_bitInvariantGE_flipBit_of_eq (h _ (bitInvariantGE_flipBit_of_lt hmn)),
+  fun hmn => fun _ hf _ hk => hf _ (hmn.trans hk)⟩
+
+theorem exists_bitInvariantGE_and_not_bitInvariantGE_iff_gt :
+    (∃ f, BitInvariantGE n f ∧ ¬ BitInvariantGE m f) ↔ m < n := not_iff_not.mp <| by
+  simp_rw [not_exists, not_lt, not_and_not_right, bitInvariantGE_imp_bitInvariantGE_iff_le]
+
+theorem BitInvariantLT.id_of_bitInvariantGE (hfLT : BitInvariantLT m f)
+    (hfGE : BitInvariantGE m f) : f = id :=
+  forall_bitInvariant_iff_eq_id.mp <| fun i => (i.lt_or_ge m).by_cases (hfLT i) (hfGE i)
+
+theorem BitInvariantGE.id_of_bitInvariantLT (hfGE : BitInvariantGE m f)
+    (hfLT : BitInvariantLT m f) : f = id := hfLT.id_of_bitInvariantGE hfGE
+
+theorem bitInvariantLT_and_bitInvariantGE_iff_id :
+    BitInvariantLT m f ∧ BitInvariantGE m f ↔ f = id :=
+  ⟨fun h => h.1.id_of_bitInvariantGE h.2, fun h => h ▸ ⟨bitInvariantLT_id, bitInvariantGE_id⟩⟩
+
+end Function
+
+namespace ArrayPerm
+
+theorem getElem_toArray_testBit (a : ArrayPerm n) {k : ℕ} (h : n ≤ 2^k) {i : ℕ}
+    (hi : i < a.toArray.size) : a.toArray[i].testBit k = false :=
+  Nat.testBit_eq_false_of_lt <| (a.getElem_toArray_lt _).trans_le h
+
+theorem getElem_invArray_testBit (a : ArrayPerm n) {k : ℕ} (h : n ≤ 2^k) {i : ℕ}
+    (hi : i < a.invArray.size) : a.invArray[i].testBit k = false :=
+  Nat.testBit_eq_false_of_lt <| (a.getElem_invArray_lt _).trans_le h
+
+open Nat Array
+
+def BitInvariant (i : ℕ) (a : ArrayPerm n) : Prop :=
+  a.toArray.map (testBit · i) = (range n).map (testBit · i)
+
+variable {a b : ArrayPerm n}
+
+theorem bitInvariant_iff_testBit_getElem_toArray_eq_testBit : a.BitInvariant i ↔
+    ∀ {x} (h : x < a.toArray.size), a.toArray[x].testBit i = x.testBit i := by
+  unfold BitInvariant
+  refine ⟨fun h {x} hx => ?_,
+    fun h  => Array.ext _ _ (by simp_rw [size_map, size_range, a.size_toArray]) ?_⟩
+  · simp_rw [← getElem_map (testBit · i) _ _ (hx.trans_eq (size_map _ _).symm), h,
+    getElem_map, getElem_range]
+  · simp_rw [size_map, size_range, a.size_toArray, getElem_map, h, getElem_range, implies_true]
+
+theorem bitInvariant_of_ge (h : n ≤ 2^i) : a.BitInvariant i := by
+  simp_rw [bitInvariant_iff_testBit_getElem_toArray_eq_testBit, size_toArray,
+  a.getElem_toArray_testBit h]
+  exact fun (hx : _ < n) => (Nat.testBit_eq_false_of_lt (hx.trans_le h)).symm
+
 @[simp]
-theorem bitInvarGE_zero :
-    bitInvarGE 0 = ⊥ := le_antisymm (fun _ => by
-  simp_rw [mem_bitInvarGE_iff, ge_iff_le, Nat.zero_le, true_implies, mem_bot,
-    End.forall_bitInvariant_iff_eq_one, imp_self]) bot_le
+theorem BitInvariant.testBit_getElem_toArray_eq_testBit (ha : a.BitInvariant i) {x : ℕ}
+    (h : x < a.toArray.size) : a.toArray[x].testBit i = x.testBit i :=
+  bitInvariant_iff_testBit_getElem_toArray_eq_testBit.mp ha h
 
-theorem bitInvarGE_strictMono : StrictMono bitInvarGE := fun m _ h => by
-  refine' ⟨fun _ => _, Set.not_subset.mpr _⟩
-  · simp only [SetLike.mem_coe, mem_bitInvarGE_iff, ge_iff_le]
-    exact fun hf _ hk => hf _ (h.le.trans hk)
-  · simp only [SetLike.mem_coe, mem_bitInvarGE_iff, ge_iff_le, not_forall, Classical.not_imp]
-    refine' ⟨(flipBit · m), fun k hk => flipBit_bitInvariant_of_ne (h.trans_le hk).ne', _⟩
-    exact ⟨m, le_rfl, not_flipBit_bitInvariant_of_eq⟩
+theorem bitInvariant_of_testBit_getElem_toArray_eq_testBit (h : ∀ {x} (h : x < a.toArray.size),
+    a.toArray[x].testBit i = x.testBit i) : a.BitInvariant i :=
+  bitInvariant_iff_testBit_getElem_toArray_eq_testBit.mpr h
 
-theorem bitInvarGE_lt_iff_lt : bitInvarGE m < bitInvarGE n ↔ m < n :=
-  bitInvarGE_strictMono.lt_iff_lt
+theorem BitInvariant.inv (ha : a.BitInvariant i) :
+    BitInvariant i a⁻¹ := bitInvariant_of_testBit_getElem_toArray_eq_testBit <| by
+  simp_rw [inv_toArray]
+  simp_rw [← ha.testBit_getElem_toArray_eq_testBit (getElem_invArray_lt_size_toArray _ _ _),
+  getElem_toArray_getElem_invArray, implies_true]
 
-theorem bitInvarGE_le_iff_le : bitInvarGE m ≤ bitInvarGE n ↔ m ≤ n :=
-  bitInvarGE_strictMono.le_iff_le
+theorem bitInvariant_iff_testBit_getElem_invArray_eq_testBit : a.BitInvariant i ↔
+    ∀ {x} (h : x < a.invArray.size), a.invArray[x].testBit i = x.testBit i := by
+  rw [← inv_toArray, ← bitInvariant_iff_testBit_getElem_toArray_eq_testBit]
+  refine ⟨BitInvariant.inv, fun h => inv_inv a ▸ h.inv⟩
 
-theorem bitInvarLT_inf_bitInvarGE_eq_bot : bitInvarGE m ⊓ bitInvarLT m = ⊥ :=
+@[simp]
+theorem BitInvariant.testBit_getElem_invArray_eq_testBit (ha : a.BitInvariant i) {x : ℕ}
+    (h : x < a.invArray.size) : a.invArray[x].testBit i = x.testBit i :=
+  bitInvariant_iff_testBit_getElem_invArray_eq_testBit.mp ha h
+
+theorem bitInvariant_of_testBit_getElem_invArray_eq_testBit (h : ∀ {x} (h : x < a.invArray.size),
+    a.invArray[x].testBit i = x.testBit i) : a.BitInvariant i :=
+  bitInvariant_iff_testBit_getElem_invArray_eq_testBit.mpr h
+
+theorem one_bitInvariant : BitInvariant i (1 : ArrayPerm n) := rfl
+
+theorem BitInvariant.mul (ha : a.BitInvariant i) (hb : b.BitInvariant i) :
+    BitInvariant i (a * b) := bitInvariant_of_testBit_getElem_toArray_eq_testBit <| by
+  simp_rw [getElem_mul_toArray, ha.testBit_getElem_toArray_eq_testBit,
+  hb.testBit_getElem_toArray_eq_testBit, implies_true]
+
+theorem bitInvariant_iff_smul_bitInvariant :
+    a.BitInvariant i ↔ (a • ·).BitInvariant i := by
+  simp_rw [bitInvariant_iff_testBit_getElem_toArray_eq_testBit, Function.bitInvariant_iff,
+    a.size_toArray, smul_nat_def, apply_dite (testBit · i), dite_eq_right_iff]
+
+def BitInvariantLT (i : ℕ) (a : ArrayPerm n) : Prop := ∀ k < i, a.BitInvariant k
+
+theorem bitInvariantLT_iff : a.BitInvariantLT i ↔ ∀ k < i, a.BitInvariant k := Iff.rfl
+
+theorem bitInvariantLT_iff_smul_bitInvariantLT :
+    a.BitInvariantLT i ↔ (a • ·).BitInvariantLT i := by
+  simp_rw [bitInvariantLT_iff, bitInvariant_iff_smul_bitInvariant, Function.bitInvariantLT_iff]
+
+def BitInvariantGE (i : ℕ) (a : ArrayPerm n) : Prop := ∀ k ≥ i, a.BitInvariant k
+
+theorem bitInvariantGE_iff : BitInvariantGE i a ↔ ∀ k ≥ i, a.BitInvariant k := Iff.rfl
+
+theorem bitInvariantGE_iff_smul_bitInvarianGE :
+    a.BitInvariantGE i ↔ (a • ·).BitInvariantGE i := by
+  simp_rw [bitInvariantGE_iff, bitInvariant_iff_smul_bitInvariant, Function.bitInvariantGE_iff]
+
+theorem bitInvariantGE_of_ge (h : n ≤ 2^i) : a.BitInvariantGE i :=
+  fun _ hk => bitInvariant_of_ge (h.trans (Nat.pow_le_pow_right zero_lt_two hk))
+
+theorem bitInvariantLT_iff_eq_one_of_ge (h : n ≤ 2^i) : a.BitInvariantLT i ↔ a = 1 := by
+  simp_rw [bitInvariantLT_iff_smul_bitInvariantLT, ← smul_eq_id_iff_eq_one,
+  ← Function.bitInvariantLT_and_bitInvariantGE_iff_id (m := i),
+  ← bitInvariantGE_iff_smul_bitInvarianGE, bitInvariantGE_of_ge h, and_true]
+
+def BitInvariantSubgroup (i : ℕ) : Subgroup (ArrayPerm n) where
+  carrier := BitInvariant i
+  mul_mem' := BitInvariant.mul
+  one_mem' := one_bitInvariant
+  inv_mem' := BitInvariant.inv
+
+/-
+def BitInvariantLTSubgroup (i : ℕ) : Subgroup (ArrayPerm n) :=
+  ⨅ k Finset.range i, BitInvariantSubgroup k
+def BitInvariantGESubgroup (i : ℕ) : Subgroup (ArrayPerm n) :=
+  ⨅ k : ℕ, ⨅ (_ : i ≤ k), BitInvariant k-/
+
+@[simp]
+theorem mem_bitInvariant_iff : π ∈ BitInvariant i ↔ (⇑π).BitInvariant i := Iff.rfl
+
+@[simp]
+theorem mem_bitInvariantLT_iff : π ∈ BitInvariantLT i ↔ (⇑π).BitInvariantLT i := by
+  unfold BitInvariantLT
+  simp_rw [mem_iInf, mem_bitInvariant_iff, bitInvariantLT_iff]
+
+@[simp]
+theorem mem_bitInvariantGE_iff : π ∈ BitInvariantGE i ↔ (⇑π).BitInvariantGE i:= by
+  unfold BitInvariantGE
+  simp_rw [mem_iInf, mem_bitInvariant_iff, bitInvariantGE_iff]
+
+
+/-
+theorem bitInvariant_iff_natPerm_mem_bitInvariant :
+    a.BitInvariant i ↔ natPerm a ∈ Subgroup.BitInvariant i := by
+  simp_rw [bitInvariant_iff_smul_bitInvariant, Subgroup.mem_bitInvariant_iff]
+  exact Iff.rfl
+-/
+
+end ArrayPerm
+
+namespace Submonoid
+
+open Function Nat
+
+def BitInvariant (i : ℕ) : Submonoid (Function.End ℕ) where
+  carrier := Function.BitInvariant i
+  mul_mem' := BitInvariant.comp
+  one_mem' := bitInvariant_id
+
+def BitInvariantLT (i : ℕ) : Submonoid (Function.End ℕ) := ⨅ k : ℕ, ⨅ (_ : k < i), BitInvariant k
+
+variable {f : Function.End ℕ}
+
+@[simp]
+theorem mem_bitInvariant_iff : f ∈ BitInvariant i ↔ f.BitInvariant i := Iff.rfl
+
+@[simp]
+theorem mem_bitInvariantLT_iff : f ∈ BitInvariantLT i ↔ f.BitInvariantLT i := by
+  unfold BitInvariantLT ; simp_rw [mem_iInf] ; exact Iff.rfl
+
+theorem _root_.Function.BitInvariantLT.mem_bitInvariantLT (hf : f.BitInvariantLT i) :
+    f ∈ BitInvariantLT i := mem_bitInvariantLT_iff.mpr hf
+
+theorem bitInvariantLT_of_mem_bitInvariantLT (hf : f ∈ BitInvariantLT i) :
+    f.BitInvariantLT i := mem_bitInvariantLT_iff.mp hf
+
+@[simp]
+theorem bitInvariantLT_zero : BitInvariantLT 0 = ⊤ := by
+  simp_rw [Submonoid.eq_top_iff', mem_bitInvariantLT_iff,
+  Function.bitInvariantLT_zero, implies_true]
+
+theorem bitInvariantLT_le_iff_le : BitInvariantLT n ≤ BitInvariantLT m ↔ m ≤ n := by
+  simp_rw [SetLike.le_def, mem_bitInvariantLT_iff]
+  exact bitInvariantLT_imp_bitInvariantLT_iff_ge
+
+theorem bitInvariantLT_strictAnti : StrictAnti BitInvariantLT :=
+  strictAnti_of_le_iff_le (fun _ _ => bitInvariantLT_le_iff_le.symm)
+
+theorem bitInvarLT_lt_iff_lt : BitInvariantLT n < BitInvariantLT m ↔ m < n :=
+  bitInvariantLT_strictAnti.lt_iff_lt
+
+def BitInvariantGE (i : ℕ) : Submonoid (Function.End ℕ) := ⨅ k : ℕ, ⨅ (_ : i ≤ k), BitInvariant k
+
+@[simp]
+theorem mem_bitInvariantGE_iff : f ∈ BitInvariantGE i ↔ f.BitInvariantGE i := by
+  unfold BitInvariantGE ; simp_rw [mem_iInf] ; exact Iff.rfl
+
+theorem _root_.Function.bitInvariantGE.mem_bitInvariantGE (hf : f.BitInvariantGE i) :
+    f ∈ BitInvariantGE i := mem_bitInvariantGE_iff.mpr hf
+
+theorem bitInvariantGE_of_mem_bitInvariantGE (hf : f ∈ BitInvariantGE i) :
+    f.BitInvariantGE i := mem_bitInvariantGE_iff.mp hf
+
+@[simp]
+theorem bitInvariantGE_zero :
+    BitInvariantGE 0 = ⊥ := by
+  simp_rw [Submonoid.eq_bot_iff_forall, mem_bitInvariantGE_iff, bitInvariantGE_zero_iff_id]
+  exact fun _ => id
+
+theorem bitInvariantGE_le_iff_le : BitInvariantGE m ≤ BitInvariantGE n ↔ m ≤ n := by
+  simp_rw [SetLike.le_def, mem_bitInvariantGE_iff]
+  exact bitInvariantGE_imp_bitInvariantGE_iff_le
+
+theorem bitInvariantGE_strictMono : StrictMono BitInvariantGE :=
+    strictMono_of_le_iff_le (fun _ _ => bitInvariantGE_le_iff_le.symm)
+
+theorem bitInvariantGE_lt_iff_lt : BitInvariantGE m < BitInvariantGE n ↔ m < n :=
+  bitInvariantGE_strictMono.lt_iff_lt
+
+theorem bitInvariantLT_inf_BitInvariantGE_eq_bot : BitInvariantLT m ⊓ BitInvariantGE m = ⊥ :=
     SetLike.ext <| fun f => by
-  simp_rw [mem_bot, ← End.forall_bitInvariant_iff_eq_one, Submonoid.mem_inf, mem_bitInvarGE_iff,
-  mem_bitInvarLT_iff, ← not_le, ge_iff_le, ← forall_and, _root_.imp_and_neg_imp_iff]
+  simp_rw [mem_bot, Submonoid.mem_inf, mem_bitInvariantGE_iff,
+  mem_bitInvariantLT_iff, bitInvariantLT_and_bitInvariantGE_iff_id]
+  exact Iff.rfl
 
-theorem eq_one_of_mem_bitInvarGE_mem_bitInvarLt (hfGE : f ∈ bitInvarGE m) (hfLT : f ∈ bitInvarLT m) :
-    f = 1 := by
-  rw [← Submonoid.mem_bot]
-  exact bitInvarLT_inf_bitInvarGE_eq_bot ▸ Submonoid.mem_inf.mpr ⟨hfGE, hfLT⟩
+theorem disjoint_bitInvariantGE_bitInvariantLT :
+    Disjoint (BitInvariantLT m) (BitInvariantGE m) := by
+  simp_rw [disjoint_iff]
+  exact bitInvariantLT_inf_BitInvariantGE_eq_bot
+
+theorem eq_one_of_mem_BitInvariantGE_mem_bitInvarLT (hfLT : f ∈ BitInvariantLT m)
+    (hfGE : f ∈ BitInvariantGE m) : f = 1 := Submonoid.mem_bot.mp <| by
+  exact bitInvariantLT_inf_BitInvariantGE_eq_bot ▸ Submonoid.mem_inf.mpr ⟨hfLT, hfGE⟩
 
 end Submonoid
 
@@ -1534,106 +1981,92 @@ namespace Subgroup
 
 open Equiv Function Nat
 
-def bitInvarEQ (i : ℕ) : Subgroup (Perm ℕ) where
-  carrier π := BitInvariant i ⇑π
-  mul_mem' ha hb := BitInvariant.mulEnd_bitInvariant ha hb
-  one_mem' := End.one_bitInvariant
-  inv_mem' ha := BitInvariant.inv_bitInvariant ha
+def BitInvariant (i : ℕ) : Subgroup (Perm ℕ) where
+  carrier π := Function.BitInvariant i ⇑π
+  mul_mem' := BitInvariant.comp
+  one_mem' := bitInvariant_id
+  inv_mem' := (rightInverse_symm _).bitInvariant_of_bitInvariant
 
-def bitInvarLT (i : ℕ) : Subgroup (Perm ℕ) := ⨅ k : ℕ, ⨅ (_ : k < i), bitInvarEQ k
-def bitInvarGE (i : ℕ) : Subgroup (Perm ℕ) := ⨅ k : ℕ, ⨅ (_ : i ≤ k), bitInvarEQ k
+def BitInvariantLT (i : ℕ) : Subgroup (Perm ℕ) := ⨅ k : ℕ, ⨅ (_ : k < i), BitInvariant k
+def BitInvariantGE (i : ℕ) : Subgroup (Perm ℕ) := ⨅ k : ℕ, ⨅ (_ : i ≤ k), BitInvariant k
 
 variable {π : Perm ℕ}
 
 @[simp]
-theorem mem_bitInvarEQ_iff : π ∈ bitInvarEQ i ↔ (⇑π).BitInvariant i := Iff.rfl
+theorem mem_bitInvariant_iff : π ∈ BitInvariant i ↔ (⇑π).BitInvariant i := Iff.rfl
 
 @[simp]
-theorem mem_bitInvarLT_iff : π ∈ bitInvarLT i ↔ ∀ k < i, (⇑π).BitInvariant k := by
-  unfold bitInvarLT
-  simp_rw [mem_iInf, mem_bitInvarEQ_iff]
+theorem mem_bitInvariantLT_iff : π ∈ BitInvariantLT i ↔ (⇑π).BitInvariantLT i := by
+  unfold BitInvariantLT
+  simp_rw [mem_iInf, mem_bitInvariant_iff, bitInvariantLT_iff]
 
 @[simp]
-theorem mem_bitInvarGE_iff : π ∈ bitInvarGE i ↔ ∀ k ≥ i, (⇑π).BitInvariant k := by
-  unfold bitInvarGE
-  simp_rw [mem_iInf, mem_bitInvarEQ_iff]
+theorem mem_bitInvariantGE_iff : π ∈ BitInvariantGE i ↔ (⇑π).BitInvariantGE i:= by
+  unfold BitInvariantGE
+  simp_rw [mem_iInf, mem_bitInvariant_iff, bitInvariantGE_iff]
 
-theorem mem_bitInvarEQ_iff_coe_mem_bitInvarEQ :
-  ∀ π, π ∈ bitInvarEQ i ↔ ⇑π ∈ Submonoid.bitInvarEQ i := fun _ => Iff.rfl
+theorem mem_bitInvariant_iff_coe_mem_bitInvariant :
+  ∀ π, π ∈ BitInvariant i ↔ ⇑π ∈ Submonoid.BitInvariant i := fun _ => Iff.rfl
 
-theorem mem_bitInvarLT_iff_coe_mem_bitInvarLT :
-    ∀ π, π ∈ bitInvarLT i ↔ ⇑π ∈ Submonoid.bitInvarLT i := fun _ =>
-  mem_bitInvarLT_iff.trans Submonoid.mem_bitInvarLT_iff.symm
+theorem mem_bitInvariantLT_iff_coe_mem_bitInvariantLT :
+    ∀ π, π ∈ BitInvariantLT i ↔ ⇑π ∈ Submonoid.BitInvariantLT i := fun _ =>
+  mem_bitInvariantLT_iff.trans Submonoid.mem_bitInvariantLT_iff.symm
 
-theorem mem_bitInvarGE_iff_coe_mem_bitInvarGE :
-    ∀ π, π ∈ bitInvarGE i ↔ ⇑π ∈ Submonoid.bitInvarGE i := fun _ =>
-  mem_bitInvarGE_iff.trans Submonoid.mem_bitInvarGE_iff.symm
-
-theorem mem_bitInvarLT_iff_mod_two_pow_eq :
-    π ∈ bitInvarLT i ↔ ∀ (p : ℕ), π p % 2 ^ i = p % 2 ^ i := by
-  simp_rw [mem_bitInvarLT_iff_coe_mem_bitInvarLT]
-  exact Submonoid.mem_bitInvarLT_iff_mod_two_pow_eq
+theorem mem_bitInvariantGE_iff_coe_mem_bitInvariantGE :
+    ∀ π, π ∈ BitInvariantGE i ↔ ⇑π ∈ Submonoid.BitInvariantGE i := fun _ =>
+  mem_bitInvariantGE_iff.trans Submonoid.mem_bitInvariantGE_iff.symm
 
 @[simp]
-theorem bitInvarLT_zero : bitInvarLT 0 = ⊤ := Subgroup.ext fun _ => by
-  simp_rw [mem_bitInvarLT_iff_coe_mem_bitInvarLT, Submonoid.bitInvarLT_zero,
+theorem bitInvariantLT_zero : BitInvariantLT 0 = ⊤ := Subgroup.ext fun _ => by
+  simp_rw [mem_bitInvariantLT_iff_coe_mem_bitInvariantLT, Submonoid.bitInvariantLT_zero,
   Submonoid.mem_top, mem_top]
 
-theorem bitInvarLT_strictAnti : StrictAnti bitInvarLT := fun m _ h => by
-  simp_rw [SetLike.lt_iff_le_and_exists, SetLike.le_def, mem_bitInvarLT_iff,
-  not_forall, exists_prop]
-  exact ⟨fun _ hf _ hk => hf _ (hk.trans h),
-    ⟨flipBitPerm m, fun k hk => flipBit_bitInvariant_of_ne hk.ne,
-    ⟨m, h, not_flipBit_bitInvariant_of_eq⟩⟩⟩
+theorem bitInvariantLT_le_iff_le : BitInvariantLT n ≤ BitInvariantLT m ↔ m ≤ n := by
+  simp_rw [SetLike.le_def, mem_bitInvariantLT_iff]
+  exact ⟨fun h => (h (x := flipBitPerm _) bitInvariantLT_flipBit_of_eq).ge,
+    fun hmn _ hf _ hk => hf _ (hk.trans_le hmn)⟩
 
-theorem bitInvarLT_lt_iff_lt : bitInvarLT n < bitInvarLT m ↔ m < n :=
-  bitInvarLT_strictAnti.lt_iff_lt
+theorem bitInvariantLT_strictAnti : StrictAnti BitInvariantLT :=
+  strictAnti_of_le_iff_le (fun _ _ => bitInvariantLT_le_iff_le.symm)
 
-theorem bitInvarLT_le_iff_le : bitInvarLT n ≤ bitInvarLT m ↔ m ≤ n :=
-  bitInvarLT_strictAnti.le_iff_le
-
-theorem mem_bitInvarGE_iff_div_two_pow_eq : π ∈ bitInvarGE i ↔
-    ∀ (p : ℕ), π p / 2 ^ i = p / 2 ^ i := by
-  simp_rw [testBit_ext_div_two_pow_iff, mem_bitInvarGE_iff, bitInvariant_iff,
-  imp_forall_iff, forall_swap (α := ℕ)]
-
-theorem lt_iff_apply_lt_of_mem_bitInvarGE (hf : π ∈ bitInvarGE i) {p : ℕ}:
-    p < 2^i ↔ π p < 2^i := by
-  rw [mem_bitInvarGE_iff] at hf
-  simp_rw [lt_pow_two_iff_ge_imp_testBit_eq_false]
-  exact forall₂_congr (fun _ h => by
-    simp_rw [Bool.coe_false_iff_false, Bool.not_inj_iff]
-    exact (hf _ h).testBit_apply_eq_testBit.symm)
+theorem bitInvarLT_lt_iff_lt : BitInvariantLT n < BitInvariantLT m ↔ m < n :=
+  bitInvariantLT_strictAnti.lt_iff_lt
 
 @[simp]
-theorem bitInvarGE_zero :
-    bitInvarGE 0 = ⊥ := le_antisymm (fun _ => by
-  simp_rw [mem_bitInvarGE_iff, ge_iff_le, Nat.zero_le, true_implies, mem_bot,
-    Perm.forall_bitInvariant_iff_eq_one, imp_self]) bot_le
+theorem bitInvariantGE_zero :
+    BitInvariantGE 0 = ⊥ := Subgroup.ext <| fun _ => by
+  simp_rw [mem_bitInvariantGE_iff_coe_mem_bitInvariantGE, Submonoid.bitInvariantGE_zero,
+  Submonoid.mem_bot, mem_bot, Equiv.Perm.ext_iff, funext_iff]
+  exact Iff.rfl
 
-theorem bitInvarGE_strictMono : StrictMono bitInvarGE := fun m _ h => by
-  refine' ⟨fun _ => _, Set.not_subset.mpr _⟩
-  · simp only [SetLike.mem_coe, mem_bitInvarGE_iff, ge_iff_le]
-    exact fun hf _ hk => hf _ (h.le.trans hk)
-  · simp only [SetLike.mem_coe, mem_bitInvarGE_iff, ge_iff_le, not_forall, Classical.not_imp]
-    refine' ⟨flipBitPerm m, fun k hk => flipBit_bitInvariant_of_ne (h.trans_le hk).ne', _⟩
-    exact ⟨m, le_rfl, not_flipBit_bitInvariant_of_eq⟩
+theorem bitInvariantGE_le_iff_le : BitInvariantGE m ≤ BitInvariantGE n ↔ m ≤ n := by
+  simp_rw [SetLike.le_def, mem_bitInvariantGE_iff]
+  exact   ⟨fun h => le_of_not_lt fun hmn =>
+    not_bitInvariantGE_flipBit_of_eq (h (x := flipBitPerm _) (bitInvariantGE_flipBit_of_lt hmn)),
+  fun hmn => fun _ hf _ hk => hf _ (hmn.trans hk)⟩
 
-theorem bitInvarGE_lt_iff_lt : bitInvarGE m < bitInvarGE n ↔ m < n :=
-  bitInvarGE_strictMono.lt_iff_lt
+theorem bitInvariantGE_strictMono : StrictMono BitInvariantGE :=
+    strictMono_of_le_iff_le (fun _ _ => bitInvariantGE_le_iff_le.symm)
 
-theorem bitInvarGE_le_iff_le : bitInvarGE m ≤ bitInvarGE n ↔ m ≤ n :=
-  bitInvarGE_strictMono.le_iff_le
+theorem bitInvariantGE_lt_iff_lt : BitInvariantGE m < BitInvariantGE n ↔ m < n :=
+  bitInvariantGE_strictMono.lt_iff_lt
 
-theorem bitInvarLT_inf_bitInvarGE_eq_bot : bitInvarGE m ⊓ bitInvarLT m = ⊥ :=
+theorem bitInvariantLT_inf_BitInvariantGE_eq_bot : BitInvariantLT m ⊓ BitInvariantGE m = ⊥ :=
     SetLike.ext <| fun f => by
-  simp_rw [mem_bot, ← Perm.forall_bitInvariant_iff_eq_one, Subgroup.mem_inf, mem_bitInvarGE_iff,
-  mem_bitInvarLT_iff, ← not_le, ge_iff_le, ← forall_and, _root_.imp_and_neg_imp_iff]
+  simp_rw [Subgroup.mem_inf, mem_bitInvariantLT_iff_coe_mem_bitInvariantLT,
+    mem_bitInvariantGE_iff_coe_mem_bitInvariantGE, ←Submonoid.mem_inf,
+    Submonoid.bitInvariantLT_inf_BitInvariantGE_eq_bot (m := m),
+  Submonoid.mem_bot, mem_bot, Equiv.Perm.ext_iff, funext_iff]
+  exact Iff.rfl
 
-theorem eq_one_of_mem_bitInvarGE_mem_bitInvarLt (hfGE : f ∈ bitInvarGE m) (hfLT : f ∈ bitInvarLT m) :
-    f = 1 := by
-  rw [← Subgroup.mem_bot]
-  exact bitInvarLT_inf_bitInvarGE_eq_bot ▸ Subgroup.mem_inf.mpr ⟨hfGE, hfLT⟩
+theorem disjoint_bitInvariantGE_bitInvariantLT :
+    Disjoint (BitInvariantLT m) (BitInvariantGE m) := by
+  simp_rw [disjoint_iff]
+  exact bitInvariantLT_inf_BitInvariantGE_eq_bot
+
+theorem eq_one_of_mem_BitInvariantGE_mem_bitInvarLT (hfLT : f ∈ BitInvariantLT m)
+    (hfGE : f ∈ BitInvariantGE m) : f = 1 := Subgroup.mem_bot.mp <| by
+  exact bitInvariantLT_inf_BitInvariantGE_eq_bot ▸ Subgroup.mem_inf.mpr ⟨hfLT, hfGE⟩
 
 end Subgroup
 
@@ -1655,7 +2088,7 @@ theorem endoOfBoolArrowEndo_bitInvar (ff : Bool → ℕ → ℕ) :
   simp_rw [bitInvariant_iff, endoOfBoolArrowEndo_def, testBit_mergeBit_of_eq, implies_true]
 
 theorem endoOfBoolArrowEndo_mem_bitInvarEQ
-    (f : Bool → ℕ → ℕ) : (endoOfBoolArrowEndo i f) ∈ Submonoid.bitInvarEQ i :=
+    (f : Bool → ℕ → ℕ) : (endoOfBoolArrowEndo i f) ∈ Submonoid.BitInvariant i :=
   endoOfBoolArrowEndo_bitInvar f
 
 theorem endoOfBoolArrowEndo_comp (f g : Bool → ℕ → ℕ) :
@@ -1694,19 +2127,19 @@ theorem boolArrowEndoOfEndo_rightInvOn (i : Fin (m + 1)) :
   endoOfBoolArrowEndo_leftInvOn _
 
 @[simps!]
-def bitInvarMulEquivEnd (i : Fin (m + 1)) : (Bool → Function.End ℕ) ≃* Submonoid.bitInvarEQ i where
+def bitInvarMulEquivEnd (i : Fin (m + 1)) : (Bool → Function.End ℕ) ≃* Submonoid.BitInvariant i where
   toFun feo := ⟨endoOfBoolArrowEndo i feo, endoOfBoolArrowEndo_mem_bitInvarEQ feo⟩
   invFun f := boolArrowEndoOfEndo i f.val
   left_inv := boolArrowEndoOfEndo_leftInverse i
   right_inv f := Subtype.ext (boolArrowEndoOfEndo_rightInvOn i f.prop)
   map_mul' _ _ := Subtype.ext (endoOfBoolArrowEndo_comp _ _)
 
-def bitInvarMulEquiv (i : Fin (m + 1)) : (Bool → Equiv.Perm ℕ) ≃* Subgroup.bitInvarEQ i :=
+def bitInvarMulEquiv (i : Fin (m + 1)) : (Bool → Equiv.Perm ℕ) ≃* Subgroup.BitInvariant i :=
   ((Equiv.Perm.equivUnitsEnd).arrowCongr (Equiv.refl _)).trans <|
   MulEquiv.piUnits.symm.trans <|
   (Units.mapEquiv (bitInvarMulEquivEnd i)).trans <|
   (Equiv.Perm.equivUnitsEnd.subgroupMulEquivUnitsType
-    (Subgroup.mem_bitInvarEQ_iff_coe_mem_bitInvarEQ)).symm
+    (Subgroup.mem_bitInvariant_iff_coe_mem_bitInvariant)).symm
 
 @[simp]
 theorem bitInvarMulEquiv_apply_coe_apply (i : Fin (m + 1))
@@ -1719,11 +2152,11 @@ theorem bitInvarMulEquiv_apply_coe_symm_apply (i : Fin (m + 1))
   endoOfBoolArrowEndo i fun b => ⇑(πeo b)⁻¹ := rfl
 
 @[simp]
-theorem bitInvarMulEquiv_symm_apply_apply (i : Fin (m + 1)) (π : ↥(Subgroup.bitInvarEQ i)):
+theorem bitInvarMulEquiv_symm_apply_apply (i : Fin (m + 1)) (π : ↥(Subgroup.BitInvariant i)):
   ⇑(((bitInvarMulEquiv i).symm) π b) = boolArrowEndoOfEndo i (⇑π.val) b := rfl
 
 @[simp]
-theorem bitInvarMulEquiv_symm_apply_symm_apply (i : Fin (m + 1)) (π : ↥(Subgroup.bitInvarEQ i)):
+theorem bitInvarMulEquiv_symm_apply_symm_apply (i : Fin (m + 1)) (π : ↥(Subgroup.BitInvariant i)):
   ⇑(((bitInvarMulEquiv i).symm) π b).symm = boolArrowEndoOfEndo i (⇑π⁻¹.val) b := rfl
 
 -- Extra theorems
@@ -1868,7 +2301,7 @@ theorem condFlipBit_bitInvar_of_ne {i j : Fin (m + 1)} (h : i ≠ j) : bitInvar 
 theorem condFlipBit_succ_apply {i : Fin (m + 1)} : condFlipBit (Fin.succ i) c q =
     mergeBit 0 (testBit 0 q) ((condFlipBit i fun p =>
     c (mergeBit 0 (testBit 0 q) p)) (testRes 0 q)) := by
-    simp_rw [condFlipBit_apply_eq_mergeBit, mergeBit_succ, testRes_succ, testBit_succ,
+    simp_rw [condFlipBit_eq_mergeBit, mergeBit_succ, testRes_succ, testBit_succ,
     testBit_mergeBit, testRes_mergeBit]
 
 theorem condFlipBit_succAbove_apply {j : Fin (m + 2)} {i : Fin (m + 1)} :

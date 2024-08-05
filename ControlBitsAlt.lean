@@ -10,12 +10,12 @@ abbrev XBackXForth (i : ℕ) (π : Perm ℕ) := ⁅π, flipBitPerm i⁆
 
 lemma xBXF_def {i : ℕ} {π : Perm ℕ} : XBackXForth i π = ⁅π, flipBitPerm i⁆ := rfl
 
-theorem lt_iff_xBXF_lt (h : i < m) (hπ : ∀ q, q < 2^m ↔ π q < 2^m) :
-    ∀ q, q < 2^m ↔ XBackXForth i π q < 2^m := fun q => by
+theorem lt_iff_xBXF_lt (h : i < m) (hπ : ∀ q, π q < 2^m ↔ q < 2^m) :
+    ∀ q, XBackXForth i π q < 2^m ↔ q < 2^m := fun q => by
   unfold XBackXForth
   simp_rw [commutatorElement_def, Perm.mul_apply, flipBitPerm_inv_apply, flipBitPerm_apply,
-  ← hπ, ← lt_iff_flipBit_lt h, hπ (π⁻¹ (q.flipBit i)), Perm.apply_inv_self]
-  exact lt_iff_flipBit_lt h
+  hπ, flipBit_lt_two_pow_iff_lt_two_pow h, ← hπ (π⁻¹ (q.flipBit i)), Perm.apply_inv_self]
+  exact flipBit_lt_two_pow_iff_lt_two_pow h
 
 --Theorem 4.3 (c)
 lemma univ_filter_sameCycle_le_pow_two {q : ℕ} [DecidableRel (XBackXForth i π).SameCycle]
@@ -31,7 +31,7 @@ lemma univ_filter_sameCycle_le_pow_two {q : ℕ} [DecidableRel (XBackXForth i π
 lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF {π : Perm ℕ}
   (hπ : π ∈ Subgroup.bitInvarLT i) :
 (XBackXForth i π).CycleMin (q.flipBit i) = ((XBackXForth i π).CycleMin q).flipBit i := by
-  refine' cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr' (q :=q) rfl flipBit_ne_self
+  refine' cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr' (q :=q) rfl (fun _ => flipBit_ne_self)
     (fun h h' => eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq h h'.le (fun hk => _))
   rw [Subgroup.mem_bitInvarLT_iff] at hπ
   specialize hπ _ hk
