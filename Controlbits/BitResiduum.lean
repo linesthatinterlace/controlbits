@@ -1,7 +1,6 @@
 import Mathlib.Tactic
 import Mathlib.GroupTheory.Perm.Basic
 import Mathlib.Algebra.Ring.Defs
-import Controlbits.Bool
 import Controlbits.Fin
 import Controlbits.Equivs
 import Controlbits.Submonoid
@@ -41,18 +40,18 @@ lemma getRes_apply : getRes i q = (getBitRes i q).snd := rfl
 
 lemma mergeBitRes_apply : mergeBitRes i b p = (getBitRes i).symm (b, p) := rfl
 
-lemma getBitRes_apply_zero : getBitRes i 0 = (false, 0) := by
+lemma getBitRes_apply_zero {i : Fin (m + 1)} : getBitRes i 0 = (false, 0) := by
 ext <;> simp only [getBitRes_apply, finFunctionFinEquiv, Equiv.ofRightInverseOfCardLE_symm_apply,
   Fin.val_zero', Nat.zero_div, Nat.zero_mod, Fin.zero_eta, finTwoEquiv_apply, zero_ne_one,
   decide_False, Equiv.ofRightInverseOfCardLE_apply, Fin.val_zero, zero_mul, Finset.sum_const_zero]
 
-lemma getBit_apply_zero : getBit i 0 = false := by
+lemma getBit_apply_zero {i : Fin (m + 1)} : getBit i 0 = false := by
 rw [getBit_apply, getBitRes_apply_zero]
 
-lemma getRes_apply_zero : getRes i 0 = 0 := by
+lemma getRes_apply_zero {i : Fin (m + 1)} : getRes i 0 = 0 := by
 rw [getRes_apply, getBitRes_apply_zero]
 
-lemma mergeBitRes_apply_false_zero : mergeBitRes i false 0 = 0 := by
+lemma mergeBitRes_apply_false_zero {i : Fin (m + 1)} : mergeBitRes i false 0 = 0 := by
 rw [mergeBitRes_apply, ← getBitRes_apply_zero (i := i), Equiv.symm_apply_apply]
 
 lemma getBitRes_apply_two_pow {i : Fin (m + 1)}: getBitRes i ⟨2^(i : ℕ),
@@ -63,7 +62,7 @@ lemma getBitRes_apply_two_pow {i : Fin (m + 1)}: getBitRes i ⟨2^(i : ℕ),
     decide_True, Equiv.ofRightInverseOfCardLE_apply]
   · simp only [getBitRes_apply, finFunctionFinEquiv_apply_val, finFunctionFinEquiv_symm_apply_val,
     Fin.val_zero', Finset.sum_eq_zero_iff, Finset.mem_univ, mul_eq_zero, forall_true_left]
-    refine' fun x => Or.inl _
+    refine fun x => Or.inl ?_
     rcases (Fin.succAbove_ne i x).lt_or_lt with h | h <;> rw [Fin.lt_iff_val_lt_val] at h
     · rw [Nat.pow_div h.le zero_lt_two, Nat.pow_mod, Nat.mod_self,
         Nat.zero_pow (Nat.sub_pos_of_lt h), Nat.zero_mod]
@@ -104,8 +103,8 @@ lemma getBitRes_zero : getBitRes (0 : Fin (m + 1)) = getBitResZero := by
     Nat.pow_eq, Prod.mk.injEq, decide_eq_decide, Fin.ext_iff, Fin.val_one, Fin.coe_modNat,
     Finset.sum_fin_eq_sum_range, dite_eq_ite, Fin.coe_divNat, true_and]
   rw [Finset.sum_ite_of_true (h := fun _ H => (Finset.mem_range.mp H))]
-  refine' Nat.eq_of_mul_eq_mul_left (zero_lt_two)
-    (add_right_cancel (b := (q : ℕ) / 2 ^ 0 % 2 * 2 ^ 0) _)
+  refine Nat.eq_of_mul_eq_mul_left (zero_lt_two)
+    (add_right_cancel (b := (q : ℕ) / 2 ^ 0 % 2 * 2 ^ 0) ?_)
   simp_rw [Finset.mul_sum, mul_left_comm (2 : ℕ), ← Nat.pow_succ', Nat.succ_eq_add_one,
   ← Finset.sum_range_succ' (fun x => (q : ℕ) / 2 ^ x % 2 * 2 ^ x), pow_zero, Nat.div_one,
     mul_one, Nat.div_add_mod, Finset.sum_range, ← finFunctionFinEquiv_symm_apply_val,
@@ -180,7 +179,8 @@ lemma getBitRes_succ {i : Fin (m + 1)} : getBitRes (i.succ) = getBitResSucc i :=
     getBitRes_apply, getBitRes_symm_apply, Equiv.symm_apply_apply,
     Prod.mk.injEq, EmbeddingLike.apply_eq_iff_eq,
     Fin.eq_insertNth_iff, Fin.succAbove_zero, Fin.succ_succAbove_zero,
-    Fin.succ_succAbove_succ, true_and, implies_true]
+    Fin.removeNth_zero, Fin.tail_def, Fin.succ_succAbove_succ, true_and, implies_true]
+
 
 lemma getBitRes_succ_apply {i : Fin (m + 1)} : getBitRes (i.succ) q =
     (((getBitRes i) ((getBitRes 0) q).2).1,
@@ -229,6 +229,7 @@ lemma getBitRes_castSucc {i : Fin (m + 1)} : getBitRes (i.castSucc) = getBitResC
     getBitRes_apply, getBitRes_symm_apply, Equiv.symm_apply_apply,
     Prod.mk.injEq, EmbeddingLike.apply_eq_iff_eq,
     Fin.eq_insertNth_iff, Fin.succAbove_last, Fin.castSucc_succAbove_last,
+    Fin.removeNth_last, Fin.init_def,
     Fin.castSucc_succAbove_castSucc, true_and, implies_true]
 
 lemma getBitRes_castSucc_apply {i : Fin (m + 1)} : getBitRes (i.castSucc) q =
@@ -278,8 +279,9 @@ lemma getBitRes_succAbove {j : Fin (m + 2)} {i : Fin (m + 1)} :
   simp_rw [Equiv.ext_iff, getBitResSuccAbove_apply,
     getBitRes_apply, getBitRes_symm_apply, Equiv.symm_apply_apply,
     Prod.mk.injEq, EmbeddingLike.apply_eq_iff_eq,
-    Fin.eq_insertNth_iff, Fin.succAbove_succAbove_predAbove,
-    Fin.succAbove_succAbove_predAbove_succAbove, true_and, implies_true]
+    Fin.eq_insertNth_iff, Fin.succAbove_succAbove_predAbove]
+  unfold Fin.removeNth
+  simp_rw [Fin.succAbove_succAbove_predAbove_succAbove, true_and, implies_true]
 
 lemma getBitRes_succAbove_apply {j : Fin (m + 2)} {i : Fin (m + 1)} : getBitRes (j.succAbove i) q =
     (((getBitRes i) ((getBitRes j) q).2).1,

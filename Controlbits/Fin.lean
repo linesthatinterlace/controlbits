@@ -1,4 +1,5 @@
 import Mathlib.Data.Fin.Tuple.Basic
+import Mathlib.Order.Fin.Basic
 import Controlbits.Nat
 import Mathlib.Data.Fintype.Basic
 
@@ -74,7 +75,7 @@ theorem succAbove_le_succ (p : Fin (n + 1)) (i : Fin n) : p.succAbove i ≤ succ
 lemma succAbove_succAbove_predAbove_succAbove {j : Fin (m + 2)} :
 (j.succAbove i).succAbove ((i.predAbove j).succAbove k) = j.succAbove (i.succAbove k) := by
   rcases lt_or_le (castSucc i) j with (hij | hij)
-  . rw [succAbove_of_castSucc_lt _ _ hij, predAbove_of_castSucc_lt _ _ hij]
+  · rw [succAbove_of_castSucc_lt _ _ hij, predAbove_of_castSucc_lt _ _ hij]
     rcases lt_or_le (castSucc k) i with (hik | hik)
     · have H := (castSucc_lt_iff_succ_le.mp
       (castSucc_lt_castSucc_iff.mpr hik)).trans_lt hij

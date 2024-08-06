@@ -6,6 +6,3 @@ instance Function.End.instFunLikeEnd {α : Type u} : FunLike (Function.End α) �
 
 @[ext] lemma Function.End.ext {α : Type u} {f : Function.End α} {g : Function.End α}
 (H : ∀ (x : α), f x = g x) : f = g := DFunLike.ext _ _ H
-
-lemma Function.End.ext_iff {α : Type u} {f : Function.End α} {g : Function.End α}
-: f = g ↔ ∀ (x : α), f x = g x := DFunLike.ext_iff

@@ -11,9 +11,9 @@ calc
 lemma piFinSuccCastSucc_apply (v : (Fin (n + 2) → α)) : piFinSuccCastSucc v =
     ((v 0, v (last _)), v ∘ (fun i => i.castSucc.succ)) := by
   simp_rw [Prod.ext_iff, Function.funext_iff]
-  refine' ⟨⟨rfl, rfl⟩, fun _ => _⟩
+  refine ⟨⟨rfl, rfl⟩, fun _ => ?_⟩
   simp_rw [piFinSuccCastSucc, Equiv.instTrans_trans, Equiv.trans_apply, Equiv.prodCongr_apply,
-  Equiv.piFinSuccAbove_apply, extractNth, succAbove_last]
+  Equiv.piFinSuccAbove_apply, Fin.removeNth_last]
   rfl
 
 @[simp]

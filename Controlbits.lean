@@ -31,7 +31,7 @@ lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF {π : Perm (BV (m
   cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr
     rfl flipBit_ne_self eq_flipBit_of_lt_of_flipBit_gt
 
-lemma cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply :
+lemma cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply {q : BV (m + 1)} :
 (XBackXForth π).CycleMin (π (flipBit 0 q)) = (XBackXForth π).CycleMin (flipBit 0 (π q)) :=
 cycleMin_cmtr_apply_comm
 
@@ -43,9 +43,9 @@ getBit 0 ((XBackXForth π).FastCycleMin m (mergeBitRes 0 false p)) := by rfl
 
 lemma firstLayer_apply {π : Perm (BV (m + 1))} : FirstLayer π p =
   getBit 0 ((XBackXForth π).CycleMin (mergeBitRes 0 false p)) := by
-  refine' congrArg (getBit 0 ·) <| (XBackXForth π).fastCycleMin_eq_cycleMin_of_zpow_apply_mem_finset
+  refine congrArg (getBit 0 ·) <| (XBackXForth π).fastCycleMin_eq_cycleMin_of_zpow_apply_mem_finset
     (Finset.univ.filter (fun y => (XBackXForth π).SameCycle (mergeBitRes 0 false p) y))
-    univ_filter_sameCycle_le_pow_two _
+    univ_filter_sameCycle_le_pow_two ?_
   simp_rw [Finset.mem_filter, Finset.mem_univ, true_and, Equiv.Perm.sameCycle_zpow_right,
     Perm.SameCycle.rfl, implies_true]
 
@@ -64,7 +64,7 @@ def FirstLayerPerm (π : Perm (BV (m + 1))) := condFlipBit 0 (FirstLayer π)
 @[simp]
 lemma condFlipBit_firstLayer : condFlipBit 0 (FirstLayer π) = FirstLayerPerm π := rfl
 
-lemma firstLayerPerm_apply : FirstLayerPerm π q =
+lemma firstLayerPerm_apply {q : BV (m + 1)} : FirstLayerPerm π q =
   bif getBit 0 ((XBackXForth π).CycleMin (mergeBitRes 0 false (getRes 0 q)))
   then flipBit 0 q else q := firstLayer_apply ▸ condFlipBit_apply
 
@@ -96,7 +96,7 @@ lemma firstLayerPerm_mul_cancel_left : (FirstLayerPerm π) * ((FirstLayerPerm π
 condFlipBit_mul_cancel_left
 
 -- Theorem 5.3
-lemma getBit_zero_firstLayerPerm_apply_eq_getBit_zero_cycleMin {q} :
+lemma getBit_zero_firstLayerPerm_apply_eq_getBit_zero_cycleMin {q : BV (m + 1)} :
     getBit 0 (FirstLayerPerm π q) = getBit 0 ((XBackXForth π).CycleMin q) := by
   simp_rw [firstLayerPerm_apply, Bool.apply_cond (getBit 0), getBit_flipBit]
   rcases mergeBitRes_getRes_cases_flipBit 0 q false with (⟨h₁, h₂⟩ | ⟨h₁, h₂⟩)
@@ -108,7 +108,7 @@ lemma getBit_zero_firstLayerPerm_apply_eq_getBit_zero_cycleMin {q} :
 def LastLayer (π : Perm (BV (m + 1))) : ControlBitsLayer m :=
   fun p => getBit 0 ((FirstLayerPerm π) (π (mergeBitRes 0 false p)))
 
-lemma lastLayer_apply : LastLayer π p =
+lemma lastLayer_apply {p : BV m} : LastLayer π p =
   getBit 0 ((XBackXForth π).CycleMin (π (mergeBitRes 0 false p))) :=
   getBit_zero_firstLayerPerm_apply_eq_getBit_zero_cycleMin
 
@@ -122,7 +122,7 @@ def LastLayerPerm (π : Perm (BV (m + 1))) := condFlipBit 0 (LastLayer π)
 @[simp]
 lemma condFlipBit_lastLayer : condFlipBit 0 (LastLayer π) = LastLayerPerm π := rfl
 
-lemma lastLayerPerm_apply : LastLayerPerm π q =
+lemma lastLayerPerm_apply {q : BV (m + 1)} : LastLayerPerm π q =
   bif getBit 0 ( (XBackXForth π).CycleMin (π (mergeBitRes 0 false (getRes 0 q))))
   then flipBit 0 q
   else q := by
@@ -251,7 +251,7 @@ lemma bitInvar_toPerm {n t : Fin (m + 1)} (htn : t < n.rev) {cb} :
     rw [rev_castSucc] at IH
     simp_rw [toPerm_succ]
     have H := fun {c} => (condFlipBit_bitInvar_of_ne (c := c) htn.ne)
-    refine' bitInvar_mulPerm_of_bitInvar (bitInvar_mulPerm_of_bitInvar H (IH _)) H
+    refine bitInvar_mulPerm_of_bitInvar (bitInvar_mulPerm_of_bitInvar H (IH ?_)) H
     exact htn.trans (castSucc_lt_succ _)
 
 end PartialControlBits
@@ -311,8 +311,8 @@ lemma toPerm_leftInverse : (toPerm (m := m)).LeftInverse fromPerm := by
   unfold Function.LeftInverse ; induction' m with m IH <;> intro π
   · exact lastLayerPerm_base
   · trans FirstLayerPerm π * MiddlePerm π * LastLayerPerm π
-    · refine' toPerm_succ.trans _
-      refine' congrArg₂ _ (congrArg₂ _ _ (congrArg _ _)) _
+    · refine toPerm_succ.trans ?_
+      refine congrArg₂ _ (congrArg₂ _ ?_ (congrArg _ ?_)) ?_
       · rw [fromPerm_succ_apply_zero, condFlipBit_firstLayer]
       · simp_rw [fromPerm_succ_apply_mergeBitRes, IH, (bitInvarMulEquiv 0).apply_symm_apply]
       · rw [fromPerm_succ_apply_last, condFlipBit_lastLayer]
