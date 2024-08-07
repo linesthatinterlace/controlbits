@@ -199,8 +199,6 @@ lemma cycleMin_one : CycleMin (1 : Equiv.Perm α) x = x := cycleMin_refl
 
 lemma le_cycleMin (h : ∀ y, π.SameCycle x y → z ≤ y) : z ≤ CycleMin π x := le_csInf ⟨x, ⟨0, rfl⟩⟩ h
 
---simp_rw [cycleMin_def, Finset.le_min'_iff, mem_cycleAt_iff] ; exact h
-
 section BddBelow
 
 variable (hsb : BddBelow (π.SameCycle x ·))

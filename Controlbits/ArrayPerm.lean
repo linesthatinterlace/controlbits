@@ -12,6 +12,37 @@ import Batteries.Data.Array.Lemmas
 
 set_option autoImplicit false
 
+namespace MulAction
+
+variable {G α : Type*} [Group G] [MulAction G α]
+
+theorem period_le_card_of_smul_pow_mem (a : G) {i : α}
+  (s : Finset α) (hia : ∀ k < s.card + 1, (a ^ k) • i ∈ s) : MulAction.period a i ≤ s.card := by
+  rcases Finset.exists_ne_map_eq_of_card_lt_of_maps_to
+    (f := (fun (k : Fin (s.card + 1)) => (a ^ k.1) • i))
+    ((Nat.lt_succ_self _).trans_eq (Finset.card_fin _).symm) (fun _ _ => hia _ (Fin.is_lt _))
+    with ⟨x, _, y, _, hxy, ha⟩
+  wlog hxy' : x < y with H
+  · exact H _ _ hia _ (Finset.mem_univ _) _ (Finset.mem_univ _)
+      hxy.symm ha.symm (hxy.symm.lt_of_le (le_of_not_lt hxy'))
+  · rw [← inv_smul_eq_iff, ← mul_smul, ← inv_pow_sub _ hxy'.le, inv_pow, inv_smul_eq_iff] at ha
+    rw [Fin.lt_iff_val_lt_val, ← Nat.sub_pos_iff_lt] at hxy'
+    exact (MulAction.period_le_of_fixed hxy' ha.symm).trans
+      ((Nat.sub_le _ _).trans y.is_le)
+
+theorem smul_injOn_range_period (a : G) {x : α} :
+    Set.InjOn (fun k => a ^ k • x) (Finset.range ((MulAction.period a x))) := by
+  intro i hi j hj ha
+  simp only [Finset.coe_range, Set.mem_Iio] at hi hj ha
+  by_contra hij'
+  wlog hij : i < j with H
+  · exact (H a ha.symm hj hi (Ne.symm hij') ((Ne.symm hij').lt_of_le (le_of_not_lt hij)))
+  · rw [← inv_smul_eq_iff, ← mul_smul, ← inv_pow_sub _ hij.le, inv_pow, inv_smul_eq_iff] at ha
+    exact (lt_irrefl (period a x)) ((MulAction.period_le_of_fixed (Nat.sub_pos_of_lt hij)
+      ha.symm).trans_lt ((Nat.sub_le _ _).trans_lt hj))
+
+end MulAction
+
 namespace List
 
 variable {α β : Type*}
@@ -263,6 +294,86 @@ theorem size_attach {as : Array α} : as.attach.size = as.size := size_attachWit
 @[simp]
 theorem getElem_attach {as : Array α} {i : ℕ} (h : i < as.attach.size) :
     haveI := size_attach (as := as); (as.attach)[i] = ⟨as[i], (getElem_mem _)⟩ := getElem_attachWith _
+
+theorem size_nil : (#[] : Array α).size = 0 := rfl
+
+theorem getElem_shrink_loop {as : Array α} {n x : ℕ} (h : x < (shrink.loop n as).size) :
+    (shrink.loop n as)[x] = as[x]'
+    (h.trans_le ((as.size_shrink_loop n).trans_le (Nat.sub_le _ _))) := by
+  induction' n with n IH generalizing as
+  · rfl
+  · exact (IH _).trans (as.getElem_pop x _)
+
+@[simp]
+theorem getElem_shrink {as : Array α} {n x : ℕ} (h : x < (as.shrink n).size) :
+    (as.shrink n)[x] = as[x]'(h.trans_le ((as.size_shrink n).trans_le (min_le_left _ _))) :=
+  getElem_shrink_loop _
+
+@[simp]
+theorem shrink_size_self {as : Array α} :
+    as.shrink as.size = as := by
+  simp_rw [Array.ext_iff, size_shrink, min_self, getElem_shrink, implies_true, and_self]
+
+@[simp]
+theorem size_unzip_fst {as : Array (α × β)} : (unzip as).1.size = as.size := by
+  refine Array.foldl_induction (fun k (abs : Array α × Array β) => abs.1.size = k) size_nil ?_
+  simp_rw [size_push, add_left_inj, imp_self, implies_true]
+
+@[simp]
+theorem size_unzip_snd {as : Array (α × β)} : (unzip as).2.size = as.size := by
+  refine Array.foldl_induction (fun k (abs : Array α × Array β) => abs.2.size = k) size_nil ?_
+  simp_rw [size_push, add_left_inj, imp_self, implies_true]
+
+@[simp]
+theorem getElem_unzip_fst {as : Array (α × β)} {x : ℕ} (h : x < (unzip as).1.size) :
+    (unzip as).1[x] = (as[x]'(h.trans_eq size_unzip_fst)).1 := by
+  refine (Array.foldl_induction (fun (k : ℕ) (abs : Array α × Array β) =>
+    ∀ (hk : k ≤ as.size) x (h : x < k) (hk' : abs.1.size = k), abs.1[x] = (as[x]'(h.trans_le hk)).1)
+    ?_ ?_) le_rfl x (h.trans_eq size_unzip_fst) size_unzip_fst
+  · simp_rw [size_nil, Nat.not_lt_zero, forall_false, implies_true]
+  · simp_rw [get_eq_getElem, size_push, add_left_inj, Nat.add_one_le_iff, is_le', is_lt,
+    forall_true_left, get_push, Nat.lt_succ_iff, le_iff_lt_or_eq, Prod.forall]
+    rintro _ _ _ h _ (hi | rfl) ha
+    · simp_rw [ha, hi, dite_true]
+      exact h _ hi ha
+    · simp_rw [ha, lt_irrefl, dite_false]
+
+@[simp]
+theorem getElem_unzip_snd {as : Array (α × β)} {x : ℕ} (h : x < (unzip as).2.size) :
+    (unzip as).2[x] = (as[x]'(h.trans_eq size_unzip_snd)).2 := by
+  refine (Array.foldl_induction (fun (k : ℕ) (abs : Array α × Array β) =>
+    ∀ (hk : k ≤ as.size) x (h : x < k) (hk' : abs.2.size = k), abs.2[x] = (as[x]'(h.trans_le hk)).2)
+    ?_ ?_) le_rfl x (h.trans_eq size_unzip_snd) size_unzip_snd
+  · simp_rw [size_nil, Nat.not_lt_zero, forall_false, implies_true]
+  · simp_rw [get_eq_getElem, size_push, add_left_inj, Nat.add_one_le_iff, is_le', is_lt,
+    forall_true_left, get_push, Nat.lt_succ_iff, le_iff_lt_or_eq, Prod.forall]
+    rintro _ _ _ h _ (hi | rfl) ha
+    · simp_rw [ha, hi, dite_true]
+      exact h _ hi ha
+    · simp_rw [ha, lt_irrefl, dite_false]
+
+theorem zip_unzip {as : Array (α × β)} : zip as.unzip.fst as.unzip.snd = as := by
+  simp_rw [Array.ext_iff, size_zip, size_unzip_fst, size_unzip_snd, min_self,
+  getElem_zip, getElem_unzip_fst, getElem_unzip_snd, implies_true, and_self]
+
+theorem unzip_zip {as : Array α} {bs : Array β} :
+  (zip as bs).unzip = (as.shrink (min as.size bs.size), bs.shrink (min as.size bs.size)) := by
+  simp_rw [Prod.ext_iff, Array.ext_iff, size_unzip_fst, size_unzip_snd, size_zip, size_shrink,
+  min_comm _ bs.size, min_left_comm _ bs.size, min_self,
+  min_comm _ as.size, min_left_comm _ as.size, min_self,
+  getElem_unzip_fst, getElem_unzip_snd, getElem_zip, getElem_shrink, implies_true, and_self]
+
+theorem unzip_zip_of_le {as : Array α} {bs : Array β} (h : as.size ≤ bs.size) :
+  (zip as bs).unzip = (as, bs.shrink as.size) := by
+  simp_rw [unzip_zip, min_eq_left h, shrink_size_self]
+
+theorem unzip_zip_of_ge {as : Array α} {bs : Array β} (h : bs.size ≤ as.size) :
+  (zip as bs).unzip = (as.shrink bs.size, bs) := by
+  simp_rw [unzip_zip, min_eq_right h, shrink_size_self]
+
+theorem unzip_zip_of_eq {as : Array α} {bs : Array β} (h : as.size = bs.size) :
+  (zip as bs).unzip = (as, bs) := by
+  simp_rw [unzip_zip_of_le h.le, h, shrink_size_self]
 
 @[simp]
 theorem size_swapN {as : Array α} {i j : Nat} (hi : i < as.size) (hj : j < as.size):
@@ -525,6 +636,9 @@ theorem getElem_injective (a : ArrayPerm n) {i : ℕ} (hi : i < n) {j : ℕ} (hj
 theorem getElem_inj (a : ArrayPerm n) {i : ℕ} (hi : i < n) {j : ℕ} (hj : j < n) :
     a[i] = a[j] ↔ i = j := ⟨a.getElem_injective hi hj, fun h => h ▸ rfl⟩
 
+theorem getElem_ne_iff (a : ArrayPerm n) {i : ℕ} (hi : i < n) {j : ℕ} (hj : j < n) :
+    a[i] ≠ a[j] ↔ i ≠ j := (a.getElem_inj hi hj).not
+
 theorem getElem_surjective (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
     ∃ (j : ℕ) (hj : j < n), a[j] = i :=
   ⟨a⁻¹[i], getElem_lt, a.getElem_getElem_inv _⟩
@@ -536,6 +650,12 @@ theorem eq_getElem_inv_iff (a: ArrayPerm n) {i : ℕ} (hi : i < n) {j : ℕ} (hj
 theorem getElem_inv_eq_iff (a: ArrayPerm n) {i : ℕ} (hi : i < n) {j : ℕ} (hj : j < n) :
     a⁻¹[i] = j ↔ i = a[j] := by
   rw [← a.getElem_inj (getElem_lt) hj, getElem_getElem_inv]
+
+theorem ne_getElem_inv_iff (a: ArrayPerm n) {i : ℕ} (hi : i < n) {j : ℕ} (hj : j < n) :
+    i ≠ a⁻¹[j] ↔ a[i] ≠ j := (a.eq_getElem_inv_iff _ _).ne
+
+theorem getElem_inv_ne_iff (a: ArrayPerm n) {i : ℕ} (hi : i < n) {j : ℕ} (hj : j < n) :
+    a⁻¹[i] ≠ j ↔ i ≠ a[j] := (a.getElem_inv_eq_iff _ _).ne
 
 theorem toArray_eq_iff_forall_getElem_eq (a b : ArrayPerm n) :
     a.toArray = b.toArray ↔ ∀ i (hi : i < n), a[i] = b[i] := by
@@ -707,6 +827,7 @@ theorem smul_nat_eq_dite_smul_fin (a : ArrayPerm n) (i : ℕ) :
 @[simp]
 theorem smul_mk (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
     ↑(a • (⟨i, hi⟩ : Fin n)) = a • i := by rw [coe_smul]
+
 
 /--
 `ofPerm` maps a member of `Perm ℕ` which maps the subtype `< n` to itself to the corresponding
@@ -908,16 +1029,15 @@ theorem period_eq_one_of_one (a : ArrayPerm 1) {i : ℕ} : MulAction.period a i 
 theorem period_eq_one_of_ge (a : ArrayPerm n) {i : ℕ} (hi : n ≤ i) : MulAction.period a i = 1 := by
   simp_rw [period_eq_one_iff, hi.not_lt, forall_false]
 
+theorem period_le_card_of_getElem_pow_mem (a : ArrayPerm n) {i : ℕ} (hi : i < n)
+  (s : Finset ℕ) (hia : ∀ k < s.card + 1, (a ^ k)[i] ∈ s) : MulAction.period a i ≤ s.card := by
+  simp_rw [← smul_of_lt hi] at hia
+  exact MulAction.period_le_card_of_smul_pow_mem _ _ hia
+
 theorem period_le_of_lt (a : ArrayPerm n) {i : ℕ} (hi : i < n) : MulAction.period a i ≤ n := by
-  rcases (Fintype.exists_ne_map_eq_of_card_lt (fun k => ⟨(a ^ k.1)[i], getElem_lt⟩ :
-      Fin (n + 1) → Fin n) (by simp_rw [Fintype.card_fin, Nat.lt_succ_self])) with ⟨x, y, hxy, ha⟩
-  simp_rw [Fin.ext_iff] at ha
-  wlog hxy' : x < y with H
-  · exact H _ _ _ _ hxy.symm ha.symm (hxy.symm.lt_of_le (le_of_not_lt hxy'))
-  · simp_rw [a.getElem_pow_eq_getElem_pow_of_le hxy'.le] at ha
-    rw [Fin.lt_iff_val_lt_val, ← Nat.sub_pos_iff_lt] at hxy'
-    exact (MulAction.period_le_of_fixed hxy' (by simp_rw [smul_of_lt hi, ha])).trans
-      ((Nat.sub_le _ _).trans y.is_le)
+  refine (MulAction.period_le_card_of_smul_pow_mem a (Finset.range n) ?_).trans_eq
+    (Finset.card_range _)
+  simp_rw [Finset.card_range, Finset.mem_range, smul_lt_iff_lt, hi, implies_true]
 
 theorem period_le_of_ne_zero [NeZero n] (a : ArrayPerm n) {i : ℕ} : MulAction.period a i ≤ n := by
   rcases lt_or_le i n with hi | hi
@@ -940,7 +1060,6 @@ theorem exists_pos_le_pow_smul_eq_of_ne_zero [NeZero n] (a : ArrayPerm n) {i : �
 theorem exists_pos_le_pow_getElem_eq (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
     ∃ k, 0 < k ∧ k ≤ n ∧ (a ^ k)[i] = i := by
   simp_rw [← smul_of_lt hi, a.exists_pos_le_pow_smul_eq_of_lt hi]
-
 
 variable {α : Type*}
 
@@ -967,6 +1086,64 @@ theorem onIndices_range (a : ArrayPerm n) :
   refine Array.ext _ _ (by rw [size_onIndices, a.size_toArray]) (fun _ _ h => ?_)
   simp_rw [getElem_onIndices, Array.getElem_range, smul_of_lt (h.trans_eq a.size_toArray),
     getElem_toArray]
+
+def cycleOf (a : ArrayPerm n) (x : ℕ) : Finset ℕ :=
+  if h : x < n then (Finset.range n).image (fun k => (a ^ k)[x]) else {x}
+
+theorem cycleOf_eq_map_smul_range_period (a : ArrayPerm n) (x : ℕ) :
+    a.cycleOf x = (Finset.range (MulAction.period a x)).image (fun k => (a ^ k) • x) := by
+  unfold cycleOf
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [hx, dite_true, Finset.ext_iff, Finset.mem_image, Finset.mem_range, ← smul_of_lt hx]
+    refine fun _ => ⟨fun ⟨k, h⟩ => ⟨k % MulAction.period a x, (Nat.mod_lt _ a.period_pos),
+      by simp_rw [MulAction.pow_mod_period_smul, h]⟩, fun ⟨_, hlt, h⟩ =>
+      ⟨_, (hlt.trans_le <| a.period_le_of_lt hx), h⟩⟩
+  · simp_rw [hx.not_lt, dite_false, smul_of_ge hx, Finset.ext_iff,
+    Finset.mem_singleton, Finset.mem_image, Finset.mem_range, exists_and_right]
+    exact fun _ => ⟨fun h => ⟨⟨0, a.period_pos⟩, h.symm⟩, fun ⟨_, h⟩ => h.symm⟩
+
+theorem card_cycleOf (a : ArrayPerm n) (x : ℕ) : (a.cycleOf x).card = MulAction.period a x := by
+  refine Eq.trans ?_ (Finset.card_range (MulAction.period a x))
+  rw [cycleOf_eq_map_smul_range_period, Finset.card_image_iff]
+  exact MulAction.smul_injOn_range_period a
+
+theorem mem_cycleOf_iff_exists_pow_lt_period (a : ArrayPerm n) {x y : ℕ} :
+    y ∈ a.cycleOf x ↔ ∃ i < MulAction.period a x, (a ^ i) • x = y := by
+  rw [cycleOf_eq_map_smul_range_period]
+  simp_rw [Finset.mem_image, Finset.mem_range]
+
+theorem mem_cycleOf_iff_exists_pow (a : ArrayPerm n) {x y : ℕ} :
+    y ∈ a.cycleOf x ↔ ∃ i : ℕ, (a ^ i) • x = y := by
+  rw [cycleOf_eq_map_smul_range_period]
+  simp_rw [Finset.mem_image, Finset.mem_range]
+  refine ⟨fun ⟨_, _, h⟩ => ⟨_, h⟩,
+    fun ⟨k, h⟩ => ⟨k % MulAction.period a x, Nat.mod_lt _ a.period_pos, ?_⟩⟩
+  simp_rw [MulAction.pow_mod_period_smul, h]
+
+theorem mem_cycleOf_iff_exists_zpow (a : ArrayPerm n) {x y : ℕ} :
+    y ∈ a.cycleOf x ↔ ∃ i : ℤ, (a ^ i) • x = y := by
+  rw [mem_cycleOf_iff_exists_pow]
+  refine ⟨fun ⟨_, h⟩ => ⟨_, (zpow_natCast a _).symm ▸ h⟩,
+    fun ⟨k, h⟩ => ⟨(k % MulAction.period a x).toNat, ?_⟩⟩
+  simp_rw [← zpow_natCast, Int.toNat_of_nonneg
+    (Int.emod_nonneg _ ((Nat.cast_ne_zero (R := ℤ)).mpr (a.period_pos (i := x)).ne')),
+    MulAction.zpow_mod_period_smul, h]
+
+theorem self_mem_cycleOf (a : ArrayPerm n) (x : ℕ) : x ∈ a.cycleOf x := by
+  simp_rw [mem_cycleOf_iff_exists_pow]
+  exact ⟨0, by simp only [pow_zero, one_smul]⟩
+
+theorem smul_mem_cycleOf (a : ArrayPerm n) (x : ℕ) : (a • x) ∈ a.cycleOf x := by
+  simp_rw [mem_cycleOf_iff_exists_pow]
+  exact ⟨1, by simp only [pow_one]⟩
+
+theorem smul_pow_mem_cycleOf (a : ArrayPerm n) (x k : ℕ) : (a ^ k) • x ∈ a.cycleOf x := by
+  simp_rw [mem_cycleOf_iff_exists_pow]
+  exact ⟨k, rfl⟩
+
+theorem smul_zpow_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (k : ℤ) : (a ^ k) • x ∈ a.cycleOf x := by
+  simp_rw [mem_cycleOf_iff_exists_zpow]
+  exact ⟨k, rfl⟩
 
 def CycleMinAux (a : ArrayPerm n) : ℕ → ArrayPerm n × {a : Array ℕ // a.size = n}
   | 0 => ⟨1, range n, size_range⟩
@@ -1030,13 +1207,29 @@ lemma cycleMin_le_pow_lt_smul (a : ArrayPerm n) (x : ℕ) (i : ℕ) (h : x < (a.
 lemma cycleMin_le_pow_smul_of_period_le_two_pow {i : ℕ}
     (a : ArrayPerm n) (x : ℕ) (hn : MulAction.period a x ≤ 2^i) (h : x < (a.CycleMin i).size) :
     ∀ k, (a.CycleMin i)[x] ≤ (a ^ k) • x := fun k => by
-  simp_rw [← MulAction.pow_mod_period_smul k]
-  exact a.cycleMin_le_pow_lt_smul x i h _ ((Nat.mod_lt _ a.period_pos).trans_le hn)
+  have H := a.smul_pow_mem_cycleOf x k
+  simp_rw [mem_cycleOf_iff_exists_pow_lt_period] at H
+  rcases H with ⟨_, hk₁, hk₂⟩
+  exact (a.cycleMin_le_pow_lt_smul x i _ _ (hk₁.trans_le hn)).trans_eq hk₂
+
+lemma cycleMin_le_zpow_smul_of_period_le_two_pow {i : ℕ}
+    (a : ArrayPerm n) (x : ℕ) (hn : MulAction.period a x ≤ 2^i) (h : x < (a.CycleMin i).size) :
+    ∀ k : ℤ, (a.CycleMin i)[x] ≤ (a ^ k) • x := fun k => by
+  have H := a.smul_zpow_mem_cycleOf x k
+  simp_rw [mem_cycleOf_iff_exists_pow_lt_period] at H
+  rcases H with ⟨_, hk₁, hk₂⟩
+  exact (a.cycleMin_le_pow_lt_smul x i _ _ (hk₁.trans_le hn)).trans_eq hk₂
 
 lemma cycleMin_le_pow_smul_of_le_two_pow {i : ℕ} (hn : n ≤ 2^i)
     (a : ArrayPerm n) (x : ℕ) (h : x < (a.CycleMin i).size) :
     ∀ k, (a.CycleMin i)[x] ≤ (a ^ k) • x :=
   a.cycleMin_le_pow_smul_of_period_le_two_pow x
+    ((a.period_le_of_lt (h.trans_eq <| a.size_cycleMin i)).trans hn) _
+
+lemma cycleMin_le_zpow_smul_of_le_two_pow {i : ℕ} (hn : n ≤ 2^i)
+    (a : ArrayPerm n) (x : ℕ) (h : x < (a.CycleMin i).size) :
+    ∀ k : ℤ, (a.CycleMin i)[x] ≤ (a ^ k) • x :=
+  a.cycleMin_le_zpow_smul_of_period_le_two_pow x
     ((a.period_le_of_lt (h.trans_eq <| a.size_cycleMin i)).trans hn) _
 
 lemma cycleMin_le_self (a : ArrayPerm n) (x : ℕ) (i : ℕ) (h : x < (a.CycleMin i).size) :
