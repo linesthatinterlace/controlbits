@@ -1924,8 +1924,28 @@ theorem bitMatchTo_antitone {x : ℕ} : Antitone (bitMatchTo x) := by
 theorem bitMatchTo_le_of_ge {x i j : ℕ} (hij : i ≤ j) {q : ℕ} (hi : q ∈ bitMatchTo x j) :
     q ∈ bitMatchTo x i := bitMatchTo_antitone hij hi
 
-theorem bitMatchTo_size : bitMatchTo x x.size = Finset.range (2 ^ x.size) := by
-  simp_rw [Finset.ext_iff]
+theorem bitMatchTo_zero : bitMatchTo x 0 = Finset.range (2 ^ x.size) := by
+  simp_rw [Finset.ext_iff, mem_bitMatchTo_iff, Finset.mem_range, and_iff_left_iff_imp,
+  Nat.not_lt_zero, false_implies, implies_true]
+
+theorem mem_bitMatchTo_self : x ∈ bitMatchTo x i := by
+  simp_rw [mem_bitMatchTo_iff, Nat.lt_size_self, implies_true, and_true]
+
+theorem bitMatchTo_size : bitMatchTo x x.size = {x} := by
+  simp_rw [Finset.ext_iff, Finset.mem_singleton]
+  intro q
+  refine ⟨?_, ?_⟩
+  · rw [testBit_ext_iff, mem_bitMatchTo_iff]
+    rintro ⟨hq, hqx⟩ i
+    rcases lt_or_le i x.size with hix | hix
+    · exact hqx _ hix
+    · rw [← Nat.size_le] at hq
+      have hiq := hq.trans hix
+      rw [Nat.size_le] at hix hiq
+      rw [Nat.testBit_eq_false_of_lt hix, Nat.testBit_eq_false_of_lt hiq]
+  · rintro rfl
+    exact mem_bitMatchTo_self
+
 
 lemma card_bitMatchInRange_le (x i : ℕ):
     (bitMatchTo i x).card ≤ 2^(x.size - i) := by
