@@ -1163,13 +1163,45 @@ theorem smul_mem_cycleOf (a : ArrayPerm n) (x : ℕ) : (a • x) ∈ a.cycleOf x
   simp_rw [mem_cycleOf_iff_exists_pow]
   exact ⟨1, by simp only [pow_one]⟩
 
+theorem smul_inv_mem_cycleOf (a : ArrayPerm n) (x : ℕ) : (a⁻¹ • x) ∈ a.cycleOf x := by
+  simp_rw [mem_cycleOf_iff_exists_zpow]
+  exact ⟨-1, by simp only [zpow_neg, zpow_one]⟩
+
+theorem getElem_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (hx : x < n) : a[x] ∈ a.cycleOf x := by
+  convert a.smul_mem_cycleOf x
+  rw [smul_of_lt hx]
+
+theorem getElem_inv_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (hx : x < n) : a⁻¹[x] ∈ a.cycleOf x := by
+  convert a.smul_inv_mem_cycleOf x
+  rw [smul_of_lt hx]
+
 theorem smul_pow_mem_cycleOf (a : ArrayPerm n) (x k : ℕ) : (a ^ k) • x ∈ a.cycleOf x := by
   simp_rw [mem_cycleOf_iff_exists_pow]
   exact ⟨k, rfl⟩
 
+theorem getElem_pow_mem_cycleOf (a : ArrayPerm n) (x k : ℕ) (hx : x < n) :
+    (a^k)[x] ∈ a.cycleOf x := by
+  convert a.smul_pow_mem_cycleOf x k
+  rw [smul_of_lt hx]
+
 theorem smul_zpow_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (k : ℤ) : (a ^ k) • x ∈ a.cycleOf x := by
   simp_rw [mem_cycleOf_iff_exists_zpow]
   exact ⟨k, rfl⟩
+
+theorem getElem_zpow_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (k : ℤ) (hx : x < n) :
+    (a^k)[x] ∈ a.cycleOf x := by
+  convert a.smul_zpow_mem_cycleOf x k
+  rw [smul_of_lt hx]
+
+theorem getElem_inv_pow_mem_cycleOf (a : ArrayPerm n) (x k : ℕ) (hx : x < n) :
+    ((a⁻¹)^k)[x] ∈ a.cycleOf x := by
+  convert a.getElem_zpow_mem_cycleOf x (-(k : ℤ)) hx
+  simp_rw [inv_pow, zpow_neg, zpow_natCast]
+
+theorem getElem_inv_zpow_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (k : ℤ) (hx : x < n) :
+    ((a⁻¹)^k)[x] ∈ a.cycleOf x := by
+  simp only [inv_zpow']
+  exact a.getElem_zpow_mem_cycleOf x (-k) hx
 
 def CycleMinAux (a : ArrayPerm n) : ℕ → ArrayPerm n × {a : Array ℕ // a.size = n}
   | 0 => ⟨1, range n, size_range⟩
