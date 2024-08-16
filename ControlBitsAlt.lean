@@ -54,6 +54,100 @@ lemma blahj {π : Perm ℕ} (hπ : π ∈ Subgroup.bitInvarLT i) (hπ' : π ∈ 
 /-
 
 -/
+def FirstLayer'' (a : ArrayPerm n) (m i : ℕ) (hin : 2 ^ (i + 1) ∣ n) :
+    Array Bool := (Array.range (2^m)).map
+  fun p => ((a.flipBitCommutator hin).CycleMin (m - i) (p.mergeBit i false)).testBit i
+
+def FirstLayer' (a : ArrayPerm n) (m i : ℕ) (hin : 2 ^ (i + 1) ∣ n) :
+    Array Bool := (Array.range (2^m)).map
+  fun p => (((a.flipBitCommutator hin).CycleMinAux (m - i)).2.1.getD (p.mergeBit i false) 0).testBit i
+
+def Array.popOff' (a : Array α) (n : ℕ) [NeZero n] : Array α :=
+  (·.2.2) <| a.foldl (init := (true, (0 : Fin n), Array.empty)) fun (b, n, r) a =>
+    ((n == -1).xor b, n + 1, if b then r.push a else r)
+
+def FirstLayer (a : ArrayPerm n) (m i : ℕ) (hin : 2 ^ (i + 1) ∣ n) :
+    Array Bool :=
+      let A := ((a.flipBitCommutator hin).CycleMin (m - i)).map (testBit · i);
+      (Array.range (2^m)).map fun p => A.getD (p.mergeBit i false) false
+
+def FirstLayer4 (a : ArrayPerm n) (m i : ℕ) (hin : 2 ^ (i + 1) ∣ n) :
+    Array Bool := (((a.flipBitCommutator hin).CycleMinAux (m - i)).2.1.map (testBit · i)).popOff' (2^i)
+
+def LastLayer (a : ArrayPerm n) (m i : ℕ) (hin : 2 ^ (i + 1) ∣ n) :
+    Array Bool :=
+    let B := (a⁻¹.condFlipBit hin (FirstLayer a m i hin))⁻¹.fwdArray.map (testBit · i);
+    (Array.range (2^m)).map fun p => (B.getD (p.mergeBit i false) false )
+
+
+def MiddlePerm (a : ArrayPerm n) (m i : ℕ) (hin : 2 ^ (i + 1) ∣ n)  : ArrayPerm n :=
+  (a⁻¹.condFlipBit hin (FirstLayer a m i hin))⁻¹.condFlipBit hin (LastLayer a m i hin)
+
+
+def Bits (a : ArrayPerm n) (m : ℕ) (hin : 2 ^ (m + 1) ∣ n) (i : Fin (m + 1)) : ArrayPerm n :=
+i.induction (MiddlePerm a m 0 ((pow_dvd_pow _ (by simp)).trans hin)) fun i a =>
+MiddlePerm a m i.succ ((pow_dvd_pow _ (by simp only [succ_eq_add_one, Fin.val_succ,
+  add_le_add_iff_right, succ_le_iff, Fin.is_lt])).trans hin)
+
+example : ∀ (i : ℕ) (hi : i < #[0, 1, 2, 3, 4, 5, 6].size), #[0, 1, 2, 3, 4, 5, 6][i] < 7 := by decide
+
+#eval ArrayPerm.ofArray #[7, 4, 3, 1, 0, 2, 6, 5]
+
+#eval
+  let a := ArrayPerm.ofArray #[0, 3, 2, 1, 5, 4]
+  let f0 := FirstLayer a 2 0 (by decide);
+  let l0 := LastLayer a 2 0 (by decide);
+  let m0 := MiddlePerm a 2 0 (by decide);
+  (a, f0, l0, m0)
+
+#eval
+  let a := ArrayPerm.ofArray #[1, 3, 2, 5, 4, 0, 6, 7]
+  let f0 := FirstLayer a 2 0 (by decide);
+  let l0 := LastLayer a 2 0 (by decide);
+  let m0 := MiddlePerm a 2 0 (by decide);
+  let f1 := FirstLayer m0 2 1 (by decide);
+  let l1 := LastLayer m0 2 1 (by decide);
+  let m1 := MiddlePerm m0 2 1 (by decide)
+  let f2 := FirstLayer m1 2 2 (by decide);
+  let l2 := LastLayer m1 2 2 (by decide);
+  let m2 := MiddlePerm m1 2 2 (by decide)
+  (a, f0, l0, m0, f1, l1, m1, f2, l2, m2)
+/-if i = Fin.last _ then
+MiddlePerm a m m ((pow_dvd_pow _ le_rfl).trans hin)
+ else
+MiddlePerm (Bits a m hin (i + 1)) m i ((pow_dvd_pow _ (by simp only [add_le_add_iff_right, Fin.is_le])).trans hin)
+-/
+--#eval ((1 : ArrayPerm (2^15)).CycleMinAux 6)
+--#eval Bits (ArrayPerm.mk #[1, 2, 7, 5, 3, 4, 0, 6] #[6, 0, 1, 4, 5, 3, 7, 2]) 2 (by decide) 0
+set_option profiler true
+--#eval (Array.range (2^12)).map (fun p => (Array.range (2^12)).getD (mergeBit 3 p true) 0)
+--#eval FirstLayer' (1 : ArrayPerm (2^9)) 10 8 (by decide)
+#eval FirstLayer (1 : ArrayPerm (2^9)) 11 8 (by decide)
+--#eval FirstLayer'' (1 : ArrayPerm (2^9)) 11 8 (by decide)
+#eval FirstLayer4 (1 : ArrayPerm (2^15)) 11 8 (by decide)
+#eval LastLayer (1 : ArrayPerm (2^12)) 11 0 (by decide)
+#eval Bits (1 : ArrayPerm (2^12)) 11 (by decide) 11
+-- 8 - 278
+-- 7 - 33.5
+-- 6 5.26
+-- 4 0.25
+
+#check MiddlePerm (ArrayPerm.mk #[1, 2, 3, 0] #[3, 0, 1, 2]) 1 0 (by decide)
+
+#eval MiddlePerm (ArrayPerm.mk #[1, 2, 7, 5, 3, 4, 0, 6] #[6, 0, 1, 4, 5, 3, 7, 2])
+  2 0 (by decide)
+
+#eval MiddlePerm (MiddlePerm (MiddlePerm (ArrayPerm.mk #[1, 2, 7, 5, 3, 4, 0, 6] #[6, 0, 1, 4, 5, 3, 7, 2])
+  2 0 (by decide)) 2 1 (by decide)) 2 2 (_)
+
+
+    /--/
+
+def LastLayer (a : ArrayPerm n) (m i : ℕ) (hin : 2 ^ (i + 1) ∣ n) :
+    Array Bool := (Array.range (2^m)).map
+  fun p => ((a.flipBitCommutator hin).CycleMin (m - i) (p.mergeBit i false)).testBit i
+
+
 def FirstLayer (π : Perm ℕ) (m i : ℕ) : Array Bool := (Array.range (2^m)).map
   fun p => (FastCycleMin (m - i) (XBackXForth i π) (p.mergeBit i false)).testBit i
 
