@@ -78,7 +78,7 @@ theorem period_le_card_of_smul_pow_mem (a : G) {i : α}
       ((Nat.sub_le _ _).trans y.is_le)
 
 theorem smul_injOn_range_period (a : G) {x : α} :
-    Set.InjOn (fun k => a ^ k • x) (Finset.range ((MulAction.period a x))) := by
+    Set.InjOn (fun k => a ^ k • x) (Finset.range (MulAction.period a x)) := by
   intro i hi j hj ha
   simp only [Finset.coe_range, Set.mem_Iio] at hi hj ha
   by_contra hij'
@@ -170,6 +170,7 @@ end Equiv
 
 namespace Fin
 
+@[simp]
 theorem extendDomain_equivSubtype_lt_iff_lt {n : ℕ} (π : Equiv.Perm (Fin n)) (i : ℕ) :
     (π.extendDomain equivSubtype) i < n ↔ i < n :=
   Equiv.Perm.subtype_extendDomain_equivSubtype_iff_subtype π equivSubtype
@@ -708,9 +709,9 @@ theorem lt_of_mem_fwdArray {a : ArrayPerm n} {x : ℕ} : x ∈ a.fwdArray → x 
 def ofArray (a : Array ℕ) (hx : ∀ {x} (hx : x < a.size), a[x] < a.size := by decide)
   (ha : a.data.Nodup := by decide) : ArrayPerm (a.size) where
   fwdArray := a
-  bwdArray := (Array.range a.size).map a.data.indexOf
+  bwdArray := a.mapIdx (fun i _ => a.data.indexOf i.1)
   size_fwdArray' := rfl
-  size_bwdArray' := by simp_rw [size_map, size_range]
+  size_bwdArray' := by simp_rw [size_mapIdx]
   getElem_fwdArray_lt' := hx
   getElem_bwdArray_lt' := fun {i} hi => by
     have H : Surjective (fun (i : Fin (a.size)) => Fin.mk a[i.1] (hx i.2)) :=
@@ -718,12 +719,12 @@ def ofArray (a : Array ℕ) (hx : ∀ {x} (hx : x < a.size), a[x] < a.size := by
       simp_rw [Fin.mk.injEq, Fin.ext_iff, getElem_eq_data_getElem, ha.getElem_inj_iff, imp_self]
     simp_rw [Surjective, Fin.ext_iff, Fin.forall_iff] at H
     rcases H _ hi with ⟨_, rfl⟩
-    simp_rw [Array.getElem_map, Array.getElem_range, indexOf_lt_length]
+    simp_rw [Array.getElem_mapIdx, indexOf_lt_length]
     exact List.getElem_mem _ _ _
   left_inv' := fun _ => by
-    simp_rw [Array.getElem_map, Array.getElem_range,
-    Array.getElem_eq_data_getElem, List.indexOf_getElem ha]
+    simp_rw [Array.getElem_mapIdx, Array.getElem_eq_data_getElem, List.indexOf_getElem ha]
 
+@[simp]
 theorem getElem_ofArray {a : Array ℕ} {hx : ∀ {x} (hx : x < a.size), a[x] < a.size}
     {ha : a.data.Nodup} {i : ℕ} (hi : i < a.size) : (ofArray a hx ha)[i] = a[i] := rfl
 
@@ -778,9 +779,10 @@ theorem getElem_getElem_inv (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
 theorem getElem_bwdArray {a : ArrayPerm n} {i : ℕ} {hi : i < a.bwdArray.size} :
   a.bwdArray[i] = a⁻¹[i]'(hi.trans_eq a.size_bwdArray) := rfl
 
+@[simp]
 theorem getElem_inv_ofArray {a : Array ℕ} {hx : ∀ {x} (hx : x < a.size), a[x] < a.size}
     {ha : a.data.Nodup} {i : ℕ} (hi : i < a.size) : (ofArray a hx ha)⁻¹[i] = a.data.indexOf i :=
-  (Array.getElem_map _ _ _ _).trans (by rw [Array.getElem_range])
+  Array.getElem_mapIdx _ _ _ _
 
 @[simp]
 theorem getElem_inv_mk (a a' : Array ℕ) {sta sia getl geil geiageta} {i : ℕ} (hi : i < n) :
@@ -902,21 +904,24 @@ instance : SMul (ArrayPerm n) (Fin n) where
   smul a i := ⟨a[i.1], getElem_lt⟩
 
 @[simp]
-theorem coe_smul (a : ArrayPerm n) {i : Fin n} : (a • i : Fin n) = a[i.1] := rfl
+theorem val_smul (a : ArrayPerm n) {i : Fin n} : (a • i : Fin n) = a[i.1] := rfl
 
 @[simp]
 theorem smul_mk (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
-    (a • (⟨i, hi⟩ : Fin n)) = ⟨a[i], getElem_lt⟩ := Fin.ext a.coe_smul
+    (a • (⟨i, hi⟩ : Fin n)) = ⟨a[i], getElem_lt⟩ := Fin.ext a.val_smul
+
+theorem getElem_eq_val_smul_mk (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
+    a[i] = ↑(a • Fin.mk i hi) := by rw [smul_mk]
 
 instance : FaithfulSMul (ArrayPerm n) (Fin n) where
   eq_of_smul_eq_smul := by
-    simp_rw [ArrayPerm.ext_iff, Fin.ext_iff, Fin.forall_iff, coe_smul, imp_self, implies_true]
+    simp_rw [ArrayPerm.ext_iff, Fin.ext_iff, Fin.forall_iff, val_smul, imp_self, implies_true]
 
 theorem eq_iff_smul_eq_smul {a b : ArrayPerm n} : a = b ↔ ∀ i : Fin n, a • i = b • i :=
   ⟨fun h _ => h ▸ rfl, eq_of_smul_eq_smul⟩
 
 theorem smul_right_inj (a : ArrayPerm n) {i j : Fin n} : a • i = a • j ↔ i = j := by
-  simp_rw [Fin.ext_iff, coe_smul, getElem_inj]
+  simp_rw [Fin.ext_iff, val_smul, getElem_inj]
 
 instance : One (ArrayPerm n) where
   one := {
@@ -969,8 +974,8 @@ theorem getElem_zpow_add (a : ArrayPerm n) {i : ℕ} {x y : ℤ} (hi : i < n) :
     (a^x)[(a^y)[i]] = (a^(x + y))[i] := by simp_rw [zpow_add, getElem_mul]
 
 instance : MulAction (ArrayPerm n) (Fin n) where
-  one_smul _ := Fin.ext <| by simp_rw [coe_smul, getElem_one]
-  mul_smul _ _ _ := Fin.ext <| by simp_rw [coe_smul, getElem_mul]
+  one_smul _ := Fin.ext <| by simp_rw [val_smul, getElem_one]
+  mul_smul _ _ _ := Fin.ext <| by simp_rw [val_smul, getElem_mul]
 
 open Equiv.Perm in
 /--
@@ -985,11 +990,11 @@ def finPerm (n : ℕ) : ArrayPerm n ≃* Perm (Fin n) where
   fun _ => (Array.getElem_ofFn _ _ _).trans_lt (is_lt _),
   fun _ => by simp_rw [Array.getElem_ofFn, comp_apply, Fin.eta, symm_apply_apply]⟩
   left_inv a := ArrayPerm.ext <| fun _ _ => by simp_rw [coe_fn_mk, coe_fn_symm_mk, getElem_mk,
-    Array.getElem_ofFn, comp_apply, coe_smul]
-  right_inv π := Equiv.ext <| fun _ => Fin.ext <| by simp_rw [coe_fn_mk, coe_smul, getElem_mk,
+    Array.getElem_ofFn, comp_apply, val_smul]
+  right_inv π := Equiv.ext <| fun _ => Fin.ext <| by simp_rw [coe_fn_mk, val_smul, getElem_mk,
     Array.getElem_ofFn, Fin.eta, comp_apply]
   map_mul' a b := Equiv.ext <| fun _ => Fin.ext <| by simp_rw [mul_inv_rev, Perm.coe_mul,
-    comp_apply, coe_fn_mk, coe_smul, getElem_mul]
+    comp_apply, coe_fn_mk, val_smul, getElem_mul]
 
 @[simp]
 theorem finPerm_symm_apply_getElem (π : Perm (Fin n)) {i : ℕ} {hi : i < n} :
@@ -1006,6 +1011,9 @@ theorem finPerm_symm_apply_getElem_inv (π : Perm (Fin n)) {i : ℕ} {hi : i < n
 instance : Fintype (ArrayPerm n) := Fintype.ofEquiv (Perm (Fin n)) (finPerm n).symm.toEquiv
 
 instance : Inhabited (ArrayPerm n) := Equiv.inhabited (finPerm n).toEquiv
+
+@[simp]
+theorem default_eq : (default : ArrayPerm n) = 1 := map_one ((finPerm n).symm)
 
 instance : Unique (ArrayPerm 0) := Equiv.unique (finPerm 0).toEquiv
 
@@ -1029,12 +1037,7 @@ theorem smul_of_lt {a : ArrayPerm n} {i : ℕ} (h : i < n) : a • i = a[i] := d
 
 theorem smul_of_ge {a : ArrayPerm n} {i : ℕ} (h : n ≤ i) : a • i = i := dif_neg (not_lt_of_le h)
 
-instance : MulAction (ArrayPerm n) ℕ where
-  one_smul k := (lt_or_le k n).by_cases
-    (fun hk => smul_of_lt hk ▸ getElem_one _) (fun hk => smul_of_ge hk)
-  mul_smul _ _ k := (lt_or_le k n).by_cases
-    (fun hk => by simp_rw [smul_of_lt hk, getElem_mul, smul_of_lt getElem_lt])
-    (fun hk => by simp_rw [smul_of_ge hk])
+theorem getElem_eq_smul {a : ArrayPerm n} {i : ℕ} (h : i < n) : a[i] = a • i := (dif_pos _).symm
 
 theorem smul_val (a : ArrayPerm n) {i : Fin n} :
     a • i.1 = ((a • i) : Fin n) := smul_of_lt _
@@ -1057,6 +1060,13 @@ theorem self_eq_smul_iff {a : ArrayPerm n} {i : ℕ} :
     i = a • i ↔ ∀ (hi : i < n), i = a[i] := by
   simp_rw [eq_comm (a := i), smul_eq_self_iff]
 
+instance : MulAction (ArrayPerm n) ℕ where
+  one_smul k := (lt_or_le k n).by_cases
+    (fun hk => smul_of_lt hk ▸ getElem_one _) (fun hk => smul_of_ge hk)
+  mul_smul _ _ k := (lt_or_le k n).by_cases
+    (fun hk => by simp_rw [smul_of_lt hk, getElem_mul, smul_of_lt getElem_lt])
+    (fun hk => by simp_rw [smul_of_ge hk])
+
 theorem smul_eq_smul_same_iff {a b : ArrayPerm n} {i : ℕ} :
   a • i = b • i ↔ ∀ (hi : i < n), a[i] = b[i] := by
   simp_rw [← inv_smul_eq_iff, ← mul_smul, smul_eq_self_iff, getElem_mul,
@@ -1076,6 +1086,7 @@ instance : FaithfulSMul (ArrayPerm n) ℕ where
 theorem smul_nat_right_inj (a : ArrayPerm n) {i j : ℕ} : a • i = a • j ↔ i = j := by
   simp_rw [← inv_smul_eq_iff, inv_smul_smul]
 
+@[simp]
 theorem smul_lt_iff_lt (a : ArrayPerm n) {i : ℕ} : a • i < n ↔ i < n := by
   rcases lt_or_le i n with h | h
   · simp_rw [h, iff_true, smul_of_lt h, getElem_lt]
@@ -1098,50 +1109,67 @@ theorem smul_nat_eq_iff_eq_one (a : ArrayPerm n) : (∀ i : ℕ, a • i = i) �
 theorem smul_nat_eq_id_iff_eq_one (a : ArrayPerm n) : ((a • ·) : ℕ → ℕ) = id ↔ a = 1 := by
   simp_rw [funext_iff, id_eq, smul_nat_eq_iff_eq_one]
 
+theorem period_eq_one_of_ge {a : ArrayPerm n} {i : ℕ} (hi : n ≤ i) : MulAction.period a i = 1 := by
+  simp_rw [MulAction.period_eq_one_iff, smul_of_ge hi]
+
+theorem period_eq_one_iff (a : ArrayPerm n) {i : ℕ} :
+    MulAction.period a i = 1 ↔ ∀ (hi : i < n), a[i] = i := by
+  simp_rw [MulAction.period_eq_one_iff]
+  rcases lt_or_le i n with hi | hi
+  · simp_rw [hi, forall_true_left, smul_of_lt hi]
+  · simp_rw [hi.not_lt, forall_false, iff_true, smul_of_ge hi]
+
+@[simp]
+theorem getElem_pow_period {a : ArrayPerm n} {i : ℕ} {hi : i < n} :
+    (a ^ MulAction.period a i)[i] = i := by
+  rw [← smul_of_lt hi, MulAction.pow_period_smul]
+
+theorem getElem_pow_mod_period {a : ArrayPerm n} {i : ℕ} {hi : i < n} (k : ℕ) :
+    (a^(k % MulAction.period a i))[i] = (a^k)[i] := by
+  simp_rw [← smul_of_lt hi, MulAction.pow_mod_period_smul]
+
+theorem getElem_zpow_mod_period {a : ArrayPerm n} {i : ℕ} {hi : i < n} (k : ℤ) :
+    (a^(k % MulAction.period a i))[i] = (a^k)[i] := by
+  simp_rw [← smul_of_lt hi, MulAction.zpow_mod_period_smul]
+
 theorem period_nat_pos (a : ArrayPerm n) {i : ℕ} : 0 < MulAction.period a i :=
   MulAction.period_pos_of_orderOf_pos a.orderOf_pos _
 
 theorem period_pos (a : ArrayPerm n) {i : Fin n} : 0 < MulAction.period a i :=
   MulAction.period_pos_of_orderOf_pos a.orderOf_pos _
 
-theorem period_eq_period_val {a : ArrayPerm n} {i : Fin n} :
-    MulAction.period a i = MulAction.period a (i : ℕ):= by
+theorem period_fin {a : ArrayPerm n} {i : Fin n} :
+    MulAction.period a i = MulAction.period a (i : ℕ) := by
   rw [le_antisymm_iff]
-  refine ⟨?_, ?_⟩
-  · apply MulAction.le_period (period_nat_pos _)
-    simp_rw [smul_val, Fin.val_ne_iff]
-    apply MulAction.pow_smul_ne_of_lt_period
-  · apply MulAction.le_period (period_pos _)
-    simp_rw [← Fin.val_ne_iff, ← smul_val]
-    apply MulAction.pow_smul_ne_of_lt_period
+  refine ⟨MulAction.period_le_of_fixed (period_nat_pos _) (Fin.ext ?_),
+    MulAction.period_le_of_fixed (period_pos _) ?_⟩
+  · simp_rw [val_smul, getElem_pow_period]
+  · simp_rw [smul_val, MulAction.pow_period_smul]
 
-theorem period_eq_one_iff (a : ArrayPerm n) {i : ℕ} :
-    MulAction.period a i = 1 ↔ (hi : i < n) → a[i] = i := by
-  simp_rw [MulAction.period_eq_one_iff]
-  rcases lt_or_le i n with hi | hi
-  · simp_rw [hi, forall_true_left, smul_of_lt hi]
-  · simp_rw [hi.not_lt, forall_false, iff_true, smul_of_ge hi]
+@[simp]
+theorem period_mk {a : ArrayPerm n} {i : ℕ} {hi : i < n} :
+    MulAction.period a (Fin.mk i hi) = MulAction.period a i := period_fin
 
 theorem period_eq_one_of_zero (a : ArrayPerm 0) {i : ℕ} : MulAction.period a i = 1 := by
-  simp_rw [period_eq_one_iff, not_lt_zero', forall_false]
+  rw [Unique.eq_default a, default_eq, MulAction.period_one]
 
 theorem period_eq_one_of_one (a : ArrayPerm 1) {i : ℕ} : MulAction.period a i = 1 := by
-  simp_rw [period_eq_one_iff, Nat.lt_one_iff]
-  rintro rfl
-  simp_rw [← Nat.lt_one_iff, getElem_lt]
-
-theorem period_eq_one_of_ge (a : ArrayPerm n) {i : ℕ} (hi : n ≤ i) : MulAction.period a i = 1 := by
-  simp_rw [period_eq_one_iff, hi.not_lt, forall_false]
+  rw [Unique.eq_default a, default_eq, MulAction.period_one]
 
 theorem period_le_card_of_getElem_pow_mem (a : ArrayPerm n) {i : ℕ} (hi : i < n)
-  (s : Finset ℕ) (hia : ∀ k < s.card + 1, (a ^ k)[i] ∈ s) : MulAction.period a i ≤ s.card := by
-  simp_rw [← smul_of_lt hi] at hia
-  exact MulAction.period_le_card_of_smul_pow_mem _ _ hia
+  (s : Finset ℕ) : (∀ k < s.card + 1, (a ^ k)[i] ∈ s) → MulAction.period a i ≤ s.card := by
+  simp_rw [← smul_of_lt hi]
+  exact MulAction.period_le_card_of_smul_pow_mem _ _
+
+theorem getElem_injOn_range_period (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
+    Set.InjOn (fun k => (a ^ k)[i]) (Finset.range (MulAction.period a i)) := by
+  simp_rw [← smul_of_lt hi]
+  exact MulAction.smul_injOn_range_period _
 
 theorem period_le_of_lt (a : ArrayPerm n) {i : ℕ} (hi : i < n) : MulAction.period a i ≤ n := by
-  refine (MulAction.period_le_card_of_smul_pow_mem a (Finset.range n) ?_).trans_eq
+  refine (period_le_card_of_getElem_pow_mem a hi (Finset.range n) ?_).trans_eq
     (Finset.card_range _)
-  simp_rw [Finset.card_range, Finset.mem_range, smul_lt_iff_lt, hi, implies_true]
+  simp_rw [Finset.card_range, Finset.mem_range, getElem_lt, implies_true]
 
 theorem period_le_of_ne_zero [NeZero n] (a : ArrayPerm n) {i : ℕ} : MulAction.period a i ≤ n := by
   rcases lt_or_le i n with hi | hi
@@ -1149,21 +1177,9 @@ theorem period_le_of_ne_zero [NeZero n] (a : ArrayPerm n) {i : ℕ} : MulAction.
   · rw [a.period_eq_one_of_ge hi]
     exact NeZero.pos n
 
-theorem exists_pos_le_pow_smul_eq_of_ge_of_ne_zero [NeZero n] (a : ArrayPerm n) {i : ℕ}
-    (hi : n ≤ i) : ∃ k, 0 < k ∧ k ≤ n ∧ (a ^ k) • i = i :=
-  ⟨1, Nat.zero_lt_one, NeZero.pos n, smul_of_ge hi⟩
-
-theorem exists_pos_le_pow_smul_eq_of_lt (a : ArrayPerm n) {i : ℕ}
-    (hi : i < n) : ∃ k, 0 < k ∧ k ≤ n ∧ (a ^ k) • i = i :=
-  ⟨MulAction.period a i, a.period_nat_pos, a.period_le_of_lt hi, MulAction.pow_period_smul a i⟩
-
-theorem exists_pos_le_pow_smul_eq_of_ne_zero [NeZero n] (a : ArrayPerm n) {i : ℕ} :
-    ∃ k, 0 < k ∧ k ≤ n ∧ (a ^ k) • i = i :=
-  ⟨MulAction.period a i, a.period_nat_pos, a.period_le_of_ne_zero, MulAction.pow_period_smul a i⟩
-
 theorem exists_pos_le_pow_getElem_eq (a : ArrayPerm n) {i : ℕ} (hi : i < n) :
-    ∃ k, 0 < k ∧ k ≤ n ∧ (a ^ k)[i] = i := by
-  simp_rw [← smul_of_lt hi, a.exists_pos_le_pow_smul_eq_of_lt hi]
+    ∃ k, 0 < k ∧ k ≤ n ∧ (a ^ k)[i] = i :=
+  ⟨MulAction.period a i, a.period_nat_pos, a.period_le_of_lt hi, getElem_pow_period⟩
 
 /--
 `ofPerm` maps a member of `Perm ℕ` which maps the subtype `< n` to itself to the corresponding
@@ -1226,8 +1242,7 @@ theorem natPerm_apply_apply (a : ArrayPerm n) {i : ℕ} : natPerm n a i = a • 
 theorem natPerm_apply_symm_apply (a : ArrayPerm n) {i : ℕ} : (natPerm n a).symm i = a⁻¹ • i := by
   rw [← Perm.inv_def, ← map_inv, natPerm_apply_apply]
 
---ArrayPerm.natPerm_apply_symm_apply:
-
+@[simp]
 theorem natPerm_lt_iff_lt (a : ArrayPerm n) {i : ℕ} : natPerm n a i < n ↔ i < n := by
   rw [natPerm_apply_apply, smul_lt_iff_lt]
 
@@ -1280,238 +1295,275 @@ theorem coe_natPerm_range : MonoidHom.range (natPerm (n := n)) =
 
 variable {α : Type*}
 
-def onIndices (a : ArrayPerm n) (b : Array α) (hb : b.size = n) : Array α :=
-    (Fin.enum n).map fun i => b[a[i.1]]'(getElem_lt.trans_eq hb.symm)
+def onIndices (a : ArrayPerm n) (b : Array α) (hb : n ≤ b.size) : Array α :=
+    b.mapIdx (fun i _ => if hi : i < n then b[a[i.1]]'(getElem_lt.trans_le hb) else b[i.1])
 
 @[simp]
-theorem size_onIndices (a : ArrayPerm n) {b : Array α} {hb : b.size = n} :
-    size (a.onIndices b hb) = n := by
-  unfold onIndices
-  simp_rw [size_map, size_enum]
+theorem size_onIndices {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} :
+    size (a.onIndices b hb) = b.size := size_mapIdx _ _
 
 @[simp]
-theorem getElem_onIndices (a : ArrayPerm n) (b : Array α) (hb : b.size = n) {i : ℕ}
+theorem getElem_onIndices {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} {i : ℕ}
     {hi : i < (a.onIndices b hb).size} :
-    (a.onIndices b hb)[i] = b[a[i]'(hi.trans_eq a.size_onIndices)]'(getElem_lt.trans_eq hb.symm) :=
-  (Array.getElem_map _ _ _ _).trans (Fin.getElem_enum _ _ ▸ rfl)
+    (a.onIndices b hb)[i] =
+    if h : i < n then b[a[i]]'(getElem_lt.trans_le hb) else b[i]'(hi.trans_eq size_onIndices) :=
+  Array.getElem_mapIdx _ _ _ _
+
+theorem mem_of_mem_onIndices {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} {x : α}
+    (hx : x ∈ a.onIndices b hb) : x ∈ b := by
+  simp_rw [Array.mem_iff_getElem] at hx ⊢
+  simp_rw [getElem_onIndices, size_onIndices] at hx
+  rcases hx with ⟨i, hi, hix⟩
+  rcases lt_or_le i n with hin | hin
+  · simp_rw [hin, dite_true] at hix
+    exact ⟨a[i], getElem_lt.trans_le hb, hix⟩
+  · simp_rw [hin.not_lt, dite_false] at hix
+    exact ⟨i, hi, hix⟩
+
+theorem mem_onIndices_of_mem {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} {x : α}
+    (hx : x ∈ b) : x ∈ a.onIndices b hb := by
+  simp_rw [Array.mem_iff_getElem] at hx ⊢
+  simp_rw [getElem_onIndices, size_onIndices]
+  rcases hx with ⟨i, hi, hix⟩
+  rcases lt_or_le i n with hin | hin
+  · refine ⟨a⁻¹[i], getElem_lt.trans_le hb, ?_⟩
+    simp_rw [getElem_lt, dite_true, getElem_getElem_inv, hix]
+  · refine ⟨i, hi, ?_⟩
+    simp_rw [hin.not_lt, dite_false, hix]
+
+theorem mem_onIndices_iff {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} {x : α} :
+    x ∈ a.onIndices b hb ↔ x ∈ b := ⟨mem_of_mem_onIndices, mem_onIndices_of_mem⟩
 
 @[simp]
 theorem onIndices_range (a : ArrayPerm n) :
-    a.onIndices (Array.range n) size_range = a.fwdArray := by
-  simp_rw [Array.ext_iff, size_onIndices, size_fwdArray, getElem_onIndices, Array.getElem_range,
-    getElem_fwdArray, implies_true, and_self]
+    a.onIndices (Array.range n) size_range.ge = a.fwdArray := by
+  simp_rw [Array.ext_iff, size_onIndices, size_range, size_fwdArray, getElem_onIndices,
+    Array.getElem_range, getElem_fwdArray, true_and]
+  exact fun _ hin => by simp_rw [hin, dite_true, implies_true]
 
 @[simp]
 theorem onIndices_enum (a : ArrayPerm n) :
-    a.onIndices (Fin.enum n) (size_enum _) = a.finFwdArray := by
+    a.onIndices (Fin.enum n) (size_enum _).ge = a.finFwdArray := by
   simp_rw [Array.ext_iff, size_onIndices, size_finFwdArray, getElem_onIndices, Fin.getElem_enum,
-    getElem_finFwdArray, implies_true, and_self]
+    getElem_finFwdArray, size_enum, true_and]
+  exact fun _ hin => by simp_rw [hin, dite_true, implies_true]
 
 def cycleOf (a : ArrayPerm n) (x : ℕ) : Finset ℕ :=
   if h : x < n then (Finset.range n).image (fun k => (a ^ k)[x]) else {x}
 
-theorem cycleOf_eq_map_smul_range_period (a : ArrayPerm n) (x : ℕ) :
-    a.cycleOf x = (Finset.range (MulAction.period a x)).image (fun k => (a ^ k) • x) := by
+theorem cycleOf_lt {a : ArrayPerm n} {x : ℕ} (hx : x < n) :
+    a.cycleOf x = (Finset.range (MulAction.period a x)).image (fun k => (a ^ k)[x]) := by
   unfold cycleOf
-  rcases lt_or_le x n with hx | hx
-  · simp_rw [hx, dite_true, Finset.ext_iff, Finset.mem_image, Finset.mem_range, ← smul_of_lt hx]
-    refine fun _ => ⟨fun ⟨k, h⟩ => ⟨k % MulAction.period a x, (Nat.mod_lt _ a.period_nat_pos),
-      by simp_rw [MulAction.pow_mod_period_smul, h]⟩, fun ⟨_, hlt, h⟩ =>
-      ⟨_, (hlt.trans_le <| a.period_le_of_lt hx), h⟩⟩
-  · simp_rw [hx.not_lt, dite_false, smul_of_ge hx, Finset.ext_iff,
-    Finset.mem_singleton, Finset.mem_image, Finset.mem_range, exists_and_right]
-    exact fun _ => ⟨fun h => ⟨⟨0, a.period_nat_pos⟩, h.symm⟩, fun ⟨_, h⟩ => h.symm⟩
+  simp_rw [dif_pos hx, Finset.ext_iff, Finset.mem_image, Finset.mem_range]
+  refine fun _ => ⟨fun ⟨k, h⟩ => ⟨k % MulAction.period a x, Nat.mod_lt _ a.period_nat_pos,
+    by simp_rw [getElem_pow_mod_period, h]⟩, fun ⟨_, hlt, h⟩ =>
+    ⟨_, (hlt.trans_le <| a.period_le_of_lt hx), h⟩⟩
+
+theorem cycleOf_ge {a : ArrayPerm n} {x : ℕ} (hx : n ≤ x) :
+    a.cycleOf x = {x} := dif_neg (not_lt_of_le hx)
 
 theorem card_cycleOf (a : ArrayPerm n) (x : ℕ) : (a.cycleOf x).card = MulAction.period a x := by
-  refine Eq.trans ?_ (Finset.card_range (MulAction.period a x))
-  rw [cycleOf_eq_map_smul_range_period, Finset.card_image_iff]
-  exact MulAction.smul_injOn_range_period a
+  rcases lt_or_le x n with hx | hx
+  · refine Eq.trans ?_ (Finset.card_range (MulAction.period a x))
+    rw [cycleOf_lt hx, Finset.card_image_iff]
+    exact getElem_injOn_range_period _ _
+  · rw [cycleOf_ge hx, period_eq_one_of_ge hx, Finset.card_singleton]
 
-theorem mem_cycleOf_iff_exists_pow_lt_period (a : ArrayPerm n) {x y : ℕ} :
-    y ∈ a.cycleOf x ↔ ∃ i < MulAction.period a x, (a ^ i) • x = y := by
+theorem cycleOf_eq_map_smul_range_period (a : ArrayPerm n) (x : ℕ) :
+    a.cycleOf x = (Finset.range (MulAction.period a x)).image (fun k => (a ^ k) • x) := by
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [cycleOf_lt hx, smul_of_lt hx]
+  · simp_rw [cycleOf_ge hx, smul_of_ge hx, Finset.ext_iff, Finset.mem_singleton,
+      Finset.mem_image, Finset.mem_range, exists_and_right]
+    exact fun _ => ⟨fun h => h ▸ ⟨⟨0, a.period_nat_pos⟩, rfl⟩, fun h => h.2.symm⟩
+
+theorem mem_cycleOf_iff_exists_pow_lt_period_smul (a : ArrayPerm n) {x y : ℕ} :
+    y ∈ a.cycleOf x ↔ ∃ i : ℕ, i < MulAction.period a x ∧ (a ^ i) • x = y := by
   rw [cycleOf_eq_map_smul_range_period]
   simp_rw [Finset.mem_image, Finset.mem_range]
 
-theorem mem_cycleOf_iff_exists_pow (a : ArrayPerm n) {x y : ℕ} :
+theorem mem_cycleOf_iff_exists_pow_smul (a : ArrayPerm n) {x y : ℕ} :
     y ∈ a.cycleOf x ↔ ∃ i : ℕ, (a ^ i) • x = y := by
-  rw [cycleOf_eq_map_smul_range_period]
-  simp_rw [Finset.mem_image, Finset.mem_range]
+  rw [mem_cycleOf_iff_exists_pow_lt_period_smul]
   refine ⟨fun ⟨_, _, h⟩ => ⟨_, h⟩,
     fun ⟨k, h⟩ => ⟨k % MulAction.period a x, Nat.mod_lt _ a.period_nat_pos, ?_⟩⟩
   simp_rw [MulAction.pow_mod_period_smul, h]
 
-theorem mem_cycleOf_iff_exists_zpow (a : ArrayPerm n) {x y : ℕ} :
+theorem mem_cycleOf_iff_exists_zpow_smul (a : ArrayPerm n) {x y : ℕ} :
     y ∈ a.cycleOf x ↔ ∃ i : ℤ, (a ^ i) • x = y := by
-  rw [mem_cycleOf_iff_exists_pow]
+  rw [mem_cycleOf_iff_exists_pow_smul]
   refine ⟨fun ⟨_, h⟩ => ⟨_, (zpow_natCast a _).symm ▸ h⟩,
     fun ⟨k, h⟩ => ⟨(k % MulAction.period a x).toNat, ?_⟩⟩
   simp_rw [← zpow_natCast, Int.toNat_of_nonneg
     (Int.emod_nonneg _ ((Nat.cast_ne_zero (R := ℤ)).mpr (a.period_nat_pos (i := x)).ne')),
     MulAction.zpow_mod_period_smul, h]
 
+theorem mem_cycleOf_iff_exists_getElem_pow_lt_period (a : ArrayPerm n) {x y : ℕ} (hx : x < n) :
+    y ∈ a.cycleOf x ↔ ∃ i : ℕ, i < MulAction.period a x ∧ (a ^ i)[x] = y := by
+  simp_rw [mem_cycleOf_iff_exists_pow_lt_period_smul, smul_of_lt hx]
+
+theorem mem_cycleOf_iff_exists_getElem_pow (a : ArrayPerm n) {x y : ℕ} (hx : x < n) :
+    y ∈ a.cycleOf x ↔ ∃ i : ℕ, (a ^ i)[x] = y := by
+  simp_rw [mem_cycleOf_iff_exists_pow_smul, smul_of_lt hx]
+
+theorem mem_cycleOf_iff_exists_getElem_zpow (a : ArrayPerm n) {x y : ℕ} (hx : x < n) :
+    y ∈ a.cycleOf x ↔ ∃ i : ℤ, (a ^ i)[x] = y := by
+  simp_rw [mem_cycleOf_iff_exists_zpow_smul, smul_of_lt hx]
+
 theorem self_mem_cycleOf (a : ArrayPerm n) (x : ℕ) : x ∈ a.cycleOf x := by
-  simp_rw [mem_cycleOf_iff_exists_pow]
+  simp_rw [mem_cycleOf_iff_exists_pow_smul]
   exact ⟨0, by simp only [pow_zero, one_smul]⟩
 
 theorem nonempty_cycleOf {a : ArrayPerm n} {x : ℕ} : (a.cycleOf x).Nonempty :=
   ⟨_, a.self_mem_cycleOf x⟩
 
 theorem smul_mem_cycleOf (a : ArrayPerm n) (x : ℕ) : (a • x) ∈ a.cycleOf x := by
-  simp_rw [mem_cycleOf_iff_exists_pow]
+  simp_rw [mem_cycleOf_iff_exists_pow_smul]
   exact ⟨1, by simp only [pow_one]⟩
 
 theorem smul_inv_mem_cycleOf (a : ArrayPerm n) (x : ℕ) : (a⁻¹ • x) ∈ a.cycleOf x := by
-  simp_rw [mem_cycleOf_iff_exists_zpow]
+  simp_rw [mem_cycleOf_iff_exists_zpow_smul]
   exact ⟨-1, by simp only [zpow_neg, zpow_one]⟩
 
-theorem getElem_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (hx : x < n) : a[x] ∈ a.cycleOf x := by
+theorem smul_pow_mem_cycleOf (a : ArrayPerm n) (x k : ℕ) : (a ^ k) • x ∈ a.cycleOf x := by
+  simp_rw [mem_cycleOf_iff_exists_pow_smul]
+  exact ⟨k, rfl⟩
+
+theorem smul_zpow_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (k : ℤ) : (a ^ k) • x ∈ a.cycleOf x := by
+  simp_rw [mem_cycleOf_iff_exists_zpow_smul]
+  exact ⟨k, rfl⟩
+
+theorem getElem_mem_cycleOf (a : ArrayPerm n) {x : ℕ} (hx : x < n) : a[x] ∈ a.cycleOf x := by
   convert a.smul_mem_cycleOf x
   rw [smul_of_lt hx]
 
-theorem getElem_inv_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (hx : x < n) : a⁻¹[x] ∈ a.cycleOf x := by
+theorem getElem_inv_mem_cycleOf (a : ArrayPerm n) {x : ℕ} (hx : x < n) : a⁻¹[x] ∈ a.cycleOf x := by
   convert a.smul_inv_mem_cycleOf x
   rw [smul_of_lt hx]
 
-theorem smul_pow_mem_cycleOf (a : ArrayPerm n) (x k : ℕ) : (a ^ k) • x ∈ a.cycleOf x := by
-  simp_rw [mem_cycleOf_iff_exists_pow]
-  exact ⟨k, rfl⟩
-
-theorem getElem_pow_mem_cycleOf (a : ArrayPerm n) (x k : ℕ) (hx : x < n) :
+theorem getElem_pow_mem_cycleOf (a : ArrayPerm n) {x : ℕ} (hx : x < n) (k : ℕ):
     (a^k)[x] ∈ a.cycleOf x := by
   convert a.smul_pow_mem_cycleOf x k
   rw [smul_of_lt hx]
 
-theorem smul_zpow_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (k : ℤ) : (a ^ k) • x ∈ a.cycleOf x := by
-  simp_rw [mem_cycleOf_iff_exists_zpow]
-  exact ⟨k, rfl⟩
-
-theorem getElem_zpow_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (k : ℤ) (hx : x < n) :
+theorem getElem_zpow_mem_cycleOf (a : ArrayPerm n) {x : ℕ} (hx : x < n) (k : ℤ) :
     (a^k)[x] ∈ a.cycleOf x := by
   convert a.smul_zpow_mem_cycleOf x k
   rw [smul_of_lt hx]
 
-theorem getElem_inv_pow_mem_cycleOf (a : ArrayPerm n) (x k : ℕ) (hx : x < n) :
+theorem getElem_inv_pow_mem_cycleOf (a : ArrayPerm n) {x : ℕ} (hx : x < n) (k : ℕ) :
     ((a⁻¹)^k)[x] ∈ a.cycleOf x := by
-  convert a.getElem_zpow_mem_cycleOf x (-(k : ℤ)) hx
+  convert a.getElem_zpow_mem_cycleOf hx (-(k : ℤ))
   simp_rw [inv_pow, zpow_neg, zpow_natCast]
 
-theorem getElem_inv_zpow_mem_cycleOf (a : ArrayPerm n) (x : ℕ) (k : ℤ) (hx : x < n) :
+theorem getElem_inv_zpow_mem_cycleOf (a : ArrayPerm n) {x : ℕ} (hx : x < n) (k : ℤ) :
     ((a⁻¹)^k)[x] ∈ a.cycleOf x := by
   simp only [inv_zpow']
-  exact a.getElem_zpow_mem_cycleOf x (-k) hx
+  exact a.getElem_zpow_mem_cycleOf hx (-k)
 
-def CycleMinAux (a : ArrayPerm n) : ℕ → ArrayPerm n × {a : Array ℕ // a.size = n}
+def CycleMinArrayAux (a : ArrayPerm n) : ℕ → ArrayPerm n × {a : Array ℕ // a.size = n}
   | 0 => ⟨1, range n, size_range⟩
   | 1 =>
     ⟨a, (Array.range n).zipWith a.fwdArray min, by
     rw [Array.size_zipWith, size_range, a.size_fwdArray, min_self]⟩
   | (i+2) =>
-    let ⟨ρ, b, hb⟩ := a.CycleMinAux (i + 1)
+    let ⟨ρ, b, hb⟩ := a.CycleMinArrayAux (i + 1)
     let ρ' := ρ ^ 2
-    ⟨ρ', b.zipWith (ρ'.onIndices b hb) min,
-    by simp_rw [Array.size_zipWith, hb, size_onIndices, min_self]⟩
-
-def CycleMin (a : ArrayPerm n) (i : ℕ) : Array ℕ := (a.CycleMinAux i).2
-
-theorem cycleMinAux_snd_val {a : ArrayPerm n} {i : ℕ} : (a.CycleMinAux i).2 = CycleMin a i := rfl
+    ⟨ρ', b.zipWith (ρ'.onIndices b hb.ge) min,
+    by simp_rw [Array.size_zipWith, size_onIndices, min_self, hb]⟩
 
 @[simp]
-theorem size_cycleMin {a : ArrayPerm n} {i : ℕ} : (a.CycleMin i).size = n := (a.CycleMinAux i).2.2
+theorem cycleMinAux_zero_fst (a : ArrayPerm n) : (a.CycleMinArrayAux 0).1 = 1 := rfl
 
+@[simp]
 theorem cycleMinAux_succ_fst (a : ArrayPerm n) (i : ℕ) :
-    (a.CycleMinAux (i + 1)).1 = a ^ (2 ^ i) := by
+    (a.CycleMinArrayAux (i + 1)).1 = a ^ (2 ^ i) := by
   induction' i with i IH
   · rw [pow_zero, pow_one]
     rfl
   · rw [pow_succ, pow_mul]
     exact IH ▸ rfl
 
-theorem getElem_cycleMin_zero {a : ArrayPerm n} {x : ℕ} (hx : x < (a.CycleMin 0).size) :
-  (a.CycleMin 0)[x] = x := Array.getElem_range _
+def CycleMinArray (a : ArrayPerm n) (i : ℕ) : Array ℕ := (a.CycleMinArrayAux i).2
 
-theorem getElem_cycleMin_succ (a : ArrayPerm n) (i : ℕ) (x : ℕ)
-  (hx : x < (a.CycleMin (i + 1)).size) :
-    (a.CycleMin (i + 1))[x] = min
-    ((a.CycleMin i)[x]'(hx.trans_eq <| size_cycleMin.trans size_cycleMin.symm))
-    ((a.CycleMin i)[((a ^ 2^i)[x]'(hx.trans_eq size_cycleMin))]'
-    (getElem_lt.trans_eq size_cycleMin.symm)) := by
+@[simp]
+theorem cycleMinAux_snd_val {a : ArrayPerm n} {i : ℕ} :
+    (a.CycleMinArrayAux i).2 = CycleMinArray a i := rfl
+
+@[simp]
+theorem size_cycleMinArray {a : ArrayPerm n} {i : ℕ} :
+    (a.CycleMinArray i).size = n := (a.CycleMinArrayAux i).2.2
+
+theorem getElem_cycleMinArray_zero {a : ArrayPerm n} {x : ℕ} (hx : x < (a.CycleMinArray 0).size):
+  (a.CycleMinArray 0)[x] = x := Array.getElem_range _
+
+theorem getElem_cycleMinArray_succ {a : ArrayPerm n} {i x : ℕ}
+    (hx : x < (a.CycleMinArray (i + 1)).size) :
+    (a.CycleMinArray (i + 1))[x] = min ((a.CycleMinArray i)[x]'
+    (hx.trans_eq <| size_cycleMinArray.trans size_cycleMinArray.symm))
+    ((a.CycleMinArray i)[(a^2^i)[x]'(hx.trans_eq size_cycleMinArray)]'
+    (getElem_lt.trans_eq size_cycleMinArray.symm)) := by
   rcases i with (_ | i) <;>
   refine (Array.getElem_zipWith _).trans ?_
-  · simp_rw [getElem_cycleMin_zero, pow_zero, pow_one, Array.getElem_range,
-      getElem_fwdArray]
-  · simp_rw [getElem_onIndices, cycleMinAux_snd_val, cycleMinAux_succ_fst, ← pow_mul, ← pow_succ]
+  · simp_rw [Array.getElem_range, getElem_fwdArray, getElem_cycleMinArray_zero, pow_zero, pow_one]
+  · simp_rw [getElem_onIndices, hx.trans_eq size_cycleMinArray, dite_true,
+      cycleMinAux_snd_val, cycleMinAux_succ_fst, ← pow_mul, ← pow_succ]
 
-theorem getElem_cycleMin_lt {a : ArrayPerm n} {i : ℕ} {x : ℕ}
-  (hx : x < (a.CycleMin i).size) : (a.CycleMin i)[x] < n := by
-  induction' i with i IH
-  · simp_rw [getElem_cycleMin_zero]
-    exact hx.trans_eq size_cycleMin
-  · simp_rw [getElem_cycleMin_succ, min_lt_iff]
-    exact Or.inl <| IH _
+@[simp]
+theorem getElem_cycleMinArray_lt {a : ArrayPerm n} {i : ℕ} {x : ℕ}
+    (hx : x < (a.CycleMinArray i).size) : (a.CycleMinArray i)[x] < n := by
+  induction' i with i IH generalizing x
+  · simp_rw [getElem_cycleMinArray_zero]
+    exact hx.trans_eq size_cycleMinArray
+  · simp_rw [getElem_cycleMinArray_succ, min_lt_iff, IH, true_or]
 
-lemma cycleMin_le_getElem_pow_lt (a : ArrayPerm n) (i : ℕ) {x : ℕ}
-    (hx : x < (a.CycleMin i).size) {k : ℕ} (hk : k < 2^i) :
-    (a.CycleMin i)[x] ≤ (a ^ k)[x]'(hx.trans_eq size_cycleMin) := by
+lemma getElem_cycleMinArray_le_getElem_pow_lt (a : ArrayPerm n) {i : ℕ} {x : ℕ}
+    {hx : x < (a.CycleMinArray i).size} {k : ℕ} (hk : k < 2^i) :
+    (a.CycleMinArray i)[x] ≤ (a ^ k)[x]'(hx.trans_eq size_cycleMinArray) := by
   induction' i with i IH generalizing x k
   · simp_rw [pow_zero, Nat.lt_one_iff] at hk
-    simp_rw [getElem_cycleMin_zero, hk, pow_zero, getElem_one, le_rfl]
-  · simp_rw [getElem_cycleMin_succ, min_le_iff]
+    simp_rw [getElem_cycleMinArray_zero, hk, pow_zero, getElem_one, le_rfl]
+  · simp_rw [getElem_cycleMinArray_succ, min_le_iff]
     by_cases hk' : k < 2^i
-    · exact Or.inl (IH _ hk')
+    · exact Or.inl (IH hk')
     · rw [pow_succ', Nat.two_mul, ← Nat.sub_lt_iff_lt_add (le_of_not_lt hk')] at hk
-      exact Or.inr ((IH _ hk).trans_eq <| by
+      exact Or.inr ((IH hk).trans_eq <| by
         rw [getElem_pow_add, Nat.sub_add_cancel (le_of_not_lt hk')])
 
-lemma cycleMin_le_getElem_pow_of_period_le_two_pow (a : ArrayPerm n) (i : ℕ) {x : ℕ}
-    (hx : x < (a.CycleMin i).size) (hai : MulAction.period a x ≤ 2^i) :
-    ∀ k, (a.CycleMin i)[x] ≤ (a ^ k)[x]'(hx.trans_eq size_cycleMin) := fun k => by
-  have H := a.smul_pow_mem_cycleOf x k
-  simp_rw [mem_cycleOf_iff_exists_pow_lt_period] at H
+lemma getElem_cycleMinArray_le_getElem_pow_of_period_le_two_pow (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+    (hx : x < (a.CycleMinArray i).size) (hai : MulAction.period a x ≤ 2^i) :
+    ∀ k, (a.CycleMinArray i)[x] ≤ (a ^ k)[x]'(hx.trans_eq size_cycleMinArray) := fun k => by
+  simp_rw [size_cycleMinArray] at hx
+  have H := a.getElem_pow_mem_cycleOf hx k
+  rw [mem_cycleOf_iff_exists_getElem_pow_lt_period] at H
   rcases H with ⟨_, hk₁, hk₂⟩
-  exact (a.cycleMin_le_getElem_pow_lt i _ (hk₁.trans_le hai)).trans_eq <| by
-    simp_rw [← smul_of_lt (size_cycleMin ▸ hx), hk₂]
+  exact (a.getElem_cycleMinArray_le_getElem_pow_lt (hk₁.trans_le hai)).trans_eq hk₂
 
-lemma cycleMin_le_getElem_zpow_of_period_le_two_pow (a : ArrayPerm n) (i : ℕ) {x : ℕ}
-      (hx : x < (a.CycleMin i).size) (hai : MulAction.period a x ≤ 2^i) :
-    ∀ k : ℤ, (a.CycleMin i)[x] ≤ (a ^ k)[x]'(hx.trans_eq size_cycleMin) := fun k => by
-  have H := a.smul_zpow_mem_cycleOf x k
-  simp_rw [mem_cycleOf_iff_exists_pow_lt_period] at H
+lemma getElem_cycleMinArray_le_getElem_zpow_of_period_le_two_pow (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+      (hx : x < (a.CycleMinArray i).size) (hai : MulAction.period a x ≤ 2^i) :
+    ∀ k : ℤ, (a.CycleMinArray i)[x] ≤ (a ^ k)[x]'(hx.trans_eq size_cycleMinArray) := fun k => by
+  simp_rw [size_cycleMinArray] at hx
+  have H := a.getElem_zpow_mem_cycleOf hx k
+  rw [mem_cycleOf_iff_exists_getElem_pow_lt_period] at H
   rcases H with ⟨_, hk₁, hk₂⟩
-  exact (a.cycleMin_le_getElem_pow_lt i _ (hk₁.trans_le hai)).trans_eq <| by
-    simp_rw [← smul_of_lt (size_cycleMin ▸ hx), hk₂]
+  exact (a.getElem_cycleMinArray_le_getElem_pow_lt (hk₁.trans_le hai)).trans_eq hk₂
 
-lemma cycleMin_le_self (a : ArrayPerm n) (i : ℕ) {x : ℕ}
-      (hx : x < (a.CycleMin i).size) : (a.CycleMin i)[x] ≤ x :=
-  (a.cycleMin_le_getElem_pow_lt i _ (Nat.two_pow_pos _)).trans_eq
+lemma getElem_cycleMinArray_le_self (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+      (hx : x < (a.CycleMinArray i).size) : (a.CycleMinArray i)[x] ≤ x :=
+  (a.getElem_cycleMinArray_le_getElem_pow_lt (Nat.two_pow_pos _)).trans_eq
       (by simp_rw [pow_zero, getElem_one])
 
-lemma le_cycleMin (a : ArrayPerm n) (i : ℕ) {x : ℕ}
-      (hx : x < (a.CycleMin i).size) :
-    ∀ z, (∀ k < 2^i, z ≤ (a ^ k)[x]'(hx.trans_eq size_cycleMin)) → z ≤ (a.CycleMin i)[x] := by
+lemma exists_lt_getElem_cycleMin_eq_getElem_pow (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+      (hx : x < (a.CycleMinArray i).size) :
+    ∃ k < 2^i, (a.CycleMinArray i)[x] = (a ^ k)[x]'(hx.trans_eq size_cycleMinArray) := by
   induction' i with i IH generalizing x
-  · simp_rw [pow_zero, Nat.lt_one_iff, forall_eq, pow_zero, getElem_one, getElem_cycleMin_zero,
-    imp_self, implies_true]
-  · simp_rw [getElem_cycleMin_succ, le_min_iff]
-    intros z hz
-    refine ⟨?_, ?_⟩
-    · exact IH _ _ (fun _ hk => hz _ (hk.trans
-        (Nat.pow_lt_pow_of_lt Nat.one_lt_two (Nat.lt_succ_self _))))
-    · rw [pow_succ', Nat.two_mul] at hz
-      refine IH _ _ (fun _ hk => ?_)
-      simp_rw [getElem_pow_add]
-      exact hz _ (Nat.add_lt_add_right hk _)
-
-lemma exists_lt_cycleMin_eq_pow_apply (a : ArrayPerm n) (i : ℕ) {x : ℕ}
-      (hx : x < (a.CycleMin i).size) :
-    ∃ k < 2^i, (a.CycleMin i)[x] = (a ^ k)[x]'(hx.trans_eq size_cycleMin) := by
-  induction' i with i IH generalizing x
-  · simp_rw [getElem_cycleMin_zero]
+  · simp_rw [getElem_cycleMinArray_zero]
     exact ⟨0, Nat.two_pow_pos _, pow_zero a ▸ (getElem_one _).symm⟩
-  · have hx' := hx.trans_eq size_cycleMin
-    simp_rw [size_cycleMin] at IH
+  · have hx' := hx.trans_eq size_cycleMinArray
+    simp_rw [size_cycleMinArray] at IH
     rcases IH hx' with ⟨k, hk, hπk⟩
     rcases (IH (x := (a ^ (2 ^ i))[x]) getElem_lt) with ⟨k', hk', hπk'⟩
-    simp_rw [getElem_cycleMin_succ, hπk, hπk', getElem_pow_add,
+    simp_rw [getElem_cycleMinArray_succ, hπk, hπk', getElem_pow_add,
     pow_succ', Nat.two_mul]
     rcases lt_or_le ((a ^ k)[x]) ((a ^ (k' + 2 ^ i))[x]) with hkk' | hkk'
     · rw [min_eq_left hkk'.le]
@@ -1519,15 +1571,98 @@ lemma exists_lt_cycleMin_eq_pow_apply (a : ArrayPerm n) (i : ℕ) {x : ℕ}
     · rw [min_eq_right hkk']
       exact ⟨k' + 2^i, Nat.add_lt_add_right hk' _, rfl⟩
 
-lemma cycleMin_eq_min'_cycleOf (a : ArrayPerm n) (i : ℕ) {x : ℕ}
-      (hx : x < (a.CycleMin i).size) (hai : MulAction.period a x ≤ 2^i) :
-      (a.CycleMin i)[x] = (a.cycleOf x).min' nonempty_cycleOf := by
+lemma getElem_cycleMinArray_eq_min'_cycleOf (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+      (hx : x < (a.CycleMinArray i).size) (hai : MulAction.period a x ≤ 2^i) :
+      (a.CycleMinArray i)[x] = (a.cycleOf x).min' nonempty_cycleOf := by
+  simp_rw [size_cycleMinArray] at hx
   refine le_antisymm (Finset.le_min' _ _ _ ?_) (Finset.min'_le _ _ ?_) <;>
-  simp_rw [mem_cycleOf_iff_exists_pow, smul_of_lt (hx.trans_eq size_cycleMin)]
+  simp_rw [mem_cycleOf_iff_exists_getElem_pow _ hx]
   · simp_rw [forall_exists_index, forall_apply_eq_imp_iff]
-    exact cycleMin_le_getElem_pow_of_period_le_two_pow _ _ _ hai
-  · rcases a.exists_lt_cycleMin_eq_pow_apply i hx with ⟨k, _, hk⟩
+    exact getElem_cycleMinArray_le_getElem_pow_of_period_le_two_pow _ _ _ hai
+  · rcases a.exists_lt_getElem_cycleMin_eq_getElem_pow i (x := x) (by assumption) with ⟨k, _, hk⟩
     exact ⟨_, hk.symm⟩
+
+def CycleMin (a : ArrayPerm n) (i : ℕ) (x : ℕ) : ℕ :=
+  if h : x < (a.CycleMinArray i).size then (a.CycleMinArray i)[x] else x
+
+theorem getElem_cycleMinArray (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+    (hx : x < (a.CycleMinArray i).size) : (a.CycleMinArray i)[x] = a.CycleMin i x :=
+  (dif_pos _).symm
+
+theorem cycleMin_of_lt {a : ArrayPerm n} {i x : ℕ} (hx : x < n) :
+    a.CycleMin i x = (a.CycleMinArray i)[x]'(hx.trans_eq size_cycleMinArray.symm) := dif_pos _
+
+theorem cycleMin_of_getElem {a b : ArrayPerm n} {i x : ℕ} (hx : x < n) :
+    a.CycleMin i (b[x]) = (a.CycleMinArray i)[b[x]]'(getElem_lt.trans_eq size_cycleMinArray.symm) :=
+  dif_pos _
+
+theorem cycleMin_of_ge {a : ArrayPerm n} {i x : ℕ} (hx : n ≤ x) :
+    a.CycleMin i x = x := dif_neg (not_lt_of_le <| size_cycleMinArray.trans_le hx)
+
+@[simp]
+theorem cycleMin_zero {a : ArrayPerm n} {x : ℕ} :
+  a.CycleMin 0 x = x := if hx : x < n then
+    (cycleMin_of_lt hx).trans <| Array.getElem_range _ else cycleMin_of_ge (le_of_not_lt hx)
+
+@[simp]
+theorem cycleMin_succ {a : ArrayPerm n} {i x : ℕ} :
+    a.CycleMin (i + 1) x = min (a.CycleMin i x) (a.CycleMin i (a^2^i • x)) := by
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [smul_of_lt hx, cycleMin_of_lt hx, cycleMin_of_getElem, getElem_cycleMinArray_succ]
+  · simp_rw [smul_of_ge hx, cycleMin_of_ge hx, min_self]
+
+@[simp]
+theorem cycleMin_lt_iff_lt {a : ArrayPerm n} {i : ℕ} {x : ℕ} :
+    a.CycleMin i x < n ↔ x < n := by
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [cycleMin_of_lt hx, hx, getElem_cycleMinArray_lt]
+  · simp_rw [cycleMin_of_ge hx]
+
+lemma cycleMin_le_smul_pow_lt_two_pow (a : ArrayPerm n) {i : ℕ} (x : ℕ) {k : ℕ} (hk : k < 2^i) :
+    a.CycleMin i x ≤ (a ^ k) • x := by
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [cycleMin_of_lt hx, smul_of_lt hx]
+    exact getElem_cycleMinArray_le_getElem_pow_lt _ hk
+  · simp_rw [cycleMin_of_ge hx, smul_of_ge hx, le_rfl]
+
+lemma cycleMin_le_pow_smul_of_period_le_two_pow (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+    (hai : MulAction.period a x ≤ 2^i) : ∀ k, a.CycleMin i x ≤ (a ^ k) • x := fun k => by
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [cycleMin_of_lt hx, smul_of_lt hx]
+    exact getElem_cycleMinArray_le_getElem_pow_of_period_le_two_pow _ _ _ hai _
+  · simp_rw [cycleMin_of_ge hx, smul_of_ge hx, le_rfl]
+
+lemma cycleMin_le_zpow_smul_of_period_le_two_pow  (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+    (hai : MulAction.period a x ≤ 2^i) :
+    ∀ k : ℤ, a.CycleMin i x ≤ (a ^ k) • x := fun k => by
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [cycleMin_of_lt hx, smul_of_lt hx]
+    exact getElem_cycleMinArray_le_getElem_zpow_of_period_le_two_pow _ _ _ hai _
+  · simp_rw [cycleMin_of_ge hx, smul_of_ge hx, le_rfl]
+
+lemma cycleMin_le_self (a : ArrayPerm n) (i : ℕ) {x : ℕ} :
+    a.CycleMin i x ≤ x := by
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [cycleMin_of_lt hx]
+    exact getElem_cycleMinArray_le_self _ _ _
+  · simp_rw [cycleMin_of_ge hx, le_rfl]
+
+lemma exists_lt_cycleMin_eq_smul_pow (a : ArrayPerm n) (i : ℕ) {x : ℕ} :
+    ∃ k < 2^i, a.CycleMin i x = (a ^ k) • x := by
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [cycleMin_of_lt hx, smul_of_lt hx]
+    exact exists_lt_getElem_cycleMin_eq_getElem_pow _ _ _
+  · simp_rw [cycleMin_of_ge hx, smul_of_ge hx]
+    exact ⟨0, Nat.two_pow_pos _, trivial⟩
+
+lemma cycleMin_eq_min'_cycleOf (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+    (hai : MulAction.period a x ≤ 2^i) :
+    a.CycleMin i x = (a.cycleOf x).min' nonempty_cycleOf := by
+  rcases lt_or_le x n with hx | hx
+  · simp_rw [cycleMin_of_lt hx]
+    exact getElem_cycleMinArray_eq_min'_cycleOf _ _ _ hai
+  · simp_rw [cycleMin_of_ge hx, cycleOf_ge hx]
+    exact rfl
 
 section Cast
 
