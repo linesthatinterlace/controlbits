@@ -1295,44 +1295,65 @@ theorem coe_natPerm_range : MonoidHom.range (natPerm (n := n)) =
 
 variable {α : Type*}
 
-def onIndices (a : ArrayPerm n) (b : Array α) (hb : n ≤ b.size) : Array α :=
-    b.mapIdx (fun i _ => if hi : i < n then b[a[i.1]]'(getElem_lt.trans_le hb) else b[i.1])
+def onIndices (a : ArrayPerm n) (as : Array α) (has : n ≤ as.size) : Array α :=
+    as.mapIdx (fun i _ => if hi : i < n then as[a[i.1]]'(getElem_lt.trans_le has) else as[i.1])
 
 @[simp]
-theorem size_onIndices {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} :
-    size (a.onIndices b hb) = b.size := size_mapIdx _ _
+theorem size_onIndices {a : ArrayPerm n} {as : Array α} {has : n ≤ as.size} :
+    size (a.onIndices as has) = as.size := size_mapIdx _ _
 
 @[simp]
-theorem getElem_onIndices {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} {i : ℕ}
-    {hi : i < (a.onIndices b hb).size} :
-    (a.onIndices b hb)[i] =
-    if h : i < n then b[a[i]]'(getElem_lt.trans_le hb) else b[i]'(hi.trans_eq size_onIndices) :=
+theorem getElem_onIndices {a : ArrayPerm n} {as : Array α} {has : n ≤ as.size} {i : ℕ}
+    {hi : i < (a.onIndices as has).size} :
+    (a.onIndices as has)[i] =
+    if h : i < n then as[a[i]]'(getElem_lt.trans_le has) else as[i]'(hi.trans_eq size_onIndices) :=
   Array.getElem_mapIdx _ _ _ _
 
-theorem mem_of_mem_onIndices {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} {x : α}
-    (hx : x ∈ a.onIndices b hb) : x ∈ b := by
+theorem getElem_onIndices_getElem_inv {a : ArrayPerm n} {as : Array α} {has : n ≤ as.size}
+    {i : ℕ} {hi : i < n} : (a.onIndices as has)[a⁻¹[i]]'
+    (getElem_lt.trans_le <| has.trans_eq size_onIndices.symm) = as[i] := by
+  simp_rw [getElem_onIndices, getElem_lt, dite_true, getElem_getElem_inv]
+
+@[simp]
+theorem one_onIndices {as : Array α} {has : n ≤ as.size} :
+    (1 : ArrayPerm n).onIndices as has = as := by
+  simp_rw [Array.ext_iff, size_onIndices, getElem_onIndices, getElem_one, dite_eq_right_iff,
+    implies_true, and_self]
+
+theorem mul_onIndices {a b : ArrayPerm n} {as : Array α} {has : n ≤ as.size} :
+    (a * b).onIndices as has = b.onIndices (a.onIndices as has)
+    (has.trans_eq size_onIndices.symm) := by
+  simp_rw [Array.ext_iff, size_onIndices, getElem_onIndices, getElem_mul,
+    getElem_lt, dite_true, true_and]
+  intros i _ _
+  rcases lt_or_le i n with hin | hin
+  · simp_rw [hin, dite_true]
+  · simp_rw [hin.not_lt, dite_false]
+
+theorem mem_of_mem_onIndices {a : ArrayPerm n} {as : Array α} {has : n ≤ as.size} {x : α}
+    (hx : x ∈ a.onIndices as has) : x ∈ as := by
   simp_rw [Array.mem_iff_getElem] at hx ⊢
   simp_rw [getElem_onIndices, size_onIndices] at hx
   rcases hx with ⟨i, hi, hix⟩
   rcases lt_or_le i n with hin | hin
   · simp_rw [hin, dite_true] at hix
-    exact ⟨a[i], getElem_lt.trans_le hb, hix⟩
+    exact ⟨a[i], getElem_lt.trans_le has, hix⟩
   · simp_rw [hin.not_lt, dite_false] at hix
     exact ⟨i, hi, hix⟩
 
-theorem mem_onIndices_of_mem {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} {x : α}
-    (hx : x ∈ b) : x ∈ a.onIndices b hb := by
+theorem mem_onIndices_of_mem {a : ArrayPerm n} {as : Array α} {has : n ≤ as.size} {x : α}
+    (hx : x ∈ as) : x ∈ a.onIndices as has := by
   simp_rw [Array.mem_iff_getElem] at hx ⊢
   simp_rw [getElem_onIndices, size_onIndices]
   rcases hx with ⟨i, hi, hix⟩
   rcases lt_or_le i n with hin | hin
-  · refine ⟨a⁻¹[i], getElem_lt.trans_le hb, ?_⟩
+  · refine ⟨a⁻¹[i], getElem_lt.trans_le has, ?_⟩
     simp_rw [getElem_lt, dite_true, getElem_getElem_inv, hix]
   · refine ⟨i, hi, ?_⟩
     simp_rw [hin.not_lt, dite_false, hix]
 
-theorem mem_onIndices_iff {a : ArrayPerm n} {b : Array α} {hb : n ≤ b.size} {x : α} :
-    x ∈ a.onIndices b hb ↔ x ∈ b := ⟨mem_of_mem_onIndices, mem_onIndices_of_mem⟩
+theorem mem_onIndices_iff {a : ArrayPerm n} {as : Array α} {has : n ≤ as.size} {x : α} :
+    x ∈ a.onIndices as has ↔ x ∈ as := ⟨mem_of_mem_onIndices, mem_onIndices_of_mem⟩
 
 @[simp]
 theorem onIndices_range (a : ArrayPerm n) :
