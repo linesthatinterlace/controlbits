@@ -93,16 +93,28 @@ def FirstLayer4 (a : ArrayPerm n) (m i : ℕ)  :
 
 def LastLayer (a : ArrayPerm n) (m i : ℕ) :
     Array Bool :=
-    let B := (a⁻¹.condFlipBit i (FirstLayer a m i))⁻¹.fwdArray.map (testBit · i);
-    (Array.range (2^m)).map fun p => (B.getD (p.mergeBit i false) false )
+    let A := (a⁻¹.condFlipBit i (FirstLayer a m i)).bwdArray;
+    (Fin.enum (2^m)).map fun p => (A[p.1.mergeBit i false]?.getD 0).testBit i
+
 def MiddlePerm (a : ArrayPerm n) (m i : ℕ) : ArrayPerm n :=
   (a⁻¹.condFlipBit i (FirstLayer a m i))⁻¹.condFlipBit i (LastLayer a m i)
+
+def FLMDecomp (a : ArrayPerm n) (m i : ℕ) : Array Bool × ArrayPerm n × Array Bool :=
+(FirstLayer a m i, MiddlePerm a m i, LastLayer a m i)
+
+def CBAux (a : ArrayPerm n) (m i : ℕ) : List (Array Bool) :=
+let (F, M, L) := FLMDecomp a m i;
+if m ≤ i then [L] else F :: CBAux M m (i + 1) ++ [L]
+termination_by m - i
+
+#eval CBAux (ArrayPerm.ofArray #[2, 3, 5, 1, 0, 7, 4, 6]) 2 0
 
 def Bits (a : ArrayPerm n) (m : ℕ) (i : Fin (m + 1)) : ArrayPerm n :=
 i.induction (MiddlePerm a m 0) fun i a => MiddlePerm a m i.succ
 
+
 set_option profiler true
---#eval Bits (1 : ArrayPerm (2^15)) 14 14
+--#eval Bits (1 : ArrayPerm (2^13)) 12 12
 
 
 --#eval (Array.range (2^12)).map (fun p => (Array.range (2^12)).getD (mergeBit 3 p true) 0)
