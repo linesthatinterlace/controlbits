@@ -1,9 +1,8 @@
-import Mathlib.Data.Fintype.Card
+import Mathlib.GroupTheory.GroupAction.Basic
 import Mathlib.GroupTheory.Perm.Basic
 import Mathlib.Logic.Equiv.Fin
 import Mathlib.Data.List.DropRight
 import Mathlib.Data.List.Indexes
-import Mathlib.GroupTheory.GroupAction.Group
 import Mathlib.Algebra.Group.Subgroup.Basic
 import Mathlib.Order.Interval.Finset.Fin
 import Mathlib.Data.Fintype.Perm
@@ -222,18 +221,12 @@ theorem mem_iff_get {as : Array α} {a : α} :
   simp_rw [get_eq_getElem, mem_iff_getElem, Fin.exists_iff]
 
 @[simp]
-theorem getD_eq_get_lt (a : Array α) (x : α) (i : ℕ) (h : i < a.size) : a[i]?.getD x = a[i] := by
+theorem getD_of_lt (a : Array α) (x : α) (i : ℕ) (h : i < a.size) : a[i]?.getD x = a[i] := by
   rw [a.getElem?_lt h, Option.getD_some]
 
 @[simp]
-theorem getD_eq_get_ge (a : Array α) (x : α) (i : ℕ) (h : a.size ≤ i) : a[i]?.getD x = x := by
+theorem getD_of_ge (a : Array α) (x : α) (i : ℕ) (h : a.size ≤ i) : a[i]?.getD x = x := by
   rw [a.getElem?_ge h, Option.getD_none]
-
-theorem getD_eq_get (a : Array α) (x : α) (i : ℕ) :
-    a[i]?.getD x = if h : i < a.size then a[i] else x := by
-  split_ifs with h
-  · rw [a.getD_eq_get_lt x i h]
-  · rw [a.getD_eq_get_ge x i (le_of_not_lt h)]
 
 theorem getElem?_eq_some (a : Array α) (x : α) (i : ℕ) :
     a[i]? = some x ↔ ∃ (h : i < a.size), a[i] = x := by
@@ -248,11 +241,7 @@ theorem getElem?_eq_some (a : Array α) (x : α) (i : ℕ) :
 
 theorem getD_eq_iff (a : Array α) (x d : α) (i : ℕ) :
     a[i]?.getD d = x ↔ (∃ (h : i < a.size), a[i] = x) ∨ (a.size ≤ i ∧ d = x) := by
-  rcases lt_or_le i a.size with hi | hi
-  · simp_rw [hi, hi.not_le, exists_true_left, false_and, or_false,
-      getElem?_lt _ hi, Option.getD_some]
-  · simp_rw [hi.not_lt, hi, IsEmpty.exists_iff, false_or, true_and,
-    getElem?_ge _ hi, Option.getD_none]
+  simp_rw [← Array.getD_eq_get?, Array.getD, dite_eq_iff, get_eq_getElem, exists_prop, not_lt]
 
 theorem getD_eq_iff_of_ne {d x : α} (hdx : d ≠ x) (a : Array α) (i : ℕ) :
     a[i]?.getD d = x ↔ ∃ (h : i < a.size), a[i] = x := by
@@ -320,13 +309,13 @@ theorem getElem_append {i : ℕ} {as bs : Array α} (h : i < (as ++ bs).size)
 theorem lt_length_left_of_zipWith {f : α → β → γ} {i : ℕ} {as : Array α} {bs : Array β}
     (h : i < (as.zipWith bs f).size) : i < as.size := by
   rw [Array.size_eq_length_data] at h ⊢
-  rw [Array.zipWith_eq_zipWith_data] at h
+  rw [Array.data_zipWith] at h
   exact List.lt_length_left_of_zipWith h
 
 theorem lt_length_right_of_zipWith {f : α → β → γ} {i : ℕ} {as : Array α} {bs : Array β}
     (h : i < (as.zipWith bs f).size) : i < bs.size := by
   rw [Array.size_eq_length_data] at h ⊢
-  rw [Array.zipWith_eq_zipWith_data] at h
+  rw [Array.data_zipWith] at h
   exact List.lt_length_right_of_zipWith h
 
 theorem lt_length_left_of_zip {i : ℕ} {as : Array α} {bs : Array β} (h : i < (as.zip bs).size) :
@@ -339,13 +328,13 @@ theorem lt_length_right_of_zip {i : ℕ} {as : Array α} {bs : Array β} (h : i 
 theorem getElem_zipWith {as : Array α} {bs : Array β} {f : α → β → γ} {i : ℕ}
     (h : i < (as.zipWith bs f).size) : (as.zipWith bs f)[i] =
     f (as[i]'(lt_length_left_of_zipWith h)) (bs[i]'(lt_length_right_of_zipWith h)) := by
-  simp_rw [getElem_eq_data_getElem, Array.zipWith_eq_zipWith_data, List.getElem_zipWith]
+  simp_rw [getElem_eq_data_getElem, Array.data_zipWith, List.getElem_zipWith]
 
 @[simp]
 theorem getElem_zip {as : Array α} {bs : Array β} {i : ℕ}
     (h : i < (as.zip bs).size) : (as.zip bs)[i] =
     (as[i]'(lt_length_left_of_zip h), bs[i]'(lt_length_right_of_zip h)) := by
-  simp_rw [getElem_eq_data_getElem, Array.zip_eq_zip_data, List.getElem_zip]
+  simp_rw [getElem_eq_data_getElem, Array.data_zip, List.getElem_zip]
 
 @[simp]
 theorem getElem_zipWithIndex {as : Array α} {i : ℕ}
@@ -962,7 +951,7 @@ instance : Group (ArrayPerm n) where
     simp_rw [getElem_mul, getElem_one]
   mul_one a := ext <| fun _ hi => by
     simp_rw [getElem_mul, getElem_one]
-  mul_left_inv a := ext <| fun _ hi => by
+  inv_mul_cancel a := ext <| fun _ hi => by
     simp_rw [getElem_mul, getElem_one, getElem_inv_getElem]
 
 @[simp]
@@ -1108,6 +1097,30 @@ theorem smul_nat_eq_iff_eq_one (a : ArrayPerm n) : (∀ i : ℕ, a • i = i) �
 
 theorem smul_nat_eq_id_iff_eq_one (a : ArrayPerm n) : ((a • ·) : ℕ → ℕ) = id ↔ a = 1 := by
   simp_rw [funext_iff, id_eq, smul_nat_eq_iff_eq_one]
+
+theorem fixedBy_of_ge {a : ArrayPerm n} {i : ℕ} (h : n ≤ i) :
+    i ∈ MulAction.fixedBy ℕ a := by
+  rw [MulAction.mem_fixedBy]
+  exact smul_of_ge h
+
+theorem Ici_subset_fixedBy {a : ArrayPerm n} :
+    Set.Ici n ⊆ MulAction.fixedBy ℕ a := fun _ => fixedBy_of_ge
+
+theorem Ici_subset_fixedPoints :
+    Set.Ici n ⊆ MulAction.fixedPoints (ArrayPerm n) ℕ := fun _ hx _ => smul_of_ge hx
+
+open Pointwise in
+theorem Iic_mem_set_fixedBy {a : ArrayPerm n} :
+    Set.Iio n ∈ MulAction.fixedBy (Set ℕ) a := Set.ext <| fun _ => by
+  rw [← inv_inv a]
+  simp_rw [Set.mem_inv_smul_set_iff, Set.mem_Iio, smul_lt_iff_lt]
+
+theorem fixedBy_image_val_subset {a : ArrayPerm n} :
+    (MulAction.fixedBy (Fin n) a).image (Fin.val) ⊆ MulAction.fixedBy ℕ a := fun _ => by
+  simp_rw [Set.mem_image, MulAction.mem_fixedBy, forall_exists_index, and_imp,
+  Fin.forall_iff, Fin.ext_iff, smul_mk]
+  rintro _ h ha rfl
+  exact (smul_of_lt h).trans ha
 
 theorem period_eq_one_of_ge {a : ArrayPerm n} {i : ℕ} (hi : n ≤ i) : MulAction.period a i = 1 := by
   simp_rw [MulAction.period_eq_one_iff, smul_of_ge hi]
@@ -1603,22 +1616,22 @@ lemma getElem_cycleMinArray_eq_min'_cycleOf (a : ArrayPerm n) (i : ℕ) {x : ℕ
   · rcases a.exists_lt_getElem_cycleMin_eq_getElem_pow i (x := x) (by assumption) with ⟨k, _, hk⟩
     exact ⟨_, hk.symm⟩
 
-def CycleMin (a : ArrayPerm n) (i : ℕ) (x : ℕ) : ℕ :=
-  if h : x < (a.CycleMinArray i).size then (a.CycleMinArray i)[x] else x
+def CycleMin (a : ArrayPerm n) (i : ℕ) (x : ℕ) : ℕ := (a.CycleMinArray i)[x]?.getD x
 
 theorem getElem_cycleMinArray (a : ArrayPerm n) (i : ℕ) {x : ℕ}
     (hx : x < (a.CycleMinArray i).size) : (a.CycleMinArray i)[x] = a.CycleMin i x :=
-  (dif_pos _).symm
+  (getD_of_lt _ _ _ _).symm
 
 theorem cycleMin_of_lt {a : ArrayPerm n} {i x : ℕ} (hx : x < n) :
-    a.CycleMin i x = (a.CycleMinArray i)[x]'(hx.trans_eq size_cycleMinArray.symm) := dif_pos _
+    a.CycleMin i x = (a.CycleMinArray i)[x]'(hx.trans_eq size_cycleMinArray.symm) :=
+  getD_of_lt _ _ _ _
 
 theorem cycleMin_of_getElem {a b : ArrayPerm n} {i x : ℕ} (hx : x < n) :
     a.CycleMin i (b[x]) = (a.CycleMinArray i)[b[x]]'(getElem_lt.trans_eq size_cycleMinArray.symm) :=
-  dif_pos _
+  getD_of_lt _ _ _ _
 
 theorem cycleMin_of_ge {a : ArrayPerm n} {i x : ℕ} (hx : n ≤ x) :
-    a.CycleMin i x = x := dif_neg (not_lt_of_le <| size_cycleMinArray.trans_le hx)
+    a.CycleMin i x = x := getD_of_ge _ _ _ (size_cycleMinArray.trans_le hx)
 
 @[simp]
 theorem cycleMin_zero {a : ArrayPerm n} {x : ℕ} :

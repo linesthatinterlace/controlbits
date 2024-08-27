@@ -1,5 +1,6 @@
 import Mathlib.GroupTheory.Perm.Basic
-import Mathlib.GroupTheory.Commutator
+import Mathlib.GroupTheory.Commutator.Basic
+import Mathlib.Data.Fin.Basic
 
 namespace Fin
 
@@ -8,7 +9,7 @@ lemma perm_fin_two (π : Equiv.Perm (Fin 2)) :
   rw [Equiv.ext_iff, forall_fin_two]
   rcases (exists_fin_two.mp ⟨π 0, rfl⟩) with (h0 | h0) <;>
   rcases (exists_fin_two.mp ⟨π 1, rfl⟩) with (h1 | h1) <;>
-  simp only [h0, ite_true, Equiv.swap_apply_left, h1, Equiv.swap_apply_right, one_eq_zero_iff, id_eq,
+  simp only [h0, ite_true, Equiv.swap_apply_left, h1, Equiv.swap_apply_right, Fin.one_eq_zero_iff, id_eq,
     OfNat.ofNat_ne_one, and_false, zero_eq_one_iff, ite_false, Equiv.Perm.coe_one,  and_self] <;>
   exact (zero_ne_one ((EmbeddingLike.apply_eq_iff_eq _).mp (h0.trans (h1.symm)))).elim
 

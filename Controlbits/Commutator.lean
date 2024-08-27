@@ -1,4 +1,4 @@
-import Mathlib.GroupTheory.Commutator
+import Mathlib.GroupTheory.Commutator.Basic
 import Mathlib.GroupTheory.Perm.Basic
 import Mathlib.Dynamics.FixedPoints.Basic
 

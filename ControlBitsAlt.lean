@@ -68,36 +68,61 @@ def Array.popOff' (a : Array α) (n : ℕ) [NeZero n] : Array α :=
 
 def FirstLayer (a : ArrayPerm n) (m i : ℕ) :
     Array Bool :=
-      let A := (a.flipBitCommutator i).CycleMinArray (m - i);
-      (Fin.enum (2^m)).map fun p => (A[p.1.mergeBit i false]?.getD 0).testBit i
+  let A := (a.flipBitCommutator i).CycleMinArray (m - i);
+  (Array.range (2^m)).map fun p => (A[p.mergeBit i false]?.getD (p.mergeBit i false)).testBit i
 
+theorem firstLayer_eq_map_cycleMin : FirstLayer a m i =
+  (Array.range (2^m)).map fun p =>
+  ((a.flipBitCommutator i).CycleMin (m - i) (p.mergeBit i false)).testBit i := rfl
+
+@[simp]
 theorem size_firstLayer (a : ArrayPerm n) (m i : ℕ) : (FirstLayer a m i).size = 2^m := by
   unfold FirstLayer
-  simp_rw [Array.size_map, Fin.size_enum]
+  simp_rw [Array.size_map, Array.size_range]
 
-theorem getElem_firstLayer (m : ℕ) (a : ArrayPerm (2^(m + 1))) (i : Fin (m + 1)) {x : ℕ}
-    (hx : x < (FirstLayer a m i).size) :
-    (FirstLayer a m i)[x] = ((a.flipBitCommutator i).CycleMin i.rev (x.mergeBit i false)).testBit i := by
-  unfold FirstLayer
-  simp_rw [Array.getElem_map, Fin.getElem_enum]
-  have H : x.mergeBit i false < ((a.flipBitCommutator i).CycleMinArray (m - i)).size := by
-    simp
-    rw [mergeBit_lt_two_pow_iff_lt_two_pow i.is_le]
-    exact hx.trans_eq (size_firstLayer _ _ _)
-  rw [Array.getD_eq_get_lt _ _ _ H, ArrayPerm.getElem_cycleMinArray _ _ H, Fin.val_rev,
-  Nat.add_sub_add_right]
+theorem getElem_firstLayer (m : ℕ) (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+    (hx : x < (FirstLayer a m i).size) : (FirstLayer a m i)[x] =
+    ((a.flipBitCommutator i).CycleMin (m - i) (x.mergeBit i false)).testBit i := by
+  simp_rw [firstLayer_eq_map_cycleMin, Array.getElem_map, Array.getElem_range]
 
+theorem testBit_condFlipBit_firstLayer (a : ArrayPerm n) (i : ℕ) {k : ℕ} (hk : k < n) :
+    (condFlipBit k i (FirstLayer a m i)).testBit i =
+    ((a.flipBitCommutator i).CycleMin (m - i) k).testBit i := by
+  simp_rw [testBit_condFlipBit_of_eq, ← Array.getD_eq_get?, Array.getD, size_firstLayer,
+  Array.get_eq_getElem, getElem_firstLayer, testRes_lt_iff]
+  rw [testRes_lt_two_pow_iff_lt_two_pow]
 
-def FirstLayer4 (a : ArrayPerm n) (m i : ℕ)  :
-    Array Bool := (((a.flipBitCommutator i).CycleMinArray (m - i)).map (testBit · i)).popOff' (2^i)
+theorem testBit_condFlipBit_firstLayer' (a : ArrayPerm n) (i : ℕ) {k : ℕ} (hk : k < n) :
+    (ArrayPerm.condFlipBit i (FirstLayer a m i) (n := n))[k].testBit i = _
+    := by
+  simp_rw [firstLayer_eq_map_cycleMin, Array.getElem_map, Array.getElem_range]
 
 def LastLayer (a : ArrayPerm n) (m i : ℕ) :
     Array Bool :=
-    let A := (a⁻¹.condFlipBit i (FirstLayer a m i)).bwdArray;
-    (Fin.enum (2^m)).map fun p => (A[p.1.mergeBit i false]?.getD 0).testBit i
+    let F := FirstLayer a m i;
+    (Array.range (2^m)).map fun p => ((a • (p.mergeBit i false)).condFlipBit i F).testBit i
+
+@[simp]
+theorem size_lastLayer (a : ArrayPerm n) (m i : ℕ) : (LastLayer a m i).size = 2^m := by
+  unfold LastLayer
+  simp_rw [Array.size_map, Array.size_range]
+
+theorem getElem_lastLayer (m : ℕ) (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+    (hx : x < (LastLayer a m i).size) : (LastLayer a m i)[x] =
+    ((a • (x.mergeBit i false)).condFlipBit i (FirstLayer a m i)).testBit i := by
+  simp_rw [LastLayer, Array.getElem_map, Array.getElem_range]
 
 def MiddlePerm (a : ArrayPerm n) (m i : ℕ) : ArrayPerm n :=
-  (a⁻¹.condFlipBit i (FirstLayer a m i))⁻¹.condFlipBit i (LastLayer a m i)
+  (a.condFlipBitVals i (FirstLayer a m i)).condFlipBitIndices i (LastLayer a m i)
+
+theorem condFlipBitVal_condFlipBitIndices_middlePerm (a : ArrayPerm n) (m i : ℕ) :
+    ((MiddlePerm a m i).condFlipBitVals i (FirstLayer a m i)).condFlipBitIndices i
+    (LastLayer a m i) = a := by
+  unfold MiddlePerm
+  simp_rw [ArrayPerm.condFlipBitVals_comm_condFlipBitIndices,
+  ArrayPerm.condFlipBitIndices_condFlipBitIndices_of_eq,
+  ArrayPerm.condFlipBitVals_condFlipBitVals_of_eq]
+
 
 def FLMDecomp (a : ArrayPerm n) (m i : ℕ) : Array Bool × ArrayPerm n × Array Bool :=
 (FirstLayer a m i, MiddlePerm a m i, LastLayer a m i)
@@ -107,8 +132,8 @@ let (F, M, L) := FLMDecomp a m i;
 if m ≤ i then [L] else F :: CBAux M m (i + 1) ++ [L]
 termination_by m - i
 
-#eval CBAux (ArrayPerm.ofArray #[2, 3, 5, 1, 0, 7, 4, 6]) 2 0
-
+#eval CBAux (ArrayPerm.ofArray #[2, 3, 0, 1, 5, 7, 4, 6]) 2 0
+#eval CBAux (1 : ArrayPerm (2^13)) 12 0
 def Bits (a : ArrayPerm n) (m : ℕ) (i : Fin (m + 1)) : ArrayPerm n :=
 i.induction (MiddlePerm a m 0) fun i a => MiddlePerm a m i.succ
 
@@ -119,7 +144,7 @@ set_option profiler true
 
 --#eval (Array.range (2^12)).map (fun p => (Array.range (2^12)).getD (mergeBit 3 p true) 0)
 --#eval FirstLayer' (1 : ArrayPerm (2^9)) 10 8
-#eval FirstLayer (1 : ArrayPerm (2^15)) 14 8
+--#eval FirstLayer (1 : ArrayPerm (2^15)) 14 8
 --#eval FirstLayer'' (1 : ArrayPerm (2^9)) 11 8
 --#eval FirstLayer4 (1 : ArrayPerm (2^15)) 14 8
 --#eval FirstLayer5 14 (1 : ArrayPerm (2^15)) 8

@@ -220,7 +220,7 @@ lemma toPerm_succ_castSucc {n : Fin (m + 1)} {cb} :
   · simp_rw [castSucc_zero, toPerm_zero,
     bitInvarMulEquiv_zero_apply_condFlipBits, succ_last]
   · simp_rw [← succ_castSucc, toPerm_succ,  IH, ← Pi.mul_def,
-    MulEquiv.map_mul, Submonoid.coe_mul, bitInvarMulEquiv_zero_apply_condFlipBits,
+    map_mul, Submonoid.coe_mul, bitInvarMulEquiv_zero_apply_condFlipBits,
     rev_castSucc,  succ_castSucc, coe_castSucc]
 
 lemma toPerm_succ_last {cb : PartialControlBits (m + 1) (m + 1)} :
@@ -411,7 +411,7 @@ def controlBits3_normal : ControlBits 3 :=
   ![false, true, true, false, false, true, true, false],
   ![false, true, false, true, false, true, false, true]]
 
-
+/-
 
 def controlBits2_perm : Perm (Fin 8) := ArrayPerm.mulEquivPerm (ArrayPerm.mk (n := 8)
   (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5]))
@@ -462,3 +462,4 @@ set_option profiler true
 #eval ControlBits.fromPerm (m := 2) controlBits2_perm
 #eval ControlBits.fromPerm (m := 3) controlBits3_perm
 #eval controlBits3_normal.toPerm
+-/
