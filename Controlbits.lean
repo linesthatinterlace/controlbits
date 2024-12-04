@@ -411,10 +411,10 @@ def controlBits3_normal : ControlBits 3 :=
   ![false, true, true, false, false, true, true, false],
   ![false, true, false, true, false, true, false, true]]
 
+def controlBits2_perm : Perm (Fin 8) := (VectorPerm.ofVector #v[2, 0, 1, 3, 5, 7, 6, 4]).finPerm 8
+#eval ControlBits.fromPerm (m := 2) controlBits2_perm
 /-
 
-def controlBits2_perm : Perm (Fin 8) := VectorPerm.mulEquivPerm (VectorPerm.mk (n := 8)
-  (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5]))
 
 def controlBits3_perm : Perm (Fin 16) := VectorPerm.mulEquivPerm <| VectorPerm.mk (n := 16)
   (#[0, 15, 1, 14, 2, 13, 3, 12, 4, 11, 5, 10, 6, 9, 7, 8])

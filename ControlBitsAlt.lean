@@ -60,6 +60,51 @@ lemma blahj {π : Perm ℕ} (hπ : π ∈ Subgroup.BitInvariantLT i)
 /-
 
 -/
+
+def LeftLayer (a : VectorPerm (2^(n + 1))) (i : Fin (n + 1)) : Vector Bool (2^n) :=
+  let A := (a.flipBitCommutator i).CycleMinVector (n - i);
+  (Vector.finRange (2^n)).map fun (p : Fin (2^n)) =>
+  (A[(p : ℕ).mergeBit i false]'
+  ((mergeBit_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
+    (Nat.pow_dvd_pow _ (Nat.succ_le_succ i.is_le))).mpr
+    (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
+
+def RightLayer (a : VectorPerm (2^(n + 1))) (i : Fin (n + 1)) : Vector Bool (2^n) :=
+  let F := LeftLayer a i;
+  (Vector.finRange (2^n)).map fun (p : Fin (2^n)) =>
+  ((a[((p : ℕ).mergeBit i false)]'((mergeBit_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
+    (Nat.pow_dvd_pow _ (Nat.succ_le_succ i.is_le))).mpr
+    (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).condFlipBit i
+    F).testBit i
+
+def MiddlePerm (a : VectorPerm (2^(n + 1))) (i : Fin (n + 1)) : VectorPerm (2^(n + 1)) :=
+  (a.condFlipBitVals i (LeftLayer a i)).condFlipBitIndices i (RightLayer a i)
+
+def FLMDecomp (a : VectorPerm (2^(n + 1))) (i : Fin (n + 1)) :
+    Vector Bool (2^n) × Vector Bool (2^n) × VectorPerm (2^(n + 1)) :=
+  let A := (a.flipBitCommutator i).CycleMinVector (n - i);
+  let F := (Vector.range (2^n)).map fun (p : ℕ) =>
+    (A.getD (p.mergeBit i false) (p.mergeBit i false)).testBit i
+  let L := (Vector.range (2^n)).map fun (p : ℕ) =>
+    ((a • ((p : ℕ).mergeBit i false)).condFlipBit i F).testBit i
+  let M := (a.condFlipBitVals i F).condFlipBitIndices i L
+  (F, L, M)
+
+/-Doesn't work for form reasons-/
+def ControlBitsScuffed (a : VectorPerm (2^(n + 1))) :
+    List (Vector Bool (2^n)) :=
+  (Fin.foldr (n + 1) (fun i (l, pi) =>
+  let (F, L, M) := FLMDecomp pi i
+  (F :: l ++ [L], M)) ([], a)).fst
+
+#eval VectorPerm.ofVector (n := 2) #v[1, 0]
+
+#eval LeftLayer (n := 1) (VectorPerm.ofVector (n := 4) #v[3, 1, 0, 2]) 0
+#eval RightLayer (n := 1) (VectorPerm.ofVector (n := 4) #v[3, 1, 0, 2]) 0
+#eval FLMDecomp (n := 2) (VectorPerm.ofVector (n := 8) #v[7, 3, 6, 4, 1, 5, 0, 2]) 0
+#eval FLMDecomp (n := 2) (VectorPerm.ofVector (n := 8) #v[2, 7, 6, 5, 4, 1, 0, 3]) 1
+#eval FLMDecomp (n := 2) (VectorPerm.ofVector (n := 8) #v[4, 5, 2, 7, 0, 1, 6, 3]) 2
+#eval ControlBitsScuffed (n := 2) (VectorPerm.ofVector (n := 8) #v[7, 3, 6, 4, 1, 5, 0, 2])
 def FirstLayer'' (a : VectorPerm n) (m i : ℕ) :
     Array Bool := (Array.range (2^m)).map
   fun p => ((a.flipBitCommutator i).CycleMin (m - i) (p.mergeBit i false)).testBit i
@@ -72,10 +117,10 @@ def Array.popOff' (a : Array α) (n : ℕ) [NeZero n] : Array α :=
   (·.2.2) <| a.foldl (init := (true, (0 : Fin n), Array.empty)) fun (b, n, r) a =>
     ((n == -1).xor b, n + 1, if b then r.push a else r)
 
-def FirstLayer (a : VectorPerm n) (m i : ℕ) :
-    Array Bool :=
+def FirstLayer (a : VectorPerm (2^n)) (m i : ℕ) :
+    Vector Bool n :=
   let A := (a.flipBitCommutator i).CycleMinVector (m - i);
-  (Array.range (2^m)).map fun p => (A[p.mergeBit i false]?.getD (p.mergeBit i false)).testBit i
+  (Vector.range (2^m)).map fun p => (A[p.mergeBit i false]?.getD (p.mergeBit i false)).testBit i
 
 theorem firstLayer_eq_map_cycleMin : FirstLayer a m i =
   (Array.range (2^m)).map fun p =>

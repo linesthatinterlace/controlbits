@@ -195,6 +195,16 @@ theorem getElem_swap_eq_getElem_swap_apply (as : Vector α n) (i j : ℕ) (hi : 
   simp_rw [getElem_swap, Equiv.swap_apply_def]
   split_ifs <;> rfl
 
+protected def finRange (n : ℕ) : Vector (Fin n) n := ⟨Array.finRange n, Array.size_finRange⟩
+
+@[simp] theorem getElem_finRange (hi : i < n) : (Vector.finRange n)[i] = ⟨i, hi⟩ := by
+  unfold Vector.finRange
+  simp_rw [getElem_mk, Array.getElem_finRange]
+
+@[simp] theorem getElem_mkVector {a : α} (hi : i < n) : (Vector.mkVector n a)[i] = a := by
+  unfold Vector.mkVector
+  simp_rw [getElem_mk, Array.getElem_mkArray]
+
 end Vector
 
 /--
@@ -741,7 +751,7 @@ theorem getElem_zpow_mod_period {a : VectorPerm n} {i : ℕ} {hi : i < n} (k : �
     (a^(k % MulAction.period a i))[i] = (a^k)[i] := by
   simp_rw [← smul_of_lt hi, MulAction.zpow_mod_period_smul]
 
-theorem period_ℕ_pos (a : VectorPerm n) {i : ℕ} : 0 < MulAction.period a i :=
+theorem period_nat_pos (a : VectorPerm n) {i : ℕ} : 0 < MulAction.period a i :=
   MulAction.period_pos_of_orderOf_pos a.orderOf_pos _
 
 theorem period_pos (a : VectorPerm n) {i : Fin n} : 0 < MulAction.period a i :=
@@ -750,7 +760,7 @@ theorem period_pos (a : VectorPerm n) {i : Fin n} : 0 < MulAction.period a i :=
 theorem period_fin {a : VectorPerm n} {i : Fin n} :
     MulAction.period a i = MulAction.period a (i : ℕ) := by
   rw [le_antisymm_iff]
-  refine ⟨MulAction.period_le_of_fixed (period_ℕ_pos _) (Fin.ext ?_),
+  refine ⟨MulAction.period_le_of_fixed (period_nat_pos _) (Fin.ext ?_),
     MulAction.period_le_of_fixed (period_pos _) ?_⟩
   · simp_rw [val_smul, getElem_pow_period]
   · simp_rw [smul_val, MulAction.pow_period_smul]
@@ -788,7 +798,7 @@ theorem period_le_of_ne_zero [NeZero n] (a : VectorPerm n) {i : ℕ} : MulAction
 
 theorem exists_pos_le_pow_getElem_eq (a : VectorPerm n) {i : ℕ} (hi : i < n) :
     ∃ k, 0 < k ∧ k ≤ n ∧ (a ^ k)[i] = i :=
-  ⟨MulAction.period a i, a.period_ℕ_pos, a.period_le_of_lt hi, getElem_pow_period⟩
+  ⟨MulAction.period a i, a.period_nat_pos, a.period_le_of_lt hi, getElem_pow_period⟩
 
 /--
 `ofPerm` maps a member of `Perm ℕ` which maps the subtype `< n` to itself to the corresponding
@@ -996,7 +1006,7 @@ theorem cycleOf_lt {a : VectorPerm n} {x : ℕ} (hx : x < n) :
     a.cycleOf x = (Finset.range (MulAction.period a x)).image (fun k => (a ^ k)[x]) := by
   unfold cycleOf
   simp_rw [dif_pos hx, Finset.ext_iff, Finset.mem_image, Finset.mem_range]
-  refine fun _ => ⟨fun ⟨k, h⟩ => ⟨k % MulAction.period a x, Nat.mod_lt _ a.period_ℕ_pos,
+  refine fun _ => ⟨fun ⟨k, h⟩ => ⟨k % MulAction.period a x, Nat.mod_lt _ a.period_nat_pos,
     by simp_rw [getElem_pow_mod_period, h]⟩, fun ⟨_, hlt, h⟩ =>
     ⟨_, (hlt.trans_le <| a.period_le_of_lt hx), h⟩⟩
 
@@ -1016,7 +1026,7 @@ theorem cycleOf_eq_map_smul_range_period (a : VectorPerm n) (x : ℕ) :
   · simp_rw [cycleOf_lt hx, smul_of_lt hx]
   · simp_rw [cycleOf_ge hx, smul_of_ge hx, Finset.ext_iff, Finset.mem_singleton,
       Finset.mem_image, Finset.mem_range, exists_and_right]
-    exact fun _ => ⟨fun h => h ▸ ⟨⟨0, a.period_ℕ_pos⟩, rfl⟩, fun h => h.2.symm⟩
+    exact fun _ => ⟨fun h => h ▸ ⟨⟨0, a.period_nat_pos⟩, rfl⟩, fun h => h.2.symm⟩
 
 theorem mem_cycleOf_iff_exists_pow_lt_period_smul (a : VectorPerm n) {x y : ℕ} :
     y ∈ a.cycleOf x ↔ ∃ i : ℕ, i < MulAction.period a x ∧ (a ^ i) • x = y := by
@@ -1027,7 +1037,7 @@ theorem mem_cycleOf_iff_exists_pow_smul (a : VectorPerm n) {x y : ℕ} :
     y ∈ a.cycleOf x ↔ ∃ i : ℕ, (a ^ i) • x = y := by
   rw [mem_cycleOf_iff_exists_pow_lt_period_smul]
   refine ⟨fun ⟨_, _, h⟩ => ⟨_, h⟩,
-    fun ⟨k, h⟩ => ⟨k % MulAction.period a x, Nat.mod_lt _ a.period_ℕ_pos, ?_⟩⟩
+    fun ⟨k, h⟩ => ⟨k % MulAction.period a x, Nat.mod_lt _ a.period_nat_pos, ?_⟩⟩
   simp_rw [MulAction.pow_mod_period_smul, h]
 
 theorem mem_cycleOf_iff_exists_zpow_smul (a : VectorPerm n) {x y : ℕ} :
@@ -1036,7 +1046,7 @@ theorem mem_cycleOf_iff_exists_zpow_smul (a : VectorPerm n) {x y : ℕ} :
   refine ⟨fun ⟨_, h⟩ => ⟨_, (zpow_natCast a _).symm ▸ h⟩,
     fun ⟨k, h⟩ => ⟨(k % MulAction.period a x).toNat, ?_⟩⟩
   simp_rw [← zpow_natCast, Int.toNat_of_nonneg
-    (Int.emod_nonneg _ ((Nat.cast_ne_zero (R := ℤ)).mpr (a.period_ℕ_pos (i := x)).ne')),
+    (Int.emod_nonneg _ ((Nat.cast_ne_zero (R := ℤ)).mpr (a.period_nat_pos (i := x)).ne')),
     MulAction.zpow_mod_period_smul, h]
 
 theorem mem_cycleOf_iff_exists_getElem_pow_lt_period (a : VectorPerm n) {x y : ℕ} (hx : x < n) :
