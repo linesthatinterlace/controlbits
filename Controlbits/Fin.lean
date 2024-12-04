@@ -37,8 +37,6 @@ lemma rev_succ_castSucc {i : Fin m}: i.succ.castSucc.rev = i.rev.succ.castSucc :
 lemma castSucc_rev_castSucc {i : Fin m}: i.castSucc.rev.castSucc = i.succ.rev.succ := by
   simp_rw [rev_succ, rev_castSucc, succ_castSucc]
 
-lemma last_zero : last 0 = 0 := rfl
-
 lemma last_one : last 1 = 1 := rfl
 
 lemma last_zero_add_one : last (0 + 1) = 1 := rfl

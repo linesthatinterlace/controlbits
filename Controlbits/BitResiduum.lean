@@ -15,7 +15,7 @@ section GetMerge
 def getBitRes (i : Fin (m + 1)) : BV (m + 1) ≃ Bool × BV m :=
 calc
   _ ≃ (Fin (m + 1) → Fin 2)   := finFunctionFinEquiv.symm
-  _ ≃ Fin 2 × (Fin m → Fin 2) := Equiv.piFinSuccAbove _ i
+  _ ≃ Fin 2 × (Fin m → Fin 2) := (Fin.insertNthEquiv _ i).symm
   _ ≃ _                       := finTwoEquiv.prodCongr finFunctionFinEquiv
 
 @[simp]
@@ -43,7 +43,7 @@ lemma mergeBitRes_apply : mergeBitRes i b p = (getBitRes i).symm (b, p) := rfl
 lemma getBitRes_apply_zero {i : Fin (m + 1)} : getBitRes i 0 = (false, 0) := by
 ext <;> simp only [getBitRes_apply, finFunctionFinEquiv, Equiv.ofRightInverseOfCardLE_symm_apply,
   Fin.val_zero', Nat.zero_div, Nat.zero_mod, Fin.zero_eta, finTwoEquiv_apply, zero_ne_one,
-  decide_False, Equiv.ofRightInverseOfCardLE_apply, Fin.val_zero, zero_mul, Finset.sum_const_zero]
+  decide_false, Equiv.ofRightInverseOfCardLE_apply, Fin.val_zero, zero_mul, Finset.sum_const_zero]
 
 lemma getBit_apply_zero {i : Fin (m + 1)} : getBit i 0 = false := by
 rw [getBit_apply, getBitRes_apply_zero]
@@ -55,21 +55,21 @@ lemma mergeBitRes_apply_false_zero {i : Fin (m + 1)} : mergeBitRes i false 0 = 0
 rw [mergeBitRes_apply, ← getBitRes_apply_zero (i := i), Equiv.symm_apply_apply]
 
 lemma getBitRes_apply_two_pow {i : Fin (m + 1)}: getBitRes i ⟨2^(i : ℕ),
-  pow_lt_pow_right one_lt_two i.isLt⟩ = (true, 0) := by
+  pow_lt_pow_right₀ one_lt_two i.isLt⟩ = (true, 0) := by
   ext
   · simp only [getBitRes_apply, finFunctionFinEquiv, Equiv.ofRightInverseOfCardLE_symm_apply,
     gt_iff_lt, zero_lt_two, pow_pos, Nat.div_self, Nat.one_mod, Fin.mk_one, finTwoEquiv_apply,
-    decide_True, Equiv.ofRightInverseOfCardLE_apply]
+    decide_true, Equiv.ofRightInverseOfCardLE_apply]
   · simp only [getBitRes_apply, finFunctionFinEquiv_apply_val, finFunctionFinEquiv_symm_apply_val,
     Fin.val_zero', Finset.sum_eq_zero_iff, Finset.mem_univ, mul_eq_zero, forall_true_left]
     refine fun x => Or.inl ?_
     rcases (Fin.succAbove_ne i x).lt_or_lt with h | h <;> rw [Fin.lt_iff_val_lt_val] at h
     · rw [Nat.pow_div h.le zero_lt_two, Nat.pow_mod, Nat.mod_self,
         Nat.zero_pow (Nat.sub_pos_of_lt h), Nat.zero_mod]
-    · rw [Nat.div_eq_of_lt (pow_lt_pow_right one_lt_two h), Nat.zero_mod]
+    · rw [Nat.div_eq_of_lt (pow_lt_pow_right₀ one_lt_two h), Nat.zero_mod]
 
 lemma getBit_apply_two_pow {i : Fin (m + 1)} : getBit i ⟨2^(i : ℕ),
-  pow_lt_pow_right one_lt_two i.isLt⟩ = true := by
+  pow_lt_pow_right₀ one_lt_two i.isLt⟩ = true := by
   rw [getBit_apply, getBitRes_apply_two_pow]
 
 lemma getBit_apply_zero_one : getBit 0 (1 : BV (m + 1)) = true := by
@@ -77,11 +77,11 @@ lemma getBit_apply_zero_one : getBit 0 (1 : BV (m + 1)) = true := by
   rw [Fin.val_one', Nat.mod_eq_of_lt (Nat.one_lt_pow' _ _ ), Fin.val_zero, pow_zero]
 
 lemma getRes_apply_two_pow {i : Fin (m + 1)} :
-  getRes i ⟨2^(i : ℕ), pow_lt_pow_right one_lt_two i.isLt⟩ = 0 := by
+  getRes i ⟨2^(i : ℕ), pow_lt_pow_right₀ one_lt_two i.isLt⟩ = 0 := by
   rw [getRes_apply, getBitRes_apply_two_pow]
 
 lemma mergeBitRes_apply_true_zero {i : Fin (m + 1)} :
-  mergeBitRes i true 0 = ⟨2^(i : ℕ), pow_lt_pow_right one_lt_two i.isLt⟩ := by
+  mergeBitRes i true 0 = ⟨2^(i : ℕ), pow_lt_pow_right₀ one_lt_two i.isLt⟩ := by
   rw [mergeBitRes_apply, ← getBitRes_apply_two_pow (i := i), Equiv.symm_apply_apply]
 
 def getBitResZero : BV (m + 1) ≃ Bool × BV m :=
@@ -373,8 +373,8 @@ lemma mergeBitRes_getRes_cases (i : Fin (m + 1)) (q : BV (m + 1)) :
 (getBit i q = false ∧ mergeBitRes i false (getRes i q) = q) ∨
 (getBit i q = true ∧ mergeBitRes i true (getRes i q) = q) := by
   rcases (getBit i q).dichotomy with (h | h) <;>
-  simp_rw [h, mergeBitRes_getRes_of_getBit_eq h, false_and, and_self]
-  · simp_rw [or_false]
+  simp_rw [h, mergeBitRes_getRes_of_getBit_eq h, true_and]
+  · simp_rw [true_or]
   · simp_rw [or_true]
 
 lemma mergeBitRes_getBit_of_getRes_eq (h : getRes i q = p) : mergeBitRes i (getBit i q) p = q := by

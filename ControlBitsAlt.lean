@@ -1,7 +1,6 @@
 import Controlbits.PermFintwo
 import Controlbits.BitResiduumAlt
 import Controlbits.CommutatorCycles
-import Controlbits.ArrayPerm
 
 section Decomposition
 open Equiv Equiv.Perm Nat Function
@@ -19,7 +18,7 @@ theorem lt_iff_xBXF_lt (h : i < m) (hπ : ∀ q, π q < 2^m ↔ q < 2^m) :
 
 --Theorem 4.3 (c)
 lemma univ_filter_sameCycle_le_pow_two {q : ℕ} [DecidableRel (XBackXForth i π).SameCycle]
-(hπ : π ∈ Subgroup.bitInvarLT i) :
+(hπ : π ∈ Subgroup.BitInvariantLT i) :
 ((Finset.range (2^m)).filter (fun y => (XBackXForth i π).SameCycle q y)).card ≤ 2 ^ m := sorry
   --apply Nat.le_of_mul_le_mul_left _ (zero_lt_two)
   --rw [← pow_succ']
@@ -29,16 +28,23 @@ lemma univ_filter_sameCycle_le_pow_two {q : ℕ} [DecidableRel (XBackXForth i π
 
 -- Theorem 4.4
 lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF {π : Perm ℕ}
-  (hπ : π ∈ Subgroup.bitInvarLT i) :
+  (hπ : π ∈ Subgroup.BitInvariantLT i) :
 (XBackXForth i π).CycleMin (q.flipBit i) = ((XBackXForth i π).CycleMin q).flipBit i := by
-  refine' cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr' (q :=q) rfl (fun _ => flipBit_ne_self)
-    (fun h h' => eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq h h'.le (fun hk => _))
-  rw [Subgroup.mem_bitInvarLT_iff] at hπ
+  refine cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr' (q :=q) rfl (fun _ => flipBit_ne_self)
+    (fun h h' => eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq h h'.le (fun hk => ?_))
+  rw [Subgroup.mem_bitInvariantLT_iff] at hπ
   specialize hπ _ hk
+  rw [BitInvariant.testBit_apply_eq_testBit, BitInvariant.testBit_apply_eq_testBit]
+  sorry
+  sorry
+  -- Need to rework these BitInvariant theorems - approach is quite sprawling currently.
+  /-
+  have H := VectorPerm.BitInvariant.flipBitCommutator hπ
   simp_rw [(hπ.commutatorElement
-    (flipBitPerm_bitInvariant_of_ne hk.ne)).zpow_perm_bitInvariant.testBit_apply_eq_testBit]
+    (flipBitPerm_bitInvariant_of_ne hk.ne)).zpow_perm_bitInvariant.testBit_apply_eq_testBit]-/
 
-lemma blahj {π : Perm ℕ} (hπ : π ∈ Subgroup.bitInvarLT i) (hπ' : π ∈ Subgroup.bitInvarGE (m + 1))
+lemma blahj {π : Perm ℕ} (hπ : π ∈ Subgroup.BitInvariantLT i)
+  (hπ' : π ∈ Subgroup.BitInvariantGE (m + 1))
   (hp : p < 2 ^ m) :
     FastCycleMin (m - i) (XBackXForth i π) (p.mergeBit i false) =
     (XBackXForth i π).CycleMin (p.mergeBit i false) := by
@@ -54,21 +60,21 @@ lemma blahj {π : Perm ℕ} (hπ : π ∈ Subgroup.bitInvarLT i) (hπ' : π ∈ 
 /-
 
 -/
-def FirstLayer'' (a : ArrayPerm n) (m i : ℕ) :
+def FirstLayer'' (a : VectorPerm n) (m i : ℕ) :
     Array Bool := (Array.range (2^m)).map
   fun p => ((a.flipBitCommutator i).CycleMin (m - i) (p.mergeBit i false)).testBit i
 
-def FirstLayer' (a : ArrayPerm n) (m i : ℕ) :
+def FirstLayer' (a : VectorPerm n) (m i : ℕ) :
     Array Bool := (Array.range (2^m)).map
-  fun p => (((a.flipBitCommutator i).CycleMinArray (m - i)).getD (p.mergeBit i false) 0).testBit i
+  fun p => (((a.flipBitCommutator i).CycleMinVector (m - i)).getD (p.mergeBit i false) 0).testBit i
 
 def Array.popOff' (a : Array α) (n : ℕ) [NeZero n] : Array α :=
   (·.2.2) <| a.foldl (init := (true, (0 : Fin n), Array.empty)) fun (b, n, r) a =>
     ((n == -1).xor b, n + 1, if b then r.push a else r)
 
-def FirstLayer (a : ArrayPerm n) (m i : ℕ) :
+def FirstLayer (a : VectorPerm n) (m i : ℕ) :
     Array Bool :=
-  let A := (a.flipBitCommutator i).CycleMinArray (m - i);
+  let A := (a.flipBitCommutator i).CycleMinVector (m - i);
   (Array.range (2^m)).map fun p => (A[p.mergeBit i false]?.getD (p.mergeBit i false)).testBit i
 
 theorem firstLayer_eq_map_cycleMin : FirstLayer a m i =
@@ -76,78 +82,79 @@ theorem firstLayer_eq_map_cycleMin : FirstLayer a m i =
   ((a.flipBitCommutator i).CycleMin (m - i) (p.mergeBit i false)).testBit i := rfl
 
 @[simp]
-theorem size_firstLayer (a : ArrayPerm n) (m i : ℕ) : (FirstLayer a m i).size = 2^m := by
+theorem size_firstLayer (a : VectorPerm n) (m i : ℕ) : (FirstLayer a m i).size = 2^m := by
   unfold FirstLayer
   simp_rw [Array.size_map, Array.size_range]
 
-theorem getElem_firstLayer (m : ℕ) (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+theorem getElem_firstLayer (m : ℕ) (a : VectorPerm n) (i : ℕ) {x : ℕ}
     (hx : x < (FirstLayer a m i).size) : (FirstLayer a m i)[x] =
     ((a.flipBitCommutator i).CycleMin (m - i) (x.mergeBit i false)).testBit i := by
   simp_rw [firstLayer_eq_map_cycleMin, Array.getElem_map, Array.getElem_range]
 
-theorem testBit_condFlipBit_firstLayer (a : ArrayPerm n) (i : ℕ) {k : ℕ} (hk : k < n) :
+theorem testBit_condFlipBit_firstLayer (a : VectorPerm n) (i : ℕ) {k : ℕ} (hk : k < n) :
     (condFlipBit k i (FirstLayer a m i)).testBit i =
     ((a.flipBitCommutator i).CycleMin (m - i) k).testBit i := by
   simp_rw [testBit_condFlipBit_of_eq, ← Array.getD_eq_get?, Array.getD, size_firstLayer,
   Array.get_eq_getElem, getElem_firstLayer, testRes_lt_iff]
   rw [testRes_lt_two_pow_iff_lt_two_pow]
 
-theorem testBit_condFlipBit_firstLayer' (a : ArrayPerm n) (i : ℕ) {k : ℕ} (hk : k < n) :
-    (ArrayPerm.condFlipBit i (FirstLayer a m i) (n := n))[k].testBit i = _
+theorem testBit_condFlipBit_firstLayer' (a : VectorPerm n) (i : ℕ) {k : ℕ} (hk : k < n) :
+    (VectorPerm.condFlipBit i (FirstLayer a m i) (n := n))[k].testBit i = _
     := by
   simp_rw [firstLayer_eq_map_cycleMin, Array.getElem_map, Array.getElem_range]
 
-def LastLayer (a : ArrayPerm n) (m i : ℕ) :
+def LastLayer (a : VectorPerm n) (m i : ℕ) :
     Array Bool :=
     let F := FirstLayer a m i;
     (Array.range (2^m)).map fun p => ((a • (p.mergeBit i false)).condFlipBit i F).testBit i
 
 @[simp]
-theorem size_lastLayer (a : ArrayPerm n) (m i : ℕ) : (LastLayer a m i).size = 2^m := by
+theorem size_lastLayer (a : VectorPerm n) (m i : ℕ) : (LastLayer a m i).size = 2^m := by
   unfold LastLayer
   simp_rw [Array.size_map, Array.size_range]
 
-theorem getElem_lastLayer (m : ℕ) (a : ArrayPerm n) (i : ℕ) {x : ℕ}
+theorem getElem_lastLayer (m : ℕ) (a : VectorPerm n) (i : ℕ) {x : ℕ}
     (hx : x < (LastLayer a m i).size) : (LastLayer a m i)[x] =
     ((a • (x.mergeBit i false)).condFlipBit i (FirstLayer a m i)).testBit i := by
   simp_rw [LastLayer, Array.getElem_map, Array.getElem_range]
 
-def MiddlePerm (a : ArrayPerm n) (m i : ℕ) : ArrayPerm n :=
+def MiddlePerm (a : VectorPerm n) (m i : ℕ) : VectorPerm n :=
   (a.condFlipBitVals i (FirstLayer a m i)).condFlipBitIndices i (LastLayer a m i)
 
-theorem condFlipBitVal_condFlipBitIndices_middlePerm (a : ArrayPerm n) (m i : ℕ) :
+theorem condFlipBitVal_condFlipBitIndices_middlePerm (a : VectorPerm n) (m i : ℕ) :
     ((MiddlePerm a m i).condFlipBitVals i (FirstLayer a m i)).condFlipBitIndices i
     (LastLayer a m i) = a := by
   unfold MiddlePerm
-  simp_rw [ArrayPerm.condFlipBitVals_comm_condFlipBitIndices,
-  ArrayPerm.condFlipBitIndices_condFlipBitIndices_of_eq,
-  ArrayPerm.condFlipBitVals_condFlipBitVals_of_eq]
+  simp_rw [VectorPerm.condFlipBitVals_comm_condFlipBitIndices,
+  VectorPerm.condFlipBitIndices_condFlipBitIndices_of_eq,
+  VectorPerm.condFlipBitVals_condFlipBitVals_of_eq]
 
 
-def FLMDecomp (a : ArrayPerm n) (m i : ℕ) : Array Bool × ArrayPerm n × Array Bool :=
+def FLMDecomp (a : VectorPerm n) (m i : ℕ) : Array Bool × VectorPerm n × Array Bool :=
 (FirstLayer a m i, MiddlePerm a m i, LastLayer a m i)
 
-def CBAux (a : ArrayPerm n) (m i : ℕ) : List (Array Bool) :=
+def CBAux (a : VectorPerm n) (m i : ℕ) : List (Array Bool) :=
 let (F, M, L) := FLMDecomp a m i;
 if m ≤ i then [L] else F :: CBAux M m (i + 1) ++ [L]
 termination_by m - i
-
-#eval CBAux (ArrayPerm.ofArray #[2, 3, 0, 1, 5, 7, 4, 6]) 2 0
-#eval CBAux (1 : ArrayPerm (2^13)) 12 0
-def Bits (a : ArrayPerm n) (m : ℕ) (i : Fin (m + 1)) : ArrayPerm n :=
+set_option pp.rawOnError true
+set_option diagnostics true
+#eval CBAux (VectorPerm.ofVector #v[2, 3, 0, 1, 5, 7, 4, 6]) 2 0
+#eval CBAux (1 : VectorPerm (2^8)) 8 0
+def Bits (a : VectorPerm n) (m : ℕ) (i : Fin (m + 1)) : VectorPerm n :=
 i.induction (MiddlePerm a m 0) fun i a => MiddlePerm a m i.succ
 
 
 set_option profiler true
---#eval Bits (1 : ArrayPerm (2^13)) 12 12
+--#eval Bits (1 : VectorPerm (2^13)) 12 12
 
 
 --#eval (Array.range (2^12)).map (fun p => (Array.range (2^12)).getD (mergeBit 3 p true) 0)
---#eval FirstLayer' (1 : ArrayPerm (2^9)) 10 8
---#eval FirstLayer (1 : ArrayPerm (2^15)) 14 8
---#eval FirstLayer'' (1 : ArrayPerm (2^9)) 11 8
---#eval FirstLayer4 (1 : ArrayPerm (2^15)) 14 8
---#eval FirstLayer5 14 (1 : ArrayPerm (2^15)) 8
+--#eval FirstLayer' (1 : VectorPerm (2^9)) 10 8
+--#eval FirstLayer (1 : VectorPerm (2^15)) 14 8
+--#eval FirstLayer'' (1 : VectorPerm (2^9)) 11 8
+--#eval FirstLayer4 (1 : VectorPerm (2^15)) 14 8
+--#eval FirstLayer5 14 (1 : VectorPerm (2^15)) 8
 /-
 
 
@@ -156,17 +163,17 @@ set_option profiler true
 
 example : ∀ (i : ℕ) (hi : i < #[0, 1, 2, 3, 4, 5, 6].size), #[0, 1, 2, 3, 4, 5, 6][i] < 7 := by decide
 
-#eval ArrayPerm.ofArray #[7, 4, 3, 1, 0, 2, 6, 5]
+#eval VectorPerm.ofArray #[7, 4, 3, 1, 0, 2, 6, 5]
 
 #eval
-  let a := ArrayPerm.ofArray #[0, 3, 2, 1, 5, 4]
+  let a := VectorPerm.ofArray #[0, 3, 2, 1, 5, 4]
   let f0 := FirstLayer a 2 0;
   let l0 := LastLayer a 2 0;
   let m0 := MiddlePerm a 2 0;
   (a, f0, l0, m0)
 
 #eval
-  let a := ArrayPerm.ofArray #[1, 3, 2, 5, 4, 0, 6, 7]
+  let a := VectorPerm.ofArray #[1, 3, 2, 5, 4, 0, 6, 7]
   let f0 := FirstLayer a 2 0;
   let l0 := LastLayer a 2 0;
   let m0 := MiddlePerm a 2 0;
@@ -182,27 +189,27 @@ MiddlePerm a m m ((pow_dvd_pow _ le_rfl).trans hin)
  else
 MiddlePerm (Bits a m hin (i + 1)) m i ((pow_dvd_pow _ (by simp only [add_le_add_iff_right, Fin.is_le])).trans hin)
 -/
---#eval ((1 : ArrayPerm (2^15)).CycleMinAux 6)
+--#eval ((1 : VectorPerm (2^15)).CycleMinAux 6)
 --
 
---#eval LastLayer (1 : ArrayPerm (2^12)) 11 0
+--#eval LastLayer (1 : VectorPerm (2^12)) 11 0
 -- 8 - 278
 -- 7 - 33.5
 -- 6 5.26
 -- 4 0.25
 
-#check MiddlePerm (ArrayPerm.mk #[1, 2, 3, 0] #[3, 0, 1, 2]) 1 0
+#check MiddlePerm (VectorPerm.mk #[1, 2, 3, 0] #[3, 0, 1, 2]) 1 0
 
-#eval MiddlePerm (ArrayPerm.mk #[1, 2, 7, 5, 3, 4, 0, 6] #[6, 0, 1, 4, 5, 3, 7, 2])
+#eval MiddlePerm (VectorPerm.mk #[1, 2, 7, 5, 3, 4, 0, 6] #[6, 0, 1, 4, 5, 3, 7, 2])
   2 0
 
-#eval MiddlePerm (MiddlePerm (MiddlePerm (ArrayPerm.mk #[1, 2, 7, 5, 3, 4, 0, 6] #[6, 0, 1, 4, 5, 3, 7, 2])
+#eval MiddlePerm (MiddlePerm (MiddlePerm (VectorPerm.mk #[1, 2, 7, 5, 3, 4, 0, 6] #[6, 0, 1, 4, 5, 3, 7, 2])
   2 0) 2 1) 2 2 (_)
 
 -/
     /--/
 
-def LastLayer (a : ArrayPerm n) (m i : ℕ) (hin : 2 ^ (i + 1) ∣ n) :
+def LastLayer (a : VectorPerm n) (m i : ℕ) (hin : 2 ^ (i + 1) ∣ n) :
     Array Bool := (Array.range (2^m)).map
   fun p => ((a.flipBitCommutator hin).CycleMin (m - i) (p.mergeBit i false)).testBit i
 
@@ -226,7 +233,7 @@ lemma firstLayer_getElem (h : p < (FirstLayer π m i).size) : (FirstLayer π m i
   unfold FirstLayer
   simp_rw [Array.getElem_map, Array.getElem_range]
 
-lemma firstLayer_getElem' (h : p < (FirstLayer π m i).size) (hπ : π ∈ Subgroup.bitInvarLT i)
+lemma firstLayer_getElem' (h : p < (FirstLayer π m i).size) (hπ : π ∈ Subgroup.BitInvariantLT i)
     (hπ' : π ∈ Subgroup.bitInvarGE (m + 1)) :
   (FirstLayer π m i)[p] = testBit (CycleMin (XBackXForth i π) (p.mergeBit i false)) i := by
   unfold FirstLayer
@@ -237,7 +244,7 @@ lemma firstLayer_getElem' (h : p < (FirstLayer π m i).size) (hπ : π ∈ Subgr
 
 def FirstLayerPerm (π : Perm ℕ) (m i : ℕ) := Nat.condFlipBitPerm (FirstLayer π m i) i
 
-lemma firstLayerPerm_apply (hπ : π ∈ Subgroup.bitInvarLT i)
+lemma firstLayerPerm_apply (hπ : π ∈ Subgroup.BitInvariantLT i)
     (hπ' : π ∈ Subgroup.bitInvarGE (m + 1)) (hq : q < 2^(m + 1)) (hi : i ≤ m) :
     FirstLayerPerm π m i q =
   bif (CycleMin (XBackXForth i π) ((q.testRes i).mergeBit i false )).testBit i
@@ -514,14 +521,14 @@ def controlBits3_normal : ControlBits 3 :=
 
 
 
-def controlBits2_perm : Perm (Fin 8) := ArrayPerm.mulEquivPerm (ArrayPerm.mk (n := 8)
+def controlBits2_perm : Perm (Fin 8) := VectorPerm.mulEquivPerm (VectorPerm.mk (n := 8)
   (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5]))
 
-def controlBits3_perm : Perm (Fin 16) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 16)
+def controlBits3_perm : Perm (Fin 16) := VectorPerm.mulEquivPerm <| VectorPerm.mk (n := 16)
   (#[0, 15, 1, 14, 2, 13, 3, 12, 4, 11, 5, 10, 6, 9, 7, 8])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 15, 13, 11, 9, 7, 5, 3, 1])
 
-def controlBits4_perm : Perm (Fin 32) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 32)
+def controlBits4_perm : Perm (Fin 32) := VectorPerm.mulEquivPerm <| VectorPerm.mk (n := 32)
   (#[0, 31, 1, 30, 2, 29, 3, 28, 4, 27, 5, 26, 6, 25, 7, 24,
       8, 23, 9, 22, 10, 21, 11, 20, 12, 19, 13, 18, 14, 17, 15, 16])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
@@ -959,14 +966,14 @@ def controlBits3_normal : ControlBits 3 :=
 
 
 
-def controlBits2_perm : Perm (Fin 8) := ArrayPerm.mulEquivPerm (ArrayPerm.mk (n := 8)
+def controlBits2_perm : Perm (Fin 8) := VectorPerm.mulEquivPerm (VectorPerm.mk (n := 8)
   (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5]))
 
-def controlBits3_perm : Perm (Fin 16) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 16)
+def controlBits3_perm : Perm (Fin 16) := VectorPerm.mulEquivPerm <| VectorPerm.mk (n := 16)
   (#[0, 15, 1, 14, 2, 13, 3, 12, 4, 11, 5, 10, 6, 9, 7, 8])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 15, 13, 11, 9, 7, 5, 3, 1])
 
-def controlBits4_perm : Perm (Fin 32) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 32)
+def controlBits4_perm : Perm (Fin 32) := VectorPerm.mulEquivPerm <| VectorPerm.mk (n := 32)
   (#[0, 31, 1, 30, 2, 29, 3, 28, 4, 27, 5, 26, 6, 25, 7, 24,
       8, 23, 9, 22, 10, 21, 11, 20, 12, 19, 13, 18, 14, 17, 15, 16])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,

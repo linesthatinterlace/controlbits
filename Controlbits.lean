@@ -1,7 +1,7 @@
 import Controlbits.PermFintwo
 import Controlbits.BitResiduum
 import Controlbits.CommutatorCycles
-import Controlbits.ArrayPerm
+import Controlbits.VectorPerm
 
 open Fin Equiv
 
@@ -220,7 +220,7 @@ lemma toPerm_succ_castSucc {n : Fin (m + 1)} {cb} :
   · simp_rw [castSucc_zero, toPerm_zero,
     bitInvarMulEquiv_zero_apply_condFlipBits, succ_last]
   · simp_rw [← succ_castSucc, toPerm_succ,  IH, ← Pi.mul_def,
-    map_mul, Submonoid.coe_mul, bitInvarMulEquiv_zero_apply_condFlipBits,
+    map_mul, Subgroup.coe_mul, bitInvarMulEquiv_zero_apply_condFlipBits,
     rev_castSucc,  succ_castSucc, coe_castSucc]
 
 lemma toPerm_succ_last {cb : PartialControlBits (m + 1) (m + 1)} :
@@ -413,14 +413,14 @@ def controlBits3_normal : ControlBits 3 :=
 
 /-
 
-def controlBits2_perm : Perm (Fin 8) := ArrayPerm.mulEquivPerm (ArrayPerm.mk (n := 8)
+def controlBits2_perm : Perm (Fin 8) := VectorPerm.mulEquivPerm (VectorPerm.mk (n := 8)
   (#[2, 0, 1, 3, 5, 7, 6, 4]) (#[1, 2, 0, 3, 7, 4, 6, 5]))
 
-def controlBits3_perm : Perm (Fin 16) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 16)
+def controlBits3_perm : Perm (Fin 16) := VectorPerm.mulEquivPerm <| VectorPerm.mk (n := 16)
   (#[0, 15, 1, 14, 2, 13, 3, 12, 4, 11, 5, 10, 6, 9, 7, 8])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 15, 13, 11, 9, 7, 5, 3, 1])
 
-def controlBits4_perm : Perm (Fin 32) := ArrayPerm.mulEquivPerm <| ArrayPerm.mk (n := 32)
+def controlBits4_perm : Perm (Fin 32) := VectorPerm.mulEquivPerm <| VectorPerm.mk (n := 32)
   (#[0, 31, 1, 30, 2, 29, 3, 28, 4, 27, 5, 26, 6, 25, 7, 24,
       8, 23, 9, 22, 10, 21, 11, 20, 12, 19, 13, 18, 14, 17, 15, 16])
   (#[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
