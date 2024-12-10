@@ -322,8 +322,8 @@ theorem default_eq : (default : VectorPerm n) = 1 := rfl
 
 instance : Mul (VectorPerm n) where
   mul a b := {
-    fwdVector := b.fwdVector.map (fun i => a.fwdVector[i]?.getD 0)
-    bwdVector := a.bwdVector.map (fun i => b.bwdVector[i]?.getD 0)
+    fwdVector := b.fwdVector.map (fun i => a.fwdVector[i]?.getD i)
+    bwdVector := a.bwdVector.map (fun i => b.bwdVector[i]?.getD i)
     getElem_fwdVector_lt := fun {i} hi => by
       simp_rw [Vector.getElem_map,
         getElem?_pos a.fwdVector (b.fwdVector[i]) (b.getElem_fwdVector_lt hi),
@@ -1319,10 +1319,6 @@ def CycleMinVector (a : VectorPerm n) (i : ℕ) : Vector ℕ n := (a.CycleMinVec
 theorem cycleMinAux_snd_val (a : VectorPerm n) {i : ℕ} :
     (a.CycleMinVectorAux i).2 = CycleMinVector a i := rfl
 
-@[simp]
-theorem size_cycleMinVector (a : VectorPerm n) {i : ℕ} :
-    (a.CycleMinVector i).size = n := (a.CycleMinVectorAux i).2.2
-
 @[simp] theorem getElem_cycleMinVector_zero (a : VectorPerm n) {x : ℕ} (hx : x < n):
   (a.CycleMinVector 0)[x] = x := Vector.getElem_range _
 
@@ -1336,6 +1332,16 @@ theorem getElem_cycleMinVector_succ (a : VectorPerm n) {i x : ℕ}
       getElem_cycleMinVector_zero]
   · simp_rw [getElem_actOnIndices, cycleMinAux_snd_val,
       cycleMinAux_succ_fst, ← pow_mul, ← pow_succ]
+
+@[simp] theorem getElem_one_cycleMinVector (hi : i < n) :
+    ((1 : VectorPerm n).CycleMinVector k)[i] = i := by
+  induction k generalizing n i with | zero => _ | succ k IH => _
+  · simp_rw [getElem_cycleMinVector_zero]
+  · simp_rw [getElem_cycleMinVector_succ, one_pow, getElem_one, IH, min_self]
+
+theorem one_cycleMinVector : (1 : VectorPerm n).CycleMinVector k = Vector.range n := by
+  ext i hi
+  simp_rw [getElem_one_cycleMinVector, Vector.getElem_range]
 
 @[simp]
 theorem getElem_cycleMinVector_lt (a : VectorPerm n) {i : ℕ} {x : ℕ}
@@ -1420,6 +1426,11 @@ theorem cycleMin_of_getElem {a b : VectorPerm n} {i x : ℕ} (hx : x < n) :
 
 theorem cycleMin_of_ge (a : VectorPerm n) {i x : ℕ} (hx : n ≤ x) :
     a.CycleMin i x = x := Vector.getD_of_ge _ _ _ hx
+
+@[simp] theorem one_cycleMin : (1 : VectorPerm n).CycleMin k x = x := by
+  rcases lt_or_le x n with hx | hx
+  · rw [cycleMin_of_lt _ hx, one_cycleMinVector, Vector.getElem_range]
+  · rwa [cycleMin_of_ge]
 
 @[simp]
 theorem cycleMin_zero (a : VectorPerm n) {x : ℕ} :

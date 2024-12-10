@@ -311,8 +311,68 @@ theorem nat_eq_testBit_tsum {a : ℕ} :
 
 end TestBit
 
+
+def bitMatchUnder {n : ℕ} (i : ℕ) (x : Fin (2^n)) :=
+  (Finset.range (2 ^ n)).filter (fun y => ∀ k < i, y.testBit k = (x : ℕ).testBit k)
+
+section BitMatchUnder
+
+variable {n : ℕ} {x : Fin (2^n)} {i : ℕ}
+
+@[simp]
+theorem mem_bitMatchUnder_iff {q : ℕ} :
+    q ∈ bitMatchUnder i x ↔ q < 2 ^ n ∧ ∀ k < i, q.testBit k = (x : ℕ).testBit k := by
+  unfold bitMatchUnder
+  simp_rw [Finset.mem_filter, Finset.mem_range]
+
+lemma card_bitMatchUnder (i : ℕ) (x : Fin (2^n)) :
+    (bitMatchUnder i x).card = 2^(n - i) := by
+  rw [← Fintype.card_fin (2^(n - i)),
+    Fintype.card_congr finFunctionFinEquiv.symm]
+  refine Finset.card_eq_of_equiv_fintype
+    (Equiv.ofBijective (fun a t => finTwoEquiv.symm (a.1.testBit ((t : ℕ) + i)))
+    ⟨fun ⟨a, ha⟩ ⟨b, hb⟩ => ?_, ?_⟩)
+  · simp_rw [Subtype.mk.injEq, funext_iff, Equiv.apply_eq_iff_eq, Fin.forall_iff,
+      Nat.lt_sub_iff_add_lt, testBit_ext_iff]
+    simp_rw [mem_bitMatchUnder_iff] at ha hb
+    intro hab t
+    rcases lt_or_le t n with htn | htn
+    · rcases lt_or_le t i with hti | hti
+      · rw [ha.2 _ hti, hb.2 _ hti]
+      · rcases Nat.exists_eq_add_of_le' hti with ⟨_, rfl⟩
+        exact hab _ htn
+    · rw [Nat.testBit_eq_false_of_lt (ha.1.trans_le
+        (Nat.pow_le_pow_of_le_right zero_lt_two htn)),
+        Nat.testBit_eq_false_of_lt (hb.1.trans_le
+        (Nat.pow_le_pow_of_le_right zero_lt_two htn))]
+  · unfold Function.Surjective
+    simp_rw [Equiv.forall_congr_left finFunctionFinEquiv, Subtype.exists, exists_prop,
+       mem_bitMatchUnder_iff, funext_iff, Equiv.symm_apply_eq, finTwoEquiv_apply,
+       Fin.forall_iff, Nat.lt_sub_iff_add_lt,
+       Fin.ext_iff, Fin.val_one, finFunctionFinEquiv_symm_apply_val, ← Nat.testBit_zero,
+       Nat.testBit_div_two_pow, Nat.add_zero]
+    refine fun b hb => ⟨x % 2^(i : ℕ) + 2^(i : ℕ)*b, ?_⟩
+    simp_rw [testBit_add_mul_two_pow b (Nat.mod_lt _ (Nat.two_pow_pos _)), testBit_mod_two_pow,
+      add_lt_iff_neg_right, Nat.not_lt_zero, if_false, Nat.add_sub_cancel, implies_true,
+      and_true]
+    refine ⟨?_, fun _ h => (if_pos h).trans
+        (Bool.and_iff_right_iff_imp.mpr (fun _ => decide_eq_true h))⟩
+    rcases le_or_lt i n with hi | hi
+    · refine Nat.lt_of_div_lt_div (c := 2^(i : ℕ)) ?_
+      rwa [Nat.add_mul_div_left _ _ (Nat.two_pow_pos _),
+        Nat.div_eq_of_lt (Nat.mod_lt _ (Nat.two_pow_pos _)), zero_add,
+        Nat.pow_div hi zero_lt_two]
+    · rw [Nat.sub_eq_zero_of_le hi.le, pow_zero, Nat.lt_one_iff] at hb
+      rw [hb, mul_zero, add_zero]
+      exact (Nat.mod_le _ _).trans_lt x.isLt
+
+end BitMatchUnder
+
 section BitMatchTo
--- bitMatchTo k (j + 1) i
+
+
+
+
 def bitMatchTo (x j i : ℕ) :=
   (Finset.range (2 ^ j)).filter (fun y => ∀ k < i, y.testBit k = x.testBit k)
 
@@ -321,6 +381,7 @@ theorem mem_bitMatchTo_iff {i j x q : ℕ} :
     q ∈ bitMatchTo x j i ↔ q < 2 ^ j ∧ ∀ k < i, q.testBit k = x.testBit k := by
   unfold bitMatchTo
   simp_rw [Finset.mem_filter, Finset.mem_range]
+@[simp]
 
 theorem bitMatchTo_antitone {x j : ℕ} : Antitone (bitMatchTo x j) := by
   intro i i' hii' q
@@ -359,7 +420,7 @@ theorem mem_bitMatchTo_self_of_size_le (h : x.size ≤ j) : x ∈ bitMatchTo x j
 theorem mem_bitMatchTo_size_self : x ∈ bitMatchTo x x.size i :=
   mem_bitMatchTo_self_of_size_le le_rfl
 
-lemma card_bitMatchInRange_le (x j i : ℕ) :
+lemma card_bitMatchTo_le (x j i : ℕ) :
     (bitMatchTo x j i).card ≤ 2^(j - i) := by
   rw [← Fintype.card_fin (2^(j - i)), Fintype.card_congr finFunctionFinEquiv.symm,
    ← Finset.card_univ]
@@ -377,14 +438,14 @@ lemma card_bitMatchInRange_le (x j i : ℕ) :
   · rw [Nat.testBit_eq_false_of_lt (hq.trans_le (Nat.pow_le_pow_of_le one_lt_two ht)),
     Nat.testBit_eq_false_of_lt (hp.trans_le (Nat.pow_le_pow_of_le one_lt_two ht))]
 
-lemma card_bitMatchInRange_le_one_of_ge (x : ℕ) (hji : j ≤ i) :
+lemma card_bitMatchTo_le_one_of_ge (x : ℕ) (hji : j ≤ i) :
     (bitMatchTo x j i).card ≤ 1 := by
-  refine (card_bitMatchInRange_le _ _ _).trans_eq ?_
+  refine (card_bitMatchTo_le _ _ _).trans_eq ?_
   rw [Nat.sub_eq_zero_of_le hji, pow_zero]
 
-lemma card_bitMatchInRange_eq_of_min_size_le (hj : min x.size i ≤ j) :
+lemma card_bitMatchTo_eq_of_min_size_le (hj : min x.size i ≤ j) :
     (bitMatchTo x j i).card = 2^(j - i) := by
-  rw [← (card_bitMatchInRange_le _ _ _).ge_iff_eq]
+  rw [← (card_bitMatchTo_le _ _ _).ge_iff_eq]
   rw [← Fintype.card_fin (2^(j - i)), Fintype.card_congr finFunctionFinEquiv.symm,
     ← Finset.card_univ]
   refine Finset.card_le_card_of_surjOn (fun a t => finTwoEquiv.symm (a.testBit (t + i))) ?_
@@ -408,32 +469,32 @@ lemma card_bitMatchInRange_eq_of_min_size_le (hj : min x.size i ≤ j) :
       rw [Nat.sub_eq_zero_of_le hij.le, pow_zero, lt_one_iff] at hb
       exact hb ▸ (Nat.mod_le _ _).trans_lt hj
 
-lemma card_bitMatchInRange_eq_of_le (x : ℕ) (hij : i ≤ j) :
+lemma card_bitMatchTo_eq_of_le (x : ℕ) (hij : i ≤ j) :
     (bitMatchTo x j i).card = 2^(j - i) :=
-  card_bitMatchInRange_eq_of_min_size_le (min_le_of_right_le hij)
+  card_bitMatchTo_eq_of_min_size_le (min_le_of_right_le hij)
 
-lemma card_bitMatchInRange_eq_of_size_le (i : ℕ) (hxj : x.size ≤ j) :
+lemma card_bitMatchTo_eq_of_size_le (i : ℕ) (hxj : x.size ≤ j) :
     (bitMatchTo x j i).card = 2^(j - i) :=
-  card_bitMatchInRange_eq_of_min_size_le (min_le_of_left_le hxj)
+  card_bitMatchTo_eq_of_min_size_le (min_le_of_left_le hxj)
 
-lemma card_bitMatchInRange_eq_of_lt_two_pow (i : ℕ) (hxj : x < 2^j) :
+lemma card_bitMatchTo_eq_of_lt_two_pow (i : ℕ) (hxj : x < 2^j) :
     (bitMatchTo x j i).card = 2^(j - i) :=
-  card_bitMatchInRange_eq_of_size_le _ (Nat.size_le.mpr hxj)
+  card_bitMatchTo_eq_of_size_le _ (Nat.size_le.mpr hxj)
 
 theorem bitMatchTo_eq_singleton_of_mem_Icc (hj : j ∈ Set.Icc x.size i) :
     bitMatchTo x j i = {x} := by
-  have H := card_bitMatchInRange_eq_of_size_le i hj.1
+  have H := card_bitMatchTo_eq_of_size_le i hj.1
   rw [Nat.sub_eq_zero_of_le hj.2, pow_zero, Finset.card_eq_one] at H
   rcases H with ⟨y, hy⟩
   have HH := mem_bitMatchTo_self_of_size_le hj.1 (i := i)
   rw [hy, Finset.mem_singleton] at HH
   rwa [← HH] at hy
 
-lemma card_bitMatchInRange_size : (bitMatchTo x x.size i).card = 2^(x.size - i) :=
-  card_bitMatchInRange_eq_of_min_size_le (min_le_left _ _)
+lemma card_bitMatchTo_size : (bitMatchTo x x.size i).card = 2^(x.size - i) :=
+  card_bitMatchTo_eq_of_min_size_le (min_le_left _ _)
 
-lemma card_bitMatchInRange_self : (bitMatchTo x i i).card = 1 :=
-  (card_bitMatchInRange_eq_of_min_size_le (min_le_right _ _)).trans <|
+lemma card_bitMatchTo_self : (bitMatchTo x i i).card = 1 :=
+  (card_bitMatchTo_eq_of_min_size_le (min_le_right _ _)).trans <|
     by simp_rw [Nat.sub_self, pow_zero]
 
 end BitMatchTo
@@ -1209,7 +1270,14 @@ theorem flipBit_mem_bitMatchTo {i j k x : ℕ} (hk : k ∈ Set.Ico i j) (q : ℕ
   exact And.imp_right (fun hq _ hjk => by
     simp_rw [hq _ hjk, (hjk.trans_le hk.1).ne, decide_false, Bool.xor_false])
 
--- flipBit_testRes
+theorem flipBit_mem_bitMatchUnder {k : ℕ} {i : ℕ} {x : Fin (2^n)}
+    (hk : k ∈ Set.Ico i n) (q : ℕ) :
+    q ∈ bitMatchUnder i x → q.flipBit k ∈ bitMatchUnder i x := by
+  simp_rw [mem_bitMatchUnder_iff,
+    Nat.flipBit_lt_iff_lt (Nat.pow_dvd_pow _ ( Nat.succ_le_of_lt hk.2)),
+    testBit_flipBit]
+  exact And.imp_right (fun hq _ hjk => by
+    simp_rw [hq _ hjk, (hjk.trans_le hk.1).ne, decide_false, Bool.xor_false])
 
 theorem flipBit_testRes_of_lt (hij : i < j):
     (q.testRes j).flipBit i = (q.flipBit i).testRes j := by
@@ -2207,21 +2275,25 @@ end CondFlipBit
 section FlipBitCommutator
 
 def flipBitCommutator (a : VectorPerm n) (i : ℕ) : VectorPerm n :=
-  (a.flipBitIndices i) * (a.flipBitVals i)⁻¹
+  (a.flipBitIndices i) * (a⁻¹.flipBitIndices i)
 
 variable {a : VectorPerm n} {i k : ℕ}
+
+
 
 theorem flipBitCommutator_eq_flipBitIndices_mul_flipBitVals_inv :
     (a.flipBitCommutator i) = (a.flipBitIndices i) * (a.flipBitVals i)⁻¹ := rfl
 
 theorem flipBitCommutator_eq_flipBitIndices_mul_flipBitIndices :
-    (a.flipBitCommutator i) = (a.flipBitIndices i) * (a⁻¹.flipBitIndices i) := by
-  rw [flipBitCommutator_eq_flipBitIndices_mul_flipBitVals_inv, inv_flipBitIndices]
+    (a.flipBitCommutator i) = (a.flipBitIndices i) * (a⁻¹.flipBitIndices i) := rfl
 
 theorem flipBitCommutator_inv_eq_flipBitVals_mul_flipBitVals :
-    (a.flipBitCommutator i)⁻¹ = (a.flipBitVals i) * (a⁻¹.flipBitVals i) := by
-  rw [flipBitCommutator_eq_flipBitIndices_mul_flipBitVals_inv, mul_inv_rev, inv_inv,
-  inv_flipBitVals]
+    (a.flipBitCommutator i)⁻¹ = (a.flipBitVals i) * (a⁻¹.flipBitVals i) := rfl
+
+@[simp] theorem one_flipBitCommutator :
+    ((1 : VectorPerm n).flipBitCommutator i) = 1 := by
+  rw [flipBitCommutator_eq_flipBitIndices_mul_flipBitVals_inv,
+    one_flipBitIndices, one_flipBitVals, flipBit_inv, flipBit_mul_self]
 
 theorem flipBitCommutator_eq_commutatorElement :
     (a.flipBitCommutator i) = ⁅a, flipBit i⁆ := by
@@ -2664,39 +2736,45 @@ theorem bitInvariantLT_eq_bot_of_ge (h : n ≤ 2^i) :
   ext
   simp_rw [Subgroup.mem_bot, bitInvariantLT_iff_eq_one_of_ge h]
 
-theorem cycleOf_subset_bitMatchTo {x : ℕ} (a : VectorPerm n) (ha : ∀ k < i, a.BitInvariant k)
-    (hk : x < n) (hn : n ≤ 2^j) : a.cycleOf x ⊆ bitMatchTo x j i := by
-  simp_rw [Finset.subset_iff, mem_cycleOf_iff_exists_getElem_zpow _ hk, mem_bitMatchTo_iff,
-    forall_exists_index, forall_apply_eq_imp_iff, (getElem_lt _).trans_le hn,
-    true_and]
+theorem cycleOf_subset_bitMatchUnder {x : ℕ} (a : VectorPerm (2^(n + 1))) (i : ℕ)
+  (ha : ∀ k < (i : ℕ), a.BitInvariant k) (hk : x < 2^(n + 1)) :
+  a.cycleOf x ⊆ bitMatchUnder i ⟨x, hk⟩ := by
+  simp_rw [Finset.subset_iff, mem_cycleOf_iff_exists_getElem_zpow _ hk, mem_bitMatchUnder_iff,
+      forall_exists_index, forall_apply_eq_imp_iff, getElem_lt _,
+      true_and]
   intros _ _ hk
   exact ((ha _ hk).zpow _).testBit_getElem_eq_testBit _
 
-theorem period_le_two_pow (a : VectorPerm n) (k : ℕ) (hin : 2 ^ (i + 1) ∣ n) (hn : n ≤ 2^(j + 1))
-    (ha : ∀ k < i, a.BitInvariant k) (hij : i ≤ j) :
-    MulAction.period (a.flipBitCommutator i) k ≤ 2 ^ (j - i) := by
-  rcases lt_or_le k n with hk | hk
-  · trans ((bitMatchTo k (j + 1) i).card / 2)
-    · apply two_mul_filter_sameCycle_card_le_card hin
-      · exact flipBit_mem_bitMatchTo ⟨le_rfl, Nat.lt_succ_of_le hij⟩
-      · exact (a.flipBitCommutator i).cycleOf_subset_bitMatchTo
-          (fun _ hl => (ha _ hl).flipBitCommutator hin) hk hn
-    · apply le_of_eq
-      rw [card_bitMatchInRange_eq_of_le _ (hij.trans <| Nat.le_succ _), Nat.succ_sub hij,
-      pow_succ, Nat.mul_div_cancel _ (zero_lt_two)]
-  · rw [period_eq_one_of_ge _ hk]
-    exact Nat.one_le_pow _ _ zero_lt_two
+theorem period_le_two_pow_sub_of_bitInvariant_lt {a : VectorPerm (2^(n + 1))} (k : ℕ) {i : ℕ}
+    (ha : ∀ k < i, a.BitInvariant k) :
+    MulAction.period (a.flipBitCommutator i) k ≤ 2 ^ (n - i) := by
+  rcases le_or_lt i n with hi | hi
+  · have hin := (Nat.pow_dvd_pow 2 (Nat.succ_le_succ hi))
+    rcases lt_or_le k (2^(n + 1)) with hk | hk
+    · rw [← Nat.mul_div_cancel (2^(n - i)) (zero_lt_two), ← pow_succ,
+        ← Nat.sub_add_comm hi, ← card_bitMatchUnder i ⟨k, hk⟩]
+      refine two_mul_filter_sameCycle_card_le_card
+        (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi)) _ ?_ _ ?_
+      · exact flipBit_mem_bitMatchUnder ⟨le_rfl, Nat.lt_succ_of_le hi⟩
+      · exact (a.flipBitCommutator i).cycleOf_subset_bitMatchUnder _
+          (fun _ hl => (ha _ hl).flipBitCommutator hin) _
+    · rw [period_eq_one_of_ge _ hk]
+      exact Nat.one_le_pow _ _ zero_lt_two
+  · rw [forall_lt_bitInvariant_iff_eq_one_of_ge (Nat.pow_le_pow_of_le one_lt_two hi)] at ha
+    simp_rw [ha, one_flipBitCommutator, MulAction.period_one, Nat.one_le_iff_ne_zero]
+    exact (Nat.two_pow_pos (n - i)).ne'
 
-lemma flipBitCommutator_cycleMin_flipBit_eq_flipBit_cycleMin_flipBitCommutator
-    (hin : 2 ^ (i + 1) ∣ n) (hn : n ≤ 2^(j + 1))
-    (ha : ∀ k < i, BitInvariant k a) (hij : i ≤ j) {k : ℕ} :
-    ((a.flipBitCommutator i).CycleMin (j - i)) (k.flipBit i) =
-    ((a.flipBitCommutator i).CycleMin (j - i) k).flipBit i := by
-  rcases lt_or_le k n with hk | hk
-  · have hk' := (Nat.flipBit_lt_iff_lt hin).mpr hk
-    rw [cycleMin_eq_min'_cycleOf _ _ (period_le_two_pow _ k hin hn ha hij),
-    cycleMin_eq_min'_cycleOf _ _ (period_le_two_pow _ (k.flipBit i) hin hn ha hij)]
-    · have H := Finset.min'_mem ((a.flipBitCommutator i).cycleOf k) (nonempty_cycleOf _)
+lemma flipBitCommutator_cycleMin_flipBit_comm (a : VectorPerm (2^(n + 1))) {i : ℕ}
+    (ha : ∀ k < (i : ℕ), BitInvariant k a) (k : ℕ) :
+    ((a.flipBitCommutator i).CycleMin (n - i)) (k.flipBit i) =
+    (((a.flipBitCommutator i).CycleMin (n - i)) k).flipBit i := by
+  rcases lt_or_le i (n + 1) with hi | hi
+  · have hin :  2 ^ ((i : ℕ) + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ hi
+    rcases lt_or_le k (2^(n + 1)) with hk | hk
+    · have hk' := (flipBit_lt_two_pow_iff_lt_two_pow hi).mpr hk
+      rw [cycleMin_eq_min'_cycleOf _ _ (period_le_two_pow_sub_of_bitInvariant_lt k ha),
+        cycleMin_eq_min'_cycleOf _ _ (period_le_two_pow_sub_of_bitInvariant_lt (k.flipBit i) ha)]
+      have H := Finset.min'_mem ((a.flipBitCommutator i).cycleOf k) (nonempty_cycleOf _)
       simp_rw [mem_cycleOf_iff_exists_getElem_zpow _ hk] at H
       rcases H with ⟨p, hp⟩
       refine eq_of_le_of_not_lt ?_ ?_
@@ -2722,19 +2800,53 @@ lemma flipBitCommutator_cycleMin_flipBit_eq_flipBit_cycleMin_flipBitCommutator
             hin <| Nat.eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq H h.le (fun hji => ?_)
           simp_rw [(((ha _ hji).flipBitCommutator hin).zpow p).testBit_getElem_eq_testBit,
             (((ha _ hji).flipBitCommutator hin).zpow (-(q : ℤ))).testBit_getElem_eq_testBit]
-  · simp_rw [cycleMin_of_ge _ hk, cycleMin_of_ge _ <| le_of_not_lt <|
-    (Nat.flipBit_lt_iff_lt hin).not.mpr hk.not_lt]
+    · simp_rw [cycleMin_of_ge _ hk, cycleMin_of_ge _ <| le_of_not_lt <|
+      (Nat.flipBit_lt_iff_lt hin).not.mpr hk.not_lt]
+  · rw [forall_lt_bitInvariant_iff_eq_one_of_ge (Nat.pow_le_pow_of_le one_lt_two hi)] at ha
+    simp_rw [ha, one_flipBitCommutator, one_cycleMin]
 
-lemma flipBit_getElem_cycleMinVector_flipBitCommutator_eq_getElem_flipBit_cycleMinVector_flipBitCommutator
-    (hin : 2 ^ (i + 1) ∣ n) (hn : n ≤ 2^(j + 1))
-    (ha : ∀ k < i, BitInvariant k a) (hij : i ≤ j) {k : ℕ}
-    (hk : k < n):
-    (((a.flipBitCommutator i).CycleMinVector (j - i))[k]).flipBit i
-    = ((a.flipBitCommutator i).CycleMinVector (j - i))[(k.flipBit i)]'
-      (by rwa [flipBit_lt_iff_lt <| hin.trans (dvd_of_eq rfl)]) := by
+lemma flipBit_getElem_cycleMinVector_flipBitCommutator_comm (a : VectorPerm (2^(n + 1)))
+    (ha : ∀ k < i, BitInvariant k a) {k : ℕ}
+    (hk : k < 2^(n + 1)) (hi : i < n + 1):
+    (((a.flipBitCommutator i).CycleMinVector (n - i))[k]).flipBit i
+    = ((a.flipBitCommutator i).CycleMinVector (n - i))[(k.flipBit i)]'
+      (by rwa [flipBit_lt_iff_lt <| (Nat.pow_dvd_pow _ hi).trans (dvd_of_eq rfl)]) := by
   simp_rw [getElem_cycleMinVector]
-  exact (flipBitCommutator_cycleMin_flipBit_eq_flipBit_cycleMin_flipBitCommutator hin hn ha
-  hij).symm
+  exact (flipBitCommutator_cycleMin_flipBit_comm _ ha _).symm
+
+
+lemma flipBitCommutator_cycleMin_flipBit_comm'' (a : VectorPerm (2^(n + 1))) {i : ℕ}
+    (hi : i < n + 1) (ha : ∀ k < (i : ℕ), BitInvariant k a) {k : ℕ} (hk : k < 2^(n + 1)) :
+    ((a.flipBitCommutator i).CycleMinVector (n - i))[k.flipBit i]'
+    ((flipBit_lt_two_pow_iff_lt_two_pow hi).mpr hk) =
+    ((a.flipBitCommutator i).CycleMinVector (n - i))[k].flipBit i := by
+  have hin :  2 ^ ((i : ℕ) + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ hi
+  have hai := fun k => (period_le_two_pow_sub_of_bitInvariant_lt k ha)
+  have hk' := (flipBit_lt_two_pow_iff_lt_two_pow hi).mpr hk
+  have H := (a.flipBitCommutator i).exists_lt_getElem_cycleMin_eq_getElem_pow (n - i) hk
+  rcases H with ⟨p, hp₁, hp₂⟩
+  simp_rw [← zpow_natCast] at hp₂
+  refine eq_of_le_of_not_lt ?_ ?_
+  · simp_rw [hp₂, ← a.getElem_flipBit_flipBitCommutator_zpow_inv hin (hk := hk), ← zpow_neg,
+    getElem_flipBitIndices_of_div hin]
+    exact getElem_cycleMinVector_le_getElem_zpow_of_period_le_two_pow _ _ _ (hai _) _
+  · have H := (a.flipBitCommutator i).exists_lt_getElem_cycleMin_eq_getElem_pow (n - i) hk'
+    simp_rw [← zpow_natCast, ← getElem_flipBit_of_div hin (hk := hk), ← getElem_mul,
+      ← flipBitIndices_eq_mul_flipBit, getElem_flipBit_of_div hin (hk := hk),
+      a.getElem_flipBit_flipBitCommutator_zpow hin, ← zpow_neg] at H
+    rcases H with ⟨q, hq₁, hq₂⟩
+    have H := getElem_cycleMinVector_le_getElem_zpow_of_period_le_two_pow _ _ hk (hai _) (-(q : ℤ))
+    rcases H.eq_or_lt with H | H
+    · rw [hq₂, H]
+      exact lt_irrefl _
+    · simp_rw [hq₂, hp₂]
+      intro h
+      refine getElem_flipBitCommutator_zpow_ne_flipBit_getElem_flipBitCommutator_zpow
+        hin <| Nat.eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq ?_ h.le (fun hji => ?_)
+      · rw [hp₂] at H
+        exact H
+      · simp_rw [(((ha _ hji).flipBitCommutator hin).zpow p).testBit_getElem_eq_testBit,
+        (((ha _ hji).flipBitCommutator hin).zpow (-(q : ℤ))).testBit_getElem_eq_testBit]
 
 end VectorPerm
 

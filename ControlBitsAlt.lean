@@ -69,6 +69,36 @@ def LeftLayer (a : VectorPerm (2^(n + 1))) (i : Fin (n + 1)) : Vector Bool (2^n)
     (Nat.pow_dvd_pow _ (Nat.succ_le_succ i.is_le))).mpr
     (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
 
+variable {a : VectorPerm (2^(n + 1))} {i : Fin (n + 1)} (hp : p < 2^n)
+
+theorem getElem_leftLayer {a : VectorPerm (2^(n + 1))} {i : Fin (n + 1)} (hp : p < 2^n) :
+    (LeftLayer a i)[p] = ((a.flipBitCommutator i).CycleMin (n - i)
+    (p.mergeBit i false)).testBit i := by
+  unfold LeftLayer
+  simp_rw [Vector.getElem_map, Vector.getElem_finRange, VectorPerm.getElem_cycleMinVector]
+
+def LeftPerm (a : VectorPerm (2^(n + 1))) (i : Fin (n + 1)) : VectorPerm (2^(n + 1)) :=
+  VectorPerm.condFlipBit i (LeftLayer a i)
+
+@[simp] theorem getElem_leftPerm (hk : k < 2^(n + 1)) :
+  (LeftPerm a i)[k] = (VectorPerm.condFlipBit i (LeftLayer a i))[k] := rfl
+
+theorem testBit_leftPerm {i : Fin (n + 1)} (hk : k < 2^(n + 1))
+    (ha : ∀ k < (i : ℕ), VectorPerm.BitInvariant k a) :
+    (LeftPerm a i)[k].testBit i =
+    ((a.flipBitCommutator i).CycleMin (n - i) k).testBit i := by
+  have hin :  2 ^ ((i : ℕ) + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ i.is_lt
+  rw [getElem_leftPerm, VectorPerm.getElem_condFlipBit_of_div hin,
+    condFlipBit_apply_of_testRes_lt ((testRes_lt_two_pow_iff_lt_two_pow i.is_le).mpr hk),
+    getElem_leftLayer]
+  rcases Bool.eq_false_or_eq_true (k.testBit i) with hkb | hkb
+  · simp_rw [← Bool.not_true, ← hkb, ← flipBit_apply_eq_mergeBit,
+      VectorPerm.flipBitCommutator_cycleMin_flipBit_comm _ ha,
+      Bool.apply_cond (fun (k : ℕ) => k.testBit i), testBit_flipBit_of_eq, hkb,
+      Bool.not_true, Bool.cond_not, Bool.cond_false_right, Bool.and_true]
+  · simp_rw [← hkb, mergeBit_testBit_testRes_of_eq, Bool.apply_cond (fun (k : ℕ) => k.testBit i),
+    testBit_flipBit_of_eq, hkb, Bool.not_false, Bool.cond_false_right, Bool.and_true]
+
 def RightLayer (a : VectorPerm (2^(n + 1))) (i : Fin (n + 1)) : Vector Bool (2^n) :=
   let F := LeftLayer a i;
   (Vector.finRange (2^n)).map fun (p : Fin (2^n)) =>
@@ -82,7 +112,7 @@ def MiddlePerm (a : VectorPerm (2^(n + 1))) (i : Fin (n + 1)) : VectorPerm (2^(n
 
 def FLMDecomp (a : VectorPerm (2^(n + 1))) (i : Fin (n + 1)) :
     Vector Bool (2^n) × Vector Bool (2^n) × VectorPerm (2^(n + 1)) :=
-  let A := (a.flipBitCommutator i).CycleMinVector (n - i);
+  let A := (a.flipBitCommutator i).CycleMinVector i.rev;
   let F := (Vector.range (2^n)).map fun (p : ℕ) =>
     (A.getD (p.mergeBit i false) (p.mergeBit i false)).testBit i
   let L := (Vector.range (2^n)).map fun (p : ℕ) =>
