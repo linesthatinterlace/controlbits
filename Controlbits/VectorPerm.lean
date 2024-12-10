@@ -196,6 +196,20 @@ theorem getElem_swap_eq_getElem_swap_apply (as : Vector α n) (i j : ℕ) (hi : 
   simp_rw [getElem_swap, Equiv.swap_apply_def]
   split_ifs <;> rfl
 
+theorem getElem_swapIfInBounds {as : Vector α n} {i j k : ℕ} (hk : k < n) :
+    (as.swapIfInBounds i j)[k] =
+    if h : i < n ∧ j < n then (as.swap i j)[k] else as[k] := by
+  unfold swapIfInBounds
+  simp_rw [getElem_mk, Array.getElem_swapIfInBounds, Vector.size_toArray, getElem_swap,
+    Vector.getElem_toArray]
+  rcases eq_or_ne k i with rfl | hi
+  · simp_rw [hk, true_and, and_true, ite_true]
+    exact dite_congr rfl (fun _ => rfl) (fun _ => by simp_rw [dite_eq_right_iff, implies_true])
+  · simp_rw [hi, false_and, dite_false, ite_false]
+    rcases eq_or_ne k j with rfl | hj
+    · simp_rw [ite_true, true_and, hk, and_true]
+    · simp_rw [hj, false_and, dite_false, ite_false, dite_eq_ite, ite_self]
+
 protected def finRange (n : ℕ) : Vector (Fin n) n := ⟨Array.finRange n, Array.size_finRange⟩
 
 @[simp] theorem getElem_finRange (hi : i < n) : (Vector.finRange n)[i] = ⟨i, hi⟩ := by
@@ -1156,6 +1170,14 @@ section MulActionMulOppositeVector
     a.unop.actOnIndices v = a • v := rfl
 
 end MulActionMulOppositeVector
+
+def cycleOfAux (a : VectorPerm n) :
+    ℕ → Finset (Fin n) × Fin n × Fin n → Finset (Fin n) × Fin n × Fin n
+  | 0, p => p
+  | (k + 1), (s, y, x) =>
+    let s' := insert y s
+    let z := a[y];
+    if z = x then (s', ⟨z, a.getElem_lt⟩, x) else cycleOfAux a k (s', ⟨z, a.getElem_lt⟩, x)
 
 def cycleOf (a : VectorPerm n) (x : ℕ) : Finset ℕ :=
   if h : x < n then (Finset.range n).image (fun k => (a ^ k)[x]) else {x}
