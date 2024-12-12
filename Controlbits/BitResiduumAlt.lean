@@ -657,6 +657,10 @@ theorem mergeBit_apply : p.mergeBit i b =
 theorem mergeBit_apply_false {p : ℕ} : p.mergeBit i false = p + (2^i) * (p / 2^i) := by
   simp_rw [mergeBit_apply, Bool.toNat_false, add_zero]
 
+theorem mergeBit_apply_false_of_lt_two_pow {p : ℕ} (hp : p < 2^i) :
+    p.mergeBit i false = p := by
+  simp_rw [mergeBit_apply_false, Nat.div_eq_of_lt hp, mul_zero, add_zero]
+
 theorem mergeBit_apply_true {p : ℕ} : p.mergeBit i true = p + (2^i) * (p / 2^i) + (2^i) := by
   simp_rw [mergeBit_apply, Bool.toNat_true, mul_add, mul_one, add_assoc]
 
@@ -2625,7 +2629,7 @@ section BitInvariant
 
 namespace VectorPerm
 
-theorem getElem_testBit (a : VectorPerm n) {k : ℕ} (h : n ≤ 2^k) {i : ℕ} (hi : i < n) :
+theorem getElem_testBit_of_ge (a : VectorPerm n) {k : ℕ} (h : n ≤ 2^k) {i : ℕ} (hi : i < n) :
     a[i].testBit k = false :=
   Nat.testBit_eq_false_of_lt <| (a.getElem_lt).trans_le h
 
@@ -2645,7 +2649,7 @@ theorem bitInvariant_iff_testBit_getElem_eq_testBit : a.BitInvariant i ↔
   simp_rw [Vector.getElem_map, getElem_fwdVector, Vector.getElem_range]
 
 theorem bitInvariant_of_ge (h : n ≤ 2^i) : a.BitInvariant i := by
-  simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit, a.getElem_testBit h]
+  simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit, a.getElem_testBit_of_ge h]
   exact fun (hx : _ < n) => (Nat.testBit_eq_false_of_lt (hx.trans_le h)).symm
 
 theorem bitInvariant_of_ge_of_ge (h : n ≤ 2^i) (hk : i ≤ k) : a.BitInvariant k :=
@@ -2700,6 +2704,15 @@ theorem BitInvariant.zpow (ha : a.BitInvariant i) (p : ℤ) : (a ^ p).BitInvaria
   · simp only [zpow_negSucc]
     exact (ha.pow _).inv
 
+theorem getElem_eq_self_of_forall_bitInvariant_lt_of_lt (ha : ∀ k < i, a.BitInvariant k)
+    (hx : x < 2^i) (hin : 2^i ≤ n) : ∀ k, x ≤ (a^k)[x] := fun k => by
+  refine Nat.le_of_testBit ?_
+  intro j
+  rcases lt_or_le j i with hj | hj
+  · simp_rw [((ha _ hj).pow _).testBit_getElem_eq_testBit, imp_self]
+  · simp_rw [testBit_lt_two_pow (hx.trans_le (Nat.pow_le_pow_of_le one_lt_two hj)),
+      Bool.false_eq_true, false_implies]
+
 theorem flipBit_of_ne {j : ℕ} (hij : i ≠ j) :
     (flipBit j : VectorPerm n).BitInvariant i := by
   simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit, getElem_flipBit,
@@ -2725,7 +2738,8 @@ theorem BitInvariant.flipBitCommutator_of_ne (ha : a.BitInvariant i) {j : ℕ} (
   simp_rw [flipBitCommutator_eq_flipBitIndices_mul_flipBitVals_inv]
   exact (ha.flipBitIndices_of_ne hij).mul (ha.flipBitVals_of_ne hij).inv
 
-def BitInvariantEQ (i : ℕ) : Subgroup (VectorPerm n) where
+/-
+def Subgroup.BitInvariantEQ (i : ℕ) : Subgroup (VectorPerm n) where
   carrier := BitInvariant i
   mul_mem' := BitInvariant.mul
   one_mem' := one_bitInvariant
@@ -2765,6 +2779,7 @@ theorem bitInvariantLT_eq_bot_of_ge (h : n ≤ 2^i) :
     (BitInvariantLT i : Subgroup (VectorPerm n)) = ⊥ := by
   ext
   simp_rw [Subgroup.mem_bot, bitInvariantLT_iff_eq_one_of_ge h]
+-/
 
 theorem cycleOf_subset_bitMatchUnder {x : ℕ} (a : VectorPerm (2^(n + 1))) (i : ℕ)
   (ha : ∀ k < (i : ℕ), a.BitInvariant k) (hk : x < 2^(n + 1)) :
@@ -2807,7 +2822,7 @@ theorem period_le_two_pow_sub_of_bitInvariant_lt {a : VectorPerm (2^(n + 1))} {i
     exact (Nat.two_pow_pos (n - i)).ne'
 
 theorem flipBit_getElem_cycleMinVector_flipBitCommutator_comm (a : VectorPerm (2^(n + 1)))
-    (ha : ∀ k < i, BitInvariant k a) {k : ℕ}
+    (ha : ∀ k < i, a.BitInvariant k) {k : ℕ}
     (hk : k < 2^(n + 1)) (hi : i < n + 1):
     ((a.flipBitCommutator i).CycleMinVector (n - i))[(k.flipBit i)]'
     (by rwa [flipBit_lt_iff_lt <| (Nat.pow_dvd_pow _ hi).trans (dvd_of_eq rfl)]) =
@@ -2861,542 +2876,4 @@ theorem flipBitCommutator_cycleMin_flipBit_comm (a : VectorPerm (2^(n + 1))) {i 
 
 end VectorPerm
 
-/-
-namespace Function
-/-
-theorem bitInvariant_iff_smul_bitInvariant :
-    a.BitInvariant i ↔ (a • ·).BitInvariant i := by
-  simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit, Function.bitInvariant_iff,
-    smul_nat_eq_dite, apply_dite (testBit · i), dite_eq_right_iff]-/
-/-
-theorem mem_bitInvariantEQ_iff_smul_bitInvariant :
-  a ∈ BitInvariantEQ i ↔ (a • ·).BitInvariant i := bitInvariant_iff_smul_bitInvariant-/
-/-
-theorem mem_bitInvariantLT_iff_smul_bitInvariant :
-    a ∈ BitInvariantLT i ↔ (a • ·).BitInvariantLT i := by
-  simp_rw [mem_bitInvariantLT_iff, Function.bitInvariantLT_iff,
-  mem_bitInvariantEQ_iff_smul_bitInvariant]-/
-/-
-theorem mem_bitInvariantGE_iff_smul_bitInvariant :
-    a ∈ BitInvariantGE i ↔ (a • ·).BitInvariantGE i := by
-  simp_rw [mem_bitInvariantGE_iff, Function.bitInvariantGE_iff,
-  mem_bitInvariantEQ_iff_smul_bitInvariant]-/
-open Nat
-
-def BitInvariant (i : ℕ) (f : ℕ → ℕ) : Prop := (testBit · i) ∘ f = (testBit · i)
-
-variable {f g : ℕ → ℕ} {i : ℕ}
-
-theorem bitInvariant_iff : f.BitInvariant i ↔ ∀ q, (f q).testBit i = q.testBit i := funext_iff
-
-theorem bitInvariant_of_testBit_apply_eq_testBit (h : ∀ q, (f q).testBit i = q.testBit i) :
-    f.BitInvariant i := bitInvariant_iff.mpr h
-
-theorem BitInvariant.testBit_apply_eq_testBit (h : f.BitInvariant i) :
-    (f q).testBit i = q.testBit i := bitInvariant_iff.mp h _
-
-theorem bitInvariant_id : id.BitInvariant i :=
-  bitInvariant_of_testBit_apply_eq_testBit (fun _ => rfl)
-
-theorem forall_bitInvariant_iff_eq_id : (∀ i, f.BitInvariant i) ↔ f = id := by
-  simp_rw [funext_iff, id_eq, testBit_ext_iff, bitInvariant_iff]
-  exact forall_comm
-
-theorem bitInvariant_flipBit_of_ne (h : i ≠ j) : (flipBit · j).BitInvariant i :=
-  bitInvariant_of_testBit_apply_eq_testBit (fun _ => testBit_flipBit_of_ne h)
-
-theorem not_bitInvariant_flipBit_of_eq : ¬ (flipBit · i).BitInvariant i := by
-  simp_rw [bitInvariant_iff, testBit_flipBit_of_eq, Bool.not_eq_self,
-    forall_const, not_false_eq_true]
-
-theorem bitInvariant_condFlipBit_of_ne (h : i ≠ j) (c : Vector Bool l) :
-    (condFlipBit · j c).BitInvariant i :=
-  bitInvariant_of_testBit_apply_eq_testBit (fun _ => testBit_condFlipBit_of_ne h)
-
-theorem BitInvariant.comp (hf : f.BitInvariant i) (hg : g.BitInvariant i) :
-    (f ∘ g).BitInvariant i := bitInvariant_of_testBit_apply_eq_testBit <| fun q => by
-  simp_rw [Function.comp_apply, hf.testBit_apply_eq_testBit, hg.testBit_apply_eq_testBit]
-
-theorem BitInvariant.of_comp (hf : f.BitInvariant i)
-    (hfg : (f ∘ g).BitInvariant i) : g.BitInvariant i :=
-  bitInvariant_of_testBit_apply_eq_testBit <| fun _ =>
-  hf.testBit_apply_eq_testBit ▸ hfg.testBit_apply_eq_testBit
-
-theorem RightInverse.bitInvariant_of_bitInvariant (hfg : RightInverse g f) (h : f.BitInvariant i) :
-  g.BitInvariant i := h.of_comp (hfg.comp_eq_id ▸ bitInvariant_id)
-
-theorem LeftInverse.bitInvariant_of_bitInvariant (hfg : LeftInverse g f) (h : g.BitInvariant i) :
-  f.BitInvariant i := RightInverse.bitInvariant_of_bitInvariant hfg h
-
-theorem BitInvariant.bitInvariant_iterate (hf : f.BitInvariant i) {n : ℕ} :
-   (f^[n]).BitInvariant i := by
-  induction' n with n IH
-  · exact bitInvariant_id
-  · exact iterate_succ _ _ ▸ IH.comp hf
-
-theorem BitInvariant.mergeBit_testRes_apply_mergeBit {p : ℕ} (hf : f.BitInvariant i) :
-    ((f (p.mergeBit i b)).testRes i).mergeBit i b = f (p.mergeBit i b) := by
-  simp_rw [mergeBit_eq_iff, hf.testBit_apply_eq_testBit, testBit_mergeBit_of_eq, true_and]
-
-def BitInvariantLT (i : ℕ) (f : ℕ → ℕ) : Prop := ∀ k < i, BitInvariant k f
-
-theorem bitInvariantLT_iff : BitInvariantLT i f ↔ ∀ k < i, f.BitInvariant k := Iff.rfl
-
-theorem bitInvariantLT_iff_mod_two_pow_eq :
-    BitInvariantLT i f ↔ ∀ (p : ℕ), f p % 2 ^ i = p % 2 ^ i := by
-  simp_rw [testBit_ext_mod_two_pow_iff, bitInvariantLT_iff, bitInvariant_iff,
-  imp_forall_iff, forall_swap (α := ℕ)]
-
-@[simp]
-theorem bitInvariantLT_zero : BitInvariantLT 0 f := by
-  simp_rw [bitInvariantLT_iff, not_lt_zero, false_implies, implies_true]
-
-theorem bitInvariantLT_id : BitInvariantLT i id := fun _ _ => bitInvariant_id
-
-theorem bitInvariantLT_flipBit_of_ge (h : j ≤ i) : BitInvariantLT j (flipBit · i) :=
-  fun _ hk => bitInvariant_flipBit_of_ne (hk.trans_le h).ne
-
-theorem bitInvariantLT_flipBit_of_eq : BitInvariantLT i (flipBit · i) :=
-  bitInvariantLT_flipBit_of_ge le_rfl
-
-theorem not_bitInvariantLT_flipBit_of_lt (h : i < j) : ¬ BitInvariantLT j (flipBit · i) :=
-  not_forall_of_exists_not ⟨i, not_imp_of_and_not ⟨h, not_bitInvariant_flipBit_of_eq⟩⟩
-
-theorem BitInvariantLT.ge (h : BitInvariantLT j (flipBit · i)) : j ≤ i :=
-  le_of_not_lt (not_bitInvariantLT_flipBit_of_lt.mt <| not_not_intro h)
-
-theorem bitInvariantLT_flipBit_iff_ge : BitInvariantLT j (flipBit · i) ↔ j ≤ i :=
-  ⟨BitInvariantLT.ge, bitInvariantLT_flipBit_of_ge⟩
-
-theorem bitInvariantLT_condFlipBit_of_ge (h : j ≤ i) (c : Vector Bool l) :
-    BitInvariantLT j (condFlipBit · i c) :=
-  fun _ hk => bitInvariant_condFlipBit_of_ne (hk.trans_le h).ne c
-
-theorem bitInvariantLT_condFlipBit_of_eq (c : Vector Bool l) :
-    BitInvariantLT i (condFlipBit · i c) :=
-  bitInvariantLT_condFlipBit_of_ge le_rfl c
-
-theorem bitInvariantLT_imp_bitInvariantLT_iff_ge :
-    (∀ f, BitInvariantLT n f → BitInvariantLT m f) ↔ m ≤ n :=
-  ⟨fun h => (h _ bitInvariantLT_flipBit_of_eq).ge, fun hmn _ hf _ hk => hf _ (hk.trans_le hmn)⟩
-
-theorem exists_bitInvariantLT_and_not_bitInvariantLT_iff_lt :
-    (∃ f, BitInvariantLT n f ∧ ¬ BitInvariantLT m f) ↔ n < m := not_iff_not.mp <| by
-  simp_rw [not_exists, not_lt, not_and_not_right, bitInvariantLT_imp_bitInvariantLT_iff_ge]
-
-def BitInvariantGE (i : ℕ) (f : ℕ → ℕ) : Prop := ∀ k ≥ i, BitInvariant k f
-
-theorem bitInvariantGE_iff : BitInvariantGE i f ↔ ∀ k ≥ i, f.BitInvariant k := Iff.rfl
-
-theorem bitInvariantGE_iff_div_two_pow_eq : BitInvariantGE i f ↔
-    ∀ (p : ℕ), f p / 2 ^ i = p / 2 ^ i := by
-  simp_rw [testBit_ext_div_two_pow_iff, bitInvariantGE_iff, bitInvariant_iff,
-  imp_forall_iff, forall_swap (α := ℕ)]
-
-theorem BitInvariantGE.apply_lt_iff_lt (hf : BitInvariantGE i f) {p : ℕ}:
-    f p < 2^i ↔ p < 2^i := by
-  rw [bitInvariantGE_iff] at hf
-  simp_rw [lt_pow_two_iff_ge_imp_testBit_eq_false]
-  exact forall₂_congr (fun _ h => by
-    simp_rw [Bool.coe_false_iff_false, Bool.not_inj_iff]
-    exact (hf _ h).testBit_apply_eq_testBit)
-
-theorem bitInvariantGE_id : BitInvariantGE i id := fun _ _ => bitInvariant_id
-
-theorem bitInvariantGE_zero_iff_id : BitInvariantGE 0 f ↔ f = id := by
-  simp_rw [bitInvariantGE_iff, Nat.zero_le, true_implies, forall_bitInvariant_iff_eq_id]
-
-theorem bitInvariantGE_flipBit_of_lt (h : i < j) : BitInvariantGE j (flipBit · i) :=
-  fun _ hk => bitInvariant_flipBit_of_ne (hk.trans_lt' h).ne'
-
-theorem not_bitInvariantGE_flipBit_of_ge (h : j ≤ i) : ¬ BitInvariantGE j (flipBit · i) :=
-  not_forall_of_exists_not ⟨i, not_imp_of_and_not ⟨h, not_bitInvariant_flipBit_of_eq⟩⟩
-
-theorem BitInvariantGE.lt (h : BitInvariantGE j (flipBit · i)) : i < j :=
-  lt_of_not_le (not_bitInvariantGE_flipBit_of_ge.mt <| not_not_intro h)
-
-theorem not_bitInvariantGE_flipBit_of_eq : ¬ BitInvariantGE i (flipBit · i) :=
-  not_bitInvariantGE_flipBit_of_ge le_rfl
-
-theorem bitInvariantGE_flipBit_iff_lt : BitInvariantGE j (flipBit · i) ↔ i < j :=
-  ⟨BitInvariantGE.lt, bitInvariantGE_flipBit_of_lt⟩
-
-theorem bitInvariantGE_condFlipBit_of_lt (h : i < j) (c : Vector Bool l) :
-    BitInvariantGE j (condFlipBit · i c) :=
-  fun _ hk => bitInvariant_condFlipBit_of_ne (hk.trans_lt' h).ne' c
-
-theorem bitInvariantGE_imp_bitInvariantGE_iff_le :
-    (∀ f, BitInvariantGE n f → BitInvariantGE m f) ↔ n ≤ m :=
-  ⟨fun h => le_of_not_lt fun hmn =>
-    not_bitInvariantGE_flipBit_of_eq (h _ (bitInvariantGE_flipBit_of_lt hmn)),
-  fun hmn => fun _ hf _ hk => hf _ (hmn.trans hk)⟩
-
-theorem exists_bitInvariantGE_and_not_bitInvariantGE_iff_gt :
-    (∃ f, BitInvariantGE n f ∧ ¬ BitInvariantGE m f) ↔ m < n := not_iff_not.mp <| by
-  simp_rw [not_exists, not_lt, not_and_not_right, bitInvariantGE_imp_bitInvariantGE_iff_le]
-
-theorem BitInvariantLT.id_of_bitInvariantGE (hfLT : BitInvariantLT m f)
-    (hfGE : BitInvariantGE m f) : f = id :=
-  forall_bitInvariant_iff_eq_id.mp <| fun i => (i.lt_or_ge m).by_cases (hfLT i) (hfGE i)
-
-theorem BitInvariantGE.id_of_bitInvariantLT (hfGE : BitInvariantGE m f)
-    (hfLT : BitInvariantLT m f) : f = id := hfLT.id_of_bitInvariantGE hfGE
-
-theorem bitInvariantLT_and_bitInvariantGE_iff_id :
-    BitInvariantLT m f ∧ BitInvariantGE m f ↔ f = id :=
-  ⟨fun h => h.1.id_of_bitInvariantGE h.2, fun h => h ▸ ⟨bitInvariantLT_id, bitInvariantGE_id⟩⟩
-
-end Function
-
-namespace Submonoid
-
-open Function Nat
-
-def BitInvariant (i : ℕ) : Submonoid (Function.End ℕ) where
-  carrier := Function.BitInvariant i
-  mul_mem' := BitInvariant.comp
-  one_mem' := bitInvariant_id
-
-def BitInvariantLT (i : ℕ) : Submonoid (Function.End ℕ) := ⨅ k : ℕ, ⨅ (_ : k < i), BitInvariant k
-
-variable {f : Function.End ℕ}
-
-@[simp]
-theorem mem_bitInvariant_iff : f ∈ BitInvariant i ↔ f.BitInvariant i := Iff.rfl
-
-@[simp]
-theorem mem_bitInvariantLT_iff : f ∈ BitInvariantLT i ↔ f.BitInvariantLT i := by
-  unfold BitInvariantLT ; simp_rw [mem_iInf] ; exact Iff.rfl
-
-theorem _root_.Function.BitInvariantLT.mem_bitInvariantLT (hf : f.BitInvariantLT i) :
-    f ∈ BitInvariantLT i := mem_bitInvariantLT_iff.mpr hf
-
-theorem bitInvariantLT_of_mem_bitInvariantLT (hf : f ∈ BitInvariantLT i) :
-    f.BitInvariantLT i := mem_bitInvariantLT_iff.mp hf
-
-@[simp]
-theorem bitInvariantLT_zero : BitInvariantLT 0 = ⊤ := by
-  simp_rw [Submonoid.eq_top_iff', mem_bitInvariantLT_iff,
-  Function.bitInvariantLT_zero, implies_true]
-
-theorem bitInvariantLT_le_iff_le : BitInvariantLT n ≤ BitInvariantLT m ↔ m ≤ n := by
-  simp_rw [SetLike.le_def, mem_bitInvariantLT_iff]
-  exact bitInvariantLT_imp_bitInvariantLT_iff_ge
-
-theorem bitInvariantLT_strictAnti : StrictAnti BitInvariantLT :=
-  strictAnti_of_le_iff_le (fun _ _ => bitInvariantLT_le_iff_le.symm)
-
-theorem bitInvarLT_lt_iff_lt : BitInvariantLT n < BitInvariantLT m ↔ m < n :=
-  bitInvariantLT_strictAnti.lt_iff_lt
-
-def BitInvariantGE (i : ℕ) : Submonoid (Function.End ℕ) := ⨅ k : ℕ, ⨅ (_ : i ≤ k), BitInvariant k
-
-@[simp]
-theorem mem_bitInvariantGE_iff : f ∈ BitInvariantGE i ↔ f.BitInvariantGE i := by
-  unfold BitInvariantGE ; simp_rw [mem_iInf] ; exact Iff.rfl
-
-theorem _root_.Function.bitInvariantGE.mem_bitInvariantGE (hf : f.BitInvariantGE i) :
-    f ∈ BitInvariantGE i := mem_bitInvariantGE_iff.mpr hf
-
-theorem bitInvariantGE_of_mem_bitInvariantGE (hf : f ∈ BitInvariantGE i) :
-    f.BitInvariantGE i := mem_bitInvariantGE_iff.mp hf
-
-@[simp]
-theorem bitInvariantGE_zero :
-    BitInvariantGE 0 = ⊥ := by
-  simp_rw [Submonoid.eq_bot_iff_forall, mem_bitInvariantGE_iff, bitInvariantGE_zero_iff_id]
-  exact fun _ => id
-
-theorem bitInvariantGE_le_iff_le : BitInvariantGE m ≤ BitInvariantGE n ↔ m ≤ n := by
-  simp_rw [SetLike.le_def, mem_bitInvariantGE_iff]
-  exact bitInvariantGE_imp_bitInvariantGE_iff_le
-
-theorem bitInvariantGE_strictMono : StrictMono BitInvariantGE :=
-    strictMono_of_le_iff_le (fun _ _ => bitInvariantGE_le_iff_le.symm)
-
-theorem bitInvariantGE_lt_iff_lt : BitInvariantGE m < BitInvariantGE n ↔ m < n :=
-  bitInvariantGE_strictMono.lt_iff_lt
-
-theorem bitInvariantLT_inf_BitInvariantGE_eq_bot : BitInvariantLT m ⊓ BitInvariantGE m = ⊥ :=
-    SetLike.ext <| fun f => by
-  simp_rw [mem_bot, Submonoid.mem_inf, mem_bitInvariantGE_iff,
-  mem_bitInvariantLT_iff, bitInvariantLT_and_bitInvariantGE_iff_id]
-  exact Iff.rfl
-
-theorem disjoint_bitInvariantGE_bitInvariantLT :
-    Disjoint (BitInvariantLT m) (BitInvariantGE m) := by
-  simp_rw [disjoint_iff]
-  exact bitInvariantLT_inf_BitInvariantGE_eq_bot
-
-theorem eq_one_of_mem_BitInvariantGE_mem_bitInvarLT (hfLT : f ∈ BitInvariantLT m)
-    (hfGE : f ∈ BitInvariantGE m) : f = 1 := Submonoid.mem_bot.mp <| by
-  exact bitInvariantLT_inf_BitInvariantGE_eq_bot ▸ Submonoid.mem_inf.mpr ⟨hfLT, hfGE⟩
-
-end Submonoid
-
-namespace Subgroup
-
-open Equiv Function Nat
-
-def BitInvariant (i : ℕ) : Subgroup (Perm ℕ) where
-  carrier π := Function.BitInvariant i ⇑π
-  mul_mem' := BitInvariant.comp
-  one_mem' := bitInvariant_id
-  inv_mem' := (rightInverse_symm _).bitInvariant_of_bitInvariant
-
-def BitInvariantLT (i : ℕ) : Subgroup (Perm ℕ) := ⨅ k : ℕ, ⨅ (_ : k < i), BitInvariant k
-def BitInvariantGE (i : ℕ) : Subgroup (Perm ℕ) := ⨅ k : ℕ, ⨅ (_ : i ≤ k), BitInvariant k
-
-variable {π : Perm ℕ}
-
-@[simp]
-theorem mem_bitInvariant_iff : π ∈ BitInvariant i ↔ (⇑π).BitInvariant i := Iff.rfl
-
-@[simp]
-theorem mem_bitInvariantLT_iff : π ∈ BitInvariantLT i ↔ (⇑π).BitInvariantLT i := by
-  unfold BitInvariantLT
-  simp_rw [mem_iInf, mem_bitInvariant_iff, bitInvariantLT_iff]
-
-@[simp]
-theorem mem_bitInvariantGE_iff : π ∈ BitInvariantGE i ↔ (⇑π).BitInvariantGE i:= by
-  unfold BitInvariantGE
-  simp_rw [mem_iInf, mem_bitInvariant_iff, bitInvariantGE_iff]
-
-theorem mem_bitInvariant_iff_coe_mem_bitInvariant :
-  ∀ π, π ∈ BitInvariant i ↔ ⇑π ∈ Submonoid.BitInvariant i := fun _ => Iff.rfl
-
-theorem mem_bitInvariantLT_iff_coe_mem_bitInvariantLT :
-    ∀ π, π ∈ BitInvariantLT i ↔ ⇑π ∈ Submonoid.BitInvariantLT i := fun _ =>
-  mem_bitInvariantLT_iff.trans Submonoid.mem_bitInvariantLT_iff.symm
-
-theorem mem_bitInvariantGE_iff_coe_mem_bitInvariantGE :
-    ∀ π, π ∈ BitInvariantGE i ↔ ⇑π ∈ Submonoid.BitInvariantGE i := fun _ =>
-  mem_bitInvariantGE_iff.trans Submonoid.mem_bitInvariantGE_iff.symm
-
-@[simp]
-theorem bitInvariantLT_zero : BitInvariantLT 0 = ⊤ := Subgroup.ext fun _ => by
-  simp_rw [mem_bitInvariantLT_iff_coe_mem_bitInvariantLT, Submonoid.bitInvariantLT_zero,
-  Submonoid.mem_top, mem_top]
-
-theorem bitInvariantLT_le_iff_le : BitInvariantLT n ≤ BitInvariantLT m ↔ m ≤ n := by
-  simp_rw [SetLike.le_def, mem_bitInvariantLT_iff]
-  exact ⟨fun h => (h (x := flipBitPerm _) bitInvariantLT_flipBit_of_eq).ge,
-    fun hmn _ hf _ hk => hf _ (hk.trans_le hmn)⟩
-
-theorem bitInvariantLT_strictAnti : StrictAnti BitInvariantLT :=
-  strictAnti_of_le_iff_le (fun _ _ => bitInvariantLT_le_iff_le.symm)
-
-theorem bitInvarLT_lt_iff_lt : BitInvariantLT n < BitInvariantLT m ↔ m < n :=
-  bitInvariantLT_strictAnti.lt_iff_lt
-
-@[simp]
-theorem bitInvariantGE_zero :
-    BitInvariantGE 0 = ⊥ := Subgroup.ext <| fun _ => by
-  simp_rw [mem_bitInvariantGE_iff_coe_mem_bitInvariantGE, Submonoid.bitInvariantGE_zero,
-  Submonoid.mem_bot, mem_bot, Equiv.Perm.ext_iff, funext_iff]
-  exact Iff.rfl
-
-theorem bitInvariantGE_le_iff_le : BitInvariantGE m ≤ BitInvariantGE n ↔ m ≤ n := by
-  simp_rw [SetLike.le_def, mem_bitInvariantGE_iff]
-  exact   ⟨fun h => le_of_not_lt fun hmn =>
-    not_bitInvariantGE_flipBit_of_eq (h (x := flipBitPerm _) (bitInvariantGE_flipBit_of_lt hmn)),
-  fun hmn => fun _ hf _ hk => hf _ (hmn.trans hk)⟩
-
-theorem bitInvariantGE_strictMono : StrictMono BitInvariantGE :=
-    strictMono_of_le_iff_le (fun _ _ => bitInvariantGE_le_iff_le.symm)
-
-theorem bitInvariantGE_lt_iff_lt : BitInvariantGE m < BitInvariantGE n ↔ m < n :=
-  bitInvariantGE_strictMono.lt_iff_lt
-
-theorem bitInvariantLT_inf_BitInvariantGE_eq_bot : BitInvariantLT m ⊓ BitInvariantGE m = ⊥ :=
-    SetLike.ext <| fun f => by
-  simp_rw [Subgroup.mem_inf, mem_bitInvariantLT_iff_coe_mem_bitInvariantLT,
-    mem_bitInvariantGE_iff_coe_mem_bitInvariantGE, ←Submonoid.mem_inf,
-    Submonoid.bitInvariantLT_inf_BitInvariantGE_eq_bot (m := m),
-  Submonoid.mem_bot, mem_bot, Equiv.Perm.ext_iff, funext_iff]
-  exact Iff.rfl
-
-theorem disjoint_bitInvariantGE_bitInvariantLT :
-    Disjoint (BitInvariantLT m) (BitInvariantGE m) := by
-  simp_rw [disjoint_iff]
-  exact bitInvariantLT_inf_BitInvariantGE_eq_bot
-
-theorem eq_one_of_mem_BitInvariantGE_mem_bitInvarLT (hfLT : f ∈ BitInvariantLT m)
-    (hfGE : f ∈ BitInvariantGE m) : f = 1 := Subgroup.mem_bot.mp <| by
-  exact bitInvariantLT_inf_BitInvariantGE_eq_bot ▸ Subgroup.mem_inf.mpr ⟨hfLT, hfGE⟩
-
-end Subgroup
-
-section Equivs
-
-open Function Equiv Nat
-
-variable {ff : Bool → Function.End ℕ}
-
-def endoOfBoolArrowEndo (i : ℕ) (ff : Bool → ℕ → ℕ) : Function.End ℕ :=
-  fun q => (ff (q.testBit i) (q.testRes i)).mergeBit i (q.testBit i)
-
-@[simp]
-theorem endoOfBoolArrowEndo_def :
-  endoOfBoolArrowEndo i ff q = (ff (q.testBit i) (q.testRes i)).mergeBit i (q.testBit i)  := rfl
-
-theorem endoOfBoolArrowEndo_bitInvar (ff : Bool → ℕ → ℕ) :
-  (endoOfBoolArrowEndo i ff).BitInvariant i := by
-  simp_rw [bitInvariant_iff, endoOfBoolArrowEndo_def, testBit_mergeBit_of_eq, implies_true]
-
-theorem endoOfBoolArrowEndo_mem_bitInvarEQ
-    (f : Bool → ℕ → ℕ) : (endoOfBoolArrowEndo i f) ∈ Submonoid.BitInvariant i :=
-  endoOfBoolArrowEndo_bitInvar f
-
-theorem endoOfBoolArrowEndo_comp (f g : Bool → ℕ → ℕ) :
-  endoOfBoolArrowEndo i (fun b => (f b) ∘ (g b)) = endoOfBoolArrowEndo i f ∘ endoOfBoolArrowEndo i g
-  := by simp_rw [Function.End.ext_iff, Function.comp_apply, endoOfBoolArrowEndo_def,
-   testBit_mergeBit_of_eq, testRes_mergeBit_of_eq, Function.comp_apply, implies_true]
-
-theorem endoOfBoolArrowEndo_mul (ff gg : Bool → Function.End ℕ) :
-  endoOfBoolArrowEndo i (ff * gg) =
-  ((endoOfBoolArrowEndo i ff : Function.End ℕ) * (endoOfBoolArrowEndo i gg : Function.End ℕ)
-  : Function.End ℕ) := endoOfBoolArrowEndo_comp _ _
-
-def boolArrowEndoOfEndo (i : ℕ) (ff : ℕ → ℕ) :
-  Bool → Function.End ℕ := fun b p => (ff (p.mergeBit i b)).testRes i
-
-@[simp]
-theorem boolArrowEndoOfEndo_def {f : ℕ → ℕ} {b : Bool} {p : ℕ} :
-  boolArrowEndoOfEndo i f b p = (f (p.mergeBit i b)).testRes i := rfl
-
-theorem endoOfBoolArrowEndo_rightInverse (i : Fin (m + 1)) :
-Function.RightInverse (endoOfBoolArrowEndo i) (boolArrowEndoOfEndo i) := fun f => by
-  ext ; simp_rw [boolArrowEndoOfEndo_def, endoOfBoolArrowEndo_def, testBit_mergeBit_of_eq,
-    testRes_mergeBit_of_eq]
-
-theorem endoOfBoolArrowEndo_leftInvOn (i : Fin (m + 1)) :
-  Set.LeftInvOn (endoOfBoolArrowEndo i) (boolArrowEndoOfEndo i) (BitInvariant i) := fun f hf => by
-  ext q ; simp_rw [endoOfBoolArrowEndo_def, boolArrowEndoOfEndo_def, mergeBit_testBit_testRes_of_eq,
-    mergeBit_testRes_of_eq, hf.testBit_apply_eq_testBit, Bool.xor_not_self, cond_true]
-
-theorem boolArrowEndoOfEndo_leftInverse (i : Fin (m + 1)) :
-  Function.LeftInverse (boolArrowEndoOfEndo i) (endoOfBoolArrowEndo i) :=
-  endoOfBoolArrowEndo_rightInverse _
-
-theorem boolArrowEndoOfEndo_rightInvOn (i : Fin (m + 1)) :
-  Set.RightInvOn (boolArrowEndoOfEndo i) (endoOfBoolArrowEndo i) (BitInvariant i) :=
-  endoOfBoolArrowEndo_leftInvOn _
-
-@[simps!]
-def bitInvarMulEquivEnd (i : Fin (m + 1)) : (Bool → Function.End ℕ) ≃* Submonoid.BitInvariant i where
-  toFun feo := ⟨endoOfBoolArrowEndo i feo, endoOfBoolArrowEndo_mem_bitInvarEQ feo⟩
-  invFun f := boolArrowEndoOfEndo i f.val
-  left_inv := boolArrowEndoOfEndo_leftInverse i
-  right_inv f := Subtype.ext (boolArrowEndoOfEndo_rightInvOn i f.prop)
-  map_mul' _ _ := Subtype.ext (endoOfBoolArrowEndo_comp _ _)
-
-def bitInvarMulEquiv (i : Fin (m + 1)) : (Bool → Equiv.Perm ℕ) ≃* Subgroup.BitInvariant i :=
-  ((Equiv.Perm.equivUnitsEnd).arrowCongr (Equiv.refl _)).trans <|
-  MulEquiv.piUnits.symm.trans <|
-  (Units.mapEquiv (bitInvarMulEquivEnd i)).trans <|
-  (Equiv.Perm.equivUnitsEnd.subgroupMulEquivUnitsType
-    (Subgroup.mem_bitInvariant_iff_coe_mem_bitInvariant)).symm
-
-@[simp]
-theorem bitInvarMulEquiv_apply_coe_apply (i : Fin (m + 1))
-  (πeo : Bool → Equiv.Perm ℕ) : ⇑((bitInvarMulEquiv i) πeo).val =
-  endoOfBoolArrowEndo i fun b => ⇑(πeo b) := rfl
-
-@[simp]
-theorem bitInvarMulEquiv_apply_coe_symm_apply (i : Fin (m + 1))
-  (πeo : Bool → Equiv.Perm ℕ) : ⇑((bitInvarMulEquiv i) πeo).val.symm =
-  endoOfBoolArrowEndo i fun b => ⇑(πeo b)⁻¹ := rfl
-
-@[simp]
-theorem bitInvarMulEquiv_symm_apply_apply (i : Fin (m + 1)) (π : ↥(Subgroup.BitInvariant i)):
-  ⇑(((bitInvarMulEquiv i).symm) π b) = boolArrowEndoOfEndo i (⇑π.val) b := rfl
-
-@[simp]
-theorem bitInvarMulEquiv_symm_apply_symm_apply (i : Fin (m + 1)) (π : ↥(Subgroup.BitInvariant i)):
-  ⇑(((bitInvarMulEquiv i).symm) π b).symm = boolArrowEndoOfEndo i (⇑π⁻¹.val) b := rfl
-
--- Extra theorems
-
-theorem endoOfBoolArrowEndo_leftInverse_apply
-  {f g : Bool → ℕ → ℕ}
-  (hfg : ∀ b : Bool, (Function.LeftInverse (f b) (g b))) :
-  Function.LeftInverse (endoOfBoolArrowEndo i f) (endoOfBoolArrowEndo i g) := fun q => by
-  simp_rw [endoOfBoolArrowEndo_def, testBit_mergeBit_of_eq, testRes_mergeBit_of_eq,
-    hfg (q.testBit i) (q.testRes i), mergeBit_testBit_testRes_of_eq]
-
-theorem endoOfBoolArrowEndo_rightInverse_apply
-  {f g : Bool → ℕ → ℕ}
-  (hfg : ∀ b : Bool, (Function.RightInverse (f b) (g b))) :
-  Function.RightInverse (endoOfBoolArrowEndo i f) (endoOfBoolArrowEndo i g) :=
-  endoOfBoolArrowEndo_leftInverse_apply hfg
-
-theorem boolArrowEndoOfEndo_leftInverse_apply_ofBitInvarLeft
-  {f g: Function.End ℕ} (hfg : Function.LeftInverse f g) (hf : f.BitInvariant i)
-  {b : Bool} : Function.LeftInverse (boolArrowEndoOfEndo i f b) (boolArrowEndoOfEndo i g b) :=
-  fun q => by
-    simp_rw [boolArrowEndoOfEndo_def,
-    (hfg.bitInvariant_of_bitInvariant hf).mergeBit_testRes_apply_mergeBit,
-    hfg (q.mergeBit i b), testRes_mergeBit_of_eq]
-
-theorem boolArrowEndoOfEndo_rightInverse_apply_ofBitInvarLeft
-  {f g: Function.End ℕ} (hfg : Function.RightInverse f g) (hf : f.BitInvariant i)
-  {b : Bool} : Function.RightInverse (boolArrowEndoOfEndo i f b) (boolArrowEndoOfEndo i g b) :=
-  fun q => by
-    simp_rw [boolArrowEndoOfEndo_def, hf.mergeBit_testRes_apply_mergeBit,
-    hfg (q.mergeBit i b), testRes_mergeBit_of_eq]
-
-theorem boolArrowEndoOfEndo_leftInverse_apply_ofBitInvarRight
-  {f g: Function.End ℕ} (hfg : Function.LeftInverse f g) (hg : g.BitInvariant i)
-  {b : Bool} : Function.LeftInverse (boolArrowEndoOfEndo i f b) (boolArrowEndoOfEndo i g b) :=
-  boolArrowEndoOfEndo_rightInverse_apply_ofBitInvarLeft hfg hg
-
-theorem boolArrowEndoOfEndo_rightInverse_apply_ofBitInvarRight
-  {f g: Function.End ℕ} (hfg : Function.RightInverse f g) (hg : g.BitInvariant i)
-  {b : Bool} : Function.RightInverse (boolArrowEndoOfEndo i f b) (boolArrowEndoOfEndo i g b) :=
-  boolArrowEndoOfEndo_leftInverse_apply_ofBitInvarLeft hfg hg
-
-theorem boolArrowEndoOfEndo_comp_ofBitInvarRight
-  {f g: Function.End ℕ} (hg : g.BitInvariant i) {b : Bool} :
-  boolArrowEndoOfEndo i (f ∘ g) b = boolArrowEndoOfEndo i f b ∘ boolArrowEndoOfEndo i g b := by
-  ext ; simp_rw [boolArrowEndoOfEndo_def, Function.comp_apply, boolArrowEndoOfEndo_def,
-  hg.mergeBit_testRes_apply_mergeBit]
-
-theorem boolArrowEndoOfEndo_mul_ofBitInvarRight
-  {f g: Function.End ℕ} (hg : g.BitInvariant i) :
-  boolArrowEndoOfEndo i (f * g) = boolArrowEndoOfEndo i f * boolArrowEndoOfEndo i g := by
-  ext : 1 ; exact boolArrowEndoOfEndo_comp_ofBitInvarRight hg
-
-end Equivs
--/
 end BitInvariant
-
-section Equivs
-
-open Fin
-
-/-
-
-theorem bitInvarMulEquiv_zero_apply_condFlipBits (c : BV (m + 1) → Bool) (i : Fin (m + 1)) :
-    (bitInvarMulEquiv 0) (fun b => condFlipBitPerm (fun p => c (p.mergeBit 0 b)) i) =
-    condFlipBit (i.succ) c :=
-  Equiv.ext (fun _ => condFlipBit_succ_apply ▸ rfl)
-
-theorem bitInvarMulEquiv_zero_apply_condFlipBits_one (c : BV (m + 1) → Bool) :
-    (bitInvarMulEquiv 0) (fun b => condFlipBit 0 (fun p => c (mergeBit 0 b p))) =
-    condFlipBit 1 c :=
-  bitInvarMulEquiv_zero_apply_condFlipBits _ 0
-
-theorem bitInvarMulEquiv_apply_condFlipBits (c) (i : Fin (m + 1)) (j : Fin (m + 2)) :
-    (bitInvarMulEquiv j) (fun b => condFlipBit i (fun p => c (mergeBit (i.predAbove j) b p))) =
-    condFlipBit (j.succAbove i) c :=
-  Equiv.ext (fun _ => condFlipBit_succAbove_apply ▸ rfl)
-
-theorem bitInvarMulEquiv_last_apply_condFlipBits (c) (i : Fin (m + 1)) :
-    (bitInvarMulEquiv (Fin.last _)) (fun b => condFlipBit i
-    (fun p => c (mergeBit (Fin.last _) b p))) =
-    condFlipBit (i.castSucc) c := by
-  rw [← Fin.predAbove_right_last (i := i), bitInvarMulEquiv_apply_condFlipBits, Fin.succAbove_last]
--/
-
-end Equivs

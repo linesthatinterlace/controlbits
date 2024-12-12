@@ -24,6 +24,11 @@ end Equiv
 
 namespace Array
 
+@[simp] theorem size_flatten (ass : Array (Array α)) :
+    ass.flatten.size = (List.map size ass.toList).sum := by
+  rw [size_eq_length_toList, toList_flatten, List.length_flatten, List.map_map,
+    Function.comp_def]
+
 @[simp] theorem size_finRange {n : ℕ} : (Array.finRange n).size = n := size_ofFn _
 @[simp] theorem getElem_finRange {n i : ℕ} {hi : i < (Array.finRange n).size} :
     (Array.finRange n)[i] = ⟨i, hi.trans_eq size_finRange⟩ := getElem_ofFn _ _ _
@@ -155,6 +160,30 @@ theorem smul_injOn_range_period (a : G) {x : α} :
 end MulAction
 
 namespace Vector
+
+def flatten (a : Vector (Vector α n) m) : Vector α (m * n) :=
+  ⟨(a.toArray.map (Vector.toArray)).flatten, by
+    simp_rw [Array.size_flatten]
+    simp_rw [Array.toList_map, List.map_map,
+      Function.comp_def, size_toArray, List.map_const', Array.length_toList,
+      List.sum_replicate, size_toArray, smul_eq_mul]⟩
+
+theorem flatten_empty {a : Vector (Vector α 0) m}  :
+    (a.flatten)= #v[] := by
+  ext _ hi
+  simp_rw [mul_zero, not_lt_zero'] at hi
+
+theorem empty_flatten {a : Vector (Vector α n) 0}  :
+    (a.flatten) = #v[].cast (zero_mul _).symm := by
+  ext _ hi
+  simp_rw [zero_mul, not_lt_zero'] at hi
+
+/-
+theorem getElem_flatten {a : Vector (Vector α n) m} (hi : i < m * n) :
+    (a.flatten)[i] = (a[i/n]'(Nat.div_lt_of_lt_mul (hi.trans_eq (mul_comm _ _))))[i % n]'
+    (Nat.mod_lt _ (Nat.zero_lt_of_ne_zero (Nat.not_eq_zero_of_lt
+    ((Nat.div_lt_of_lt_mul hi))))) := -/
+
 
 @[simp]
 theorem getD_of_lt (a : Vector α n) (x : α) (i : ℕ) (h : i < n) : a[i]?.getD x = a[i] := by
@@ -562,6 +591,22 @@ instance : Group (VectorPerm n) := Group.ofLeftAxioms
   (fun _ => ext <| fun hi => by simp_rw [getElem_mul, getElem_one, getElem_inv_getElem])
 
 section Group
+
+theorem getElem_pow_eq_self_of_getElem_eq_self {a : VectorPerm n} {hi : i < n} (hia : a[i] = i) :
+    (a^k)[i] = i := by
+  induction k with | zero => _ | succ k IH => _
+  · simp_rw [pow_zero, getElem_one]
+  · simp_rw [pow_succ, getElem_mul, hia, IH]
+
+theorem getElem_inv_eq_self_of_getElem_eq_self {a : VectorPerm n} {hi : i < n} (hia : a[i] = i) :
+    (a⁻¹)[i] = i := by simp_rw [getElem_inv_eq_self_iff, hia]
+
+theorem getElem_zpow_eq_self_of_getElem_eq_self {a : VectorPerm n} {k : ℤ} {hi : i < n}
+    (hia : a[i] = i) : (a^k)[i] = i := by
+  cases k
+  · exact getElem_pow_eq_self_of_getElem_eq_self hia
+  · simp_rw [zpow_negSucc]
+    exact (getElem_inv_eq_self_of_getElem_eq_self (getElem_pow_eq_self_of_getElem_eq_self hia))
 
 @[simp]
 theorem getElem_pow_add (a : VectorPerm n) {i x y : ℕ} (hi : i < n) :
@@ -1325,6 +1370,12 @@ theorem getElem_cycleMinVector_succ (a : VectorPerm n) {i x : ℕ}
   · simp_rw [getElem_actOnIndices, cycleMinAux_snd_val,
       cycleMinAux_succ_fst, ← pow_mul, ← pow_succ]
 
+@[simp] theorem getElem_cycleMinVector_le_self {a : VectorPerm n} {k i : ℕ}
+    {hx : i < n}  : (a.CycleMinVector k)[i] ≤ i := by
+  induction k generalizing a i with | zero => _ | succ k IH => _
+  · simp_rw [getElem_cycleMinVector_zero, le_rfl]
+  · simp_rw [getElem_cycleMinVector_succ, min_le_iff, IH, true_or]
+
 @[simp] theorem getElem_one_cycleMinVector (hi : i < n) :
     ((1 : VectorPerm n).CycleMinVector k)[i] = i := by
   induction k generalizing n i with | zero => _ | succ k IH => _
@@ -1385,10 +1436,6 @@ lemma getElem_cycleMinVector_le (a : VectorPerm n) {i : ℕ} {x : ℕ}
     (a.CycleMinVector i)[x] ≤ y :=
   hk.choose_spec.2 ▸ a.getElem_cycleMinVector_le_getElem_pow_lt hk.choose_spec.1 _
 
-lemma getElem_cycleMinVector_le_self (a : VectorPerm n) (i : ℕ) {x : ℕ}
-    (hx : x < n) : (a.CycleMinVector i)[x] ≤ x :=
-  a.getElem_cycleMinVector_le ⟨0, Nat.two_pow_pos _, pow_zero a ▸ (getElem_one _).symm⟩
-
 lemma exists_lt_getElem_cycleMin_eq_getElem_pow (a : VectorPerm n) (i : ℕ) {x : ℕ}
       (hx : x < n) :
     ∃ k < 2^i, (a.CycleMinVector i)[x] = (a ^ k)[x] := by
@@ -1403,6 +1450,15 @@ lemma le_getElem_cycleMin_iff (a : VectorPerm n) (i : ℕ) {x : ℕ}
     y ≤ (a.CycleMinVector i)[x] ↔ ∀ k < 2^i, y ≤ (a ^ k)[x] := by
   simp_rw [getElem_cycleMinVector_eq_min'_getElem_pow_image_range, Finset.le_min'_iff,
     Finset.mem_image, Finset.mem_range, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂]
+
+@[simp] theorem getElem_cycleMinVector_of_self_le_getElem {a : VectorPerm n} {k i : ℕ}
+    {hx : i < n} (hxa : ∀ k, i ≤ (a^k)[i]) : (a.CycleMinVector k)[i] = i := by
+  simp_rw [le_antisymm_iff, le_getElem_cycleMin_iff, hxa,
+    getElem_cycleMinVector_le_self, implies_true, and_self]
+
+@[simp] theorem getElem_zero_cycleMinVector [NeZero n]
+    {a : VectorPerm n} {k : ℕ} : (a.CycleMinVector k)[0]'(NeZero.pos _) = 0 :=
+  getElem_cycleMinVector_of_self_le_getElem (fun _ => zero_le _)
 
 lemma getElem_cycleMinVector_eq_min'_cycleOf (a : VectorPerm n) {i : ℕ} {x : ℕ}
       (hai : MulAction.period a x ≤ 2^i) (hx : x < n) :
@@ -1504,7 +1560,7 @@ lemma cycleMin_le_self (a : VectorPerm n) (i : ℕ) {x : ℕ} :
     a.CycleMin i x ≤ x := by
   rcases lt_or_le x n with hx | hx
   · simp_rw [a.cycleMin_of_lt hx]
-    exact getElem_cycleMinVector_le_self _ _ _
+    exact getElem_cycleMinVector_le_self
   · simp_rw [a.cycleMin_of_ge hx, le_rfl]
 
 lemma exists_lt_cycleMin_eq_smul_pow (a : VectorPerm n) (i : ℕ) {x : ℕ} :

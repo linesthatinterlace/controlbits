@@ -1,6 +1,4 @@
-import Controlbits.PermFintwo
 import Controlbits.BitResiduumAlt
-import Controlbits.CommutatorCycles
 
 section Decomposition
 open Equiv Equiv.Perm Nat Function
@@ -9,12 +7,12 @@ open VectorPerm
 
 def leftLayer (a : VectorPerm (2^(n + 1))) (i : ℕ) : Vector Bool (2^n) :=
   if hi : i ≤ n then
-  let A := (a.flipBitCommutator i).CycleMinVector (n - i);
-  (Vector.finRange (2^n)).map fun (p : Fin (2^n)) =>
-  (A[(p : ℕ).mergeBit i false]'
-  ((mergeBit_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
-    (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi))).mpr
-    (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
+    let A := (a.flipBitCommutator i).CycleMinVector (n - i);
+    (Vector.finRange (2^n)).map fun (p : Fin (2^n)) =>
+      (A[(p : ℕ).mergeBit i false]'
+      ((mergeBit_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
+      (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi))).mpr
+      (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
   else Vector.mkVector _ false
 
 section LeftLayer
@@ -44,6 +42,20 @@ theorem getElem_leftLayer_of_gt {a : VectorPerm (2^(n + 1))} {i : ℕ} (hi : n <
     (leftLayer a i)[p] = false := by
   rw [getElem_leftLayer, dif_neg (hi.not_le)]
 
+theorem getElem_leftLayer_of_lt {a : VectorPerm (2^(n + 1))} (ha : ∀ j < i, a.BitInvariant j)
+    (hp : p < 2^i) (hp' : p < 2^n) :
+    (leftLayer a i)[p] = false := by
+  rcases le_or_lt i n with hi | hi
+  · simp_rw [getElem_leftLayer_of_le hi, mergeBit_apply_false_of_lt_two_pow hp,
+    getElem_cycleMinVector_of_self_le_getElem (getElem_eq_self_of_forall_bitInvariant_lt_of_lt
+    (fun _ hk => (ha _ hk).flipBitCommutator_of_ne hk.ne) hp
+    (Nat.pow_le_pow_of_le one_lt_two (hi.trans (Nat.le_succ _)))), testBit_lt_two_pow hp]
+  · simp_rw [getElem_leftLayer_of_gt hi]
+
+theorem getElem_zero_leftLayer_zero {a : VectorPerm (2^(n + 1))} :
+    (leftLayer a 0)[0] = false := getElem_leftLayer_of_lt
+      (by simp only [not_lt_zero', IsEmpty.forall_iff, implies_true]) (Nat.two_pow_pos _) _
+
 end LeftLayer
 
 def leftPerm (a : VectorPerm (2^(n + 1))) (i : ℕ) : VectorPerm (2^(n + 1)) :=
@@ -71,11 +83,11 @@ theorem testBit_leftPerm_of_ne {i : ℕ} {j : ℕ} (hj : j ≠ i) (hk : k < 2^(n
   simp_rw [(leftPerm_bitInvariant_of_ne hj).testBit_getElem_eq_testBit]
 
 theorem testBit_leftPerm {i : ℕ}
-    (ha : ∀ j < (i : ℕ), a.BitInvariant j) {hk : k < 2^(n + 1)} :
+    (ha : ∀ j < i, a.BitInvariant j) {hk : k < 2^(n + 1)} :
     (leftPerm a i)[k].testBit i =
     ((a.flipBitCommutator i).CycleMinVector (n - i))[k].testBit i := by
   rcases le_or_lt i n with hi | hi
-  · have hin :  2 ^ ((i : ℕ) + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ (Nat.succ_le_succ hi)
+  · have hin :  2 ^ (i + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ (Nat.succ_le_succ hi)
     rw [getElem_leftPerm, getElem_condFlipBit_of_div hin,
       condFlipBit_apply_of_testRes_lt ((testRes_lt_two_pow_iff_lt_two_pow hi).mpr hk),
       getElem_leftLayer_of_le hi]
@@ -92,9 +104,14 @@ end LeftPerm
 
 def rightLayer (a : VectorPerm (2^(n + 1))) (i : ℕ) : Vector Bool (2^n) :=
   if hi : i ≤ n then
-    let F := leftLayer a i;
+    let A := (a.flipBitCommutator i).CycleMinVector (n - i);
+    let F := (Vector.finRange (2^n)).map fun (p : Fin (2^n)) =>
+      (A[(p : ℕ).mergeBit i false]'
+      ((mergeBit_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
+      (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi))).mpr
+      (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
     (Vector.finRange (2^n)).map fun (p : Fin (2^n)) =>
-    ((a.condFlipBitVals i F)[((p : ℕ).mergeBit i false)]'
+      ((a.condFlipBitVals i F)[((p : ℕ).mergeBit i false)]'
       ((mergeBit_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
       (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi))).mpr
       (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
@@ -110,7 +127,7 @@ theorem getElem_rightLayer {a : VectorPerm (2^(n + 1))} {i : ℕ} (hp : p < 2^n)
       (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi))).mpr
       (hp.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))]).testBit i
     else false := by
-  unfold rightLayer leftPerm
+  unfold rightLayer leftPerm leftLayer
   split_ifs
   · simp_rw [Vector.getElem_map, Vector.getElem_finRange,
       condFlipBitVals_eq_condFlipBit_mul, getElem_mul]
@@ -155,11 +172,11 @@ theorem testBit_rightPerm_of_ne {i : ℕ} {j : ℕ} (hj : j ≠ i) (hk : k < 2^(
   simp_rw [(rightPerm_bitInvariant_of_ne hj).testBit_getElem_eq_testBit]
 
 theorem testBit_rightPerm {i : ℕ}
-    (ha : ∀ j < (i : ℕ), a.BitInvariant j) {hk : k < 2^(n + 1)}:
+    (ha : ∀ j < i, a.BitInvariant j) {hk : k < 2^(n + 1)}:
     (rightPerm a i)[k].testBit i =
     (leftPerm a i)[a[k]].testBit i := by
   rcases le_or_lt i n with hi | hi
-  · have hin :  2 ^ ((i : ℕ) + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ (Nat.lt_succ_of_le hi)
+  · have hin :  2 ^ (i + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ (Nat.lt_succ_of_le hi)
     have hk' := (flipBit_lt_two_pow_iff_lt_two_pow (Nat.lt_succ_of_le hi)).mpr hk
     rw [getElem_rightPerm, getElem_condFlipBit_of_div hin,
       condFlipBit_apply_of_testRes_lt ((testRes_lt_two_pow_iff_lt_two_pow hi).mpr hk),
@@ -181,20 +198,47 @@ theorem testBit_rightPerm {i : ℕ}
 end RightPerm
 
 def middlePerm (a : VectorPerm (2^(n + 1))) (i : ℕ) : VectorPerm (2^(n + 1)) :=
-  if i ≤ n then (a.condFlipBitVals i (leftLayer a i)).condFlipBitIndices i (rightLayer a i) else a
+  if hi : i ≤ n then
+    let A := (a.flipBitCommutator i).CycleMinVector (n - i);
+    let L := (Vector.finRange (2^n)).map fun (p : Fin (2^n)) =>
+      (A[(p : ℕ).mergeBit i false]'
+      ((mergeBit_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
+      (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi))).mpr
+      (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
+    let a' := a.condFlipBitVals i L;
+    let R := (Vector.finRange (2^n)).map fun (p : Fin (2^n)) =>
+      (a'[((p : ℕ).mergeBit i false)]'
+      ((mergeBit_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
+      (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi))).mpr
+      (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
+    a'.condFlipBitIndices i R
+  else a
 
 section MiddlePerm
 
+theorem middlePerm_eq_condFlipBitVals_condFlipBitIndices {a : VectorPerm (2^(n + 1))} :
+    middlePerm a i =
+    (a.condFlipBitVals i (leftLayer a i)).condFlipBitIndices i (rightLayer a i) := by
+  unfold middlePerm leftLayer rightLayer
+  rcases le_or_lt i n with hi | hi
+  · simp_rw [dif_pos hi]
+  · simp_rw [dif_neg hi.not_le, condFlipBitVals_eq_condFlipBit_mul,
+      condFlipBitIndices_eq_mul_condFlipBit, VectorPerm.ext_iff,
+      getElem_mul, getElem_condFlipBit, condFlipBit_of_mkVector_false, getElem_lt,
+      if_true, ite_self, implies_true]
+
 @[simp] theorem getElem_middlePerm (hk : k < 2^(n + 1)) :
     (middlePerm a i)[k] = (leftPerm a i)[a[(rightPerm a i)[k]]] := by
-  unfold middlePerm
+  unfold middlePerm leftPerm leftLayer rightPerm rightLayer
+  simp_rw [condFlipBitVals_eq_condFlipBit_mul,
+      condFlipBitIndices_eq_mul_condFlipBit]
   rcases le_or_lt i n with hi | hi
-  · simp_rw [if_pos hi, condFlipBitVals_eq_condFlipBit_mul, condFlipBitIndices_eq_mul_condFlipBit,
-      getElem_leftPerm, getElem_rightPerm, getElem_mul]
-  · simp_rw [if_neg hi.not_le, getElem_leftPerm_of_gt hi, getElem_rightPerm_of_gt hi]
+  · simp_rw [dif_pos hi, getElem_mul]
+  · simp_rw [dif_neg hi.not_le, getElem_condFlipBit, condFlipBit_of_mkVector_false,
+      getElem_lt, if_true, ite_self]
 
 theorem middlePerm_eq_leftPerm_mul_mul_rightPerm  :
-    middlePerm a i = (leftPerm a i) * a * rightPerm a i := by
+    middlePerm a i = leftPerm a i * a * rightPerm a i := by
   ext
   simp_rw [getElem_middlePerm, getElem_mul]
 
@@ -205,7 +249,7 @@ theorem leftPerm_mul_middlePerm_mul_rightPerm  :
     getElem_rightPerm_rightPerm, getElem_leftPerm_leftPerm]
 
 @[simp] theorem bitInvariant_middlePerm {i : ℕ} {a : VectorPerm (2^(n + 1))}
-  (ha : ∀ j < (i : ℕ), a.BitInvariant j) : ∀ j ≤ (i : ℕ), (middlePerm a i).BitInvariant j := by
+  (ha : ∀ j < i, a.BitInvariant j) : ∀ j ≤ i, (middlePerm a i).BitInvariant j := by
   intro j hj
   rcases hj.eq_or_lt with rfl | hj
   · simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit, getElem_middlePerm,
@@ -246,10 +290,10 @@ section FlmDecomp
 
 theorem flmDecomp_eq_left_middle_right {a : VectorPerm (2^(n + 1))} :
     flmDecomp a i = (middlePerm a i, leftLayer a i, rightLayer a i) := by
-  unfold flmDecomp middlePerm rightLayer  leftLayer
+  unfold flmDecomp middlePerm rightLayer leftLayer
   rcases le_or_lt i n with hi | hi
-  · simp_rw [if_pos hi, dif_pos hi]
-  · simp_rw [if_neg hi.not_le, dif_neg hi.not_le]
+  · simp_rw [dif_pos hi]
+  · simp_rw [dif_neg hi.not_le]
 
 @[simp] theorem condFlipBit_flmDecomp_snd_fst {i : ℕ} :
     (condFlipBit i (flmDecomp a i).snd.fst :
@@ -271,20 +315,17 @@ theorem condFlipBit_flmDecomp_snd_fst_mul_flmDecomp_fst_mul_flmDecomp_snd_snd {i
 
 end FlmDecomp
 
-def NthDecomp (a : VectorPerm (2^(n + 1))) (i : ℕ) :
-    VectorPerm (2^(n + 1)) × Vector Bool (2^n) × Vector Bool (2^n) :=
-  i.recOn (flmDecomp a 0) (fun i rec => flmDecomp rec.1 i.succ)
+def ControlBits (k : ℕ) (a : VectorPerm (2^(n + 1))) : Array Bool := Id.run do
+    let mut (M, LS, RS) := (a, (#[] : Array (Vector Bool (2^n))),
+      (#[] : Array (Vector Bool (2^n)) ))
+    for i in [0:k + 1] do
+      let (M', L, R) := flmDecomp M i
+      M := M'
+      if i < n then LS := LS.push L else pure ()
+      RS := RS.push R
 
-#eval NthDecomp (1 : VectorPerm (2^3)) 3
+    pure ((LS ++ RS.reverse).map (Vector.toArray)).flatten
 
-def ControlBitsScuffed (a : VectorPerm (2^(n + 1))) :
-    VectorPerm (2^(n + 1)) × List (Vector Bool (2^n)) × List (Vector Bool (2^n)) :=
-  (Nat.fold (n + 1) (fun i _ (pi, ls, rs) =>
-  let (m, l, r) := flmDecomp pi i
-  (m, l :: ls, r :: rs)) (a, [], []))
-
-def ControlBits (n : ℕ) := Vector (Vector Bool (2^n)) (2*n + 1)
-
-#eval ControlBitsScuffed (ofVector #v[5, 4, 7, 3, 6, 1, 2, 0] : VectorPerm (2^3))
+#eval ControlBits (n := 2) 2 (ofVector #v[3,4,1,2,7,6,5,0])
 
 end Decomposition
