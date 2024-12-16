@@ -524,9 +524,5 @@ theorem getElem_controlBits (hi' : i < (2*n + 1)) :
   · exact getElem_controlBits_of_lt hi
   · exact getElem_controlBits_of_ge (le_of_not_lt hi)
 
-
-#eval controlBits (n := 2) (ofVector #v[7,4,1,2,3,6,5,0])
-
-
 end Decomposition
 end VectorPerm
