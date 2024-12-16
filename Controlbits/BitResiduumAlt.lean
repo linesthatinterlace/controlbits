@@ -2114,6 +2114,18 @@ theorem getElem_inv_condFlipBitVals {hk : k < n} :
     if hk : k.condFlipBit i c < n then a⁻¹[k.condFlipBit i c] else a⁻¹[k] :=
 Vector.getElem_condFlipBitIndices _
 
+@[simp] theorem condFlipBitIndices_of_mkVector_false :
+    (a.condFlipBitIndices i (Vector.mkVector l false)) = a := by
+  ext
+  simp_rw [getElem_condFlipBitIndices, Nat.condFlipBit_of_mkVector_false,
+    dite_eq_right_iff, implies_true]
+
+@[simp] theorem condFlipBitVals_of_mkVector_false :
+    (a.condFlipBitVals i (Vector.mkVector l false)) = a := by
+  ext
+  simp_rw [getElem_condFlipBitVals, Nat.condFlipBit_of_mkVector_false, ite_self]
+
+
 def condFlipBit (i : ℕ) (c : Vector Bool l) : VectorPerm n :=
   (1 : VectorPerm n).condFlipBitIndices i c
 
@@ -2121,6 +2133,11 @@ theorem getElem_condFlipBit {hk : k < n} :
     (condFlipBit i c)[k] = if k.condFlipBit i c < n then k.condFlipBit i c else k := by
   unfold condFlipBit
   simp_rw [getElem_condFlipBitIndices, getElem_one, dite_eq_ite]
+
+@[simp] theorem condFlipBit_of_mkVector_false :
+    (condFlipBit i (Vector.mkVector l false)) = (1 : VectorPerm n) := by
+  ext
+  simp_rw [getElem_condFlipBit, Nat.condFlipBit_of_mkVector_false, ite_self, getElem_one]
 
 theorem getElem_inv_condFlipBit {hk : k < n} :
     (condFlipBit i c)⁻¹[k] = if k.condFlipBit i c < n then k.condFlipBit i c else k := by
