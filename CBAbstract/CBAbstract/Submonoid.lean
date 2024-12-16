@@ -2,7 +2,7 @@ import Mathlib.Algebra.Group.Submonoid.Units
 
 namespace MulEquiv
 
-def piUnits {β : α → Type*} [∀ a, Monoid (β a)] : (∀ a, β a)ˣ ≃* (∀ a, (β a)ˣ) where
+def piUnits {α : Type*} {β : α → Type*} [∀ a, Monoid (β a)] : (∀ a, β a)ˣ ≃* (∀ a, (β a)ˣ) where
   toFun f a := ⟨f.val a, f.inv a, congr_fun f.mul_inv a, congr_fun f.inv_mul a⟩
   invFun f := ⟨(f ·), (f⁻¹ ·), funext (f · |>.mul_inv), funext (f · |>.inv_mul)⟩
   left_inv _ := Units.ext <| funext fun _ => rfl

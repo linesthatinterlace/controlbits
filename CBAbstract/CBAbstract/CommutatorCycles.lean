@@ -1,5 +1,5 @@
-import Controlbits.Cycles
-import Controlbits.Commutator
+import CBAbstract.Commutator
+import CBAbstract.Cycles
 
 set_option autoImplicit false
 

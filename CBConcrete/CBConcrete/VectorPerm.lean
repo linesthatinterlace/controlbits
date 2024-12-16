@@ -1,9 +1,73 @@
 import Batteries.Data.Vector.Lemmas
-import Mathlib.Data.Fintype.Perm
-import Mathlib.Data.List.Nodup
-import Mathlib.Algebra.Group.Action.Faithful
-import Mathlib.GroupTheory.GroupAction.Period
 import Mathlib.Algebra.Group.MinimalAxioms
+import Mathlib.Data.Fintype.Perm
+import Mathlib.GroupTheory.GroupAction.Period
+
+universe u
+
+namespace Nat
+
+@[simp] theorem fold_succ_last {α : Type u} (n : Nat)
+    (f : (i : Nat) → i < n + 1 → α → α) (init : α) :
+    fold (n + 1) f init = (fold n (fun i h => f (i + 1) (by omega)) (f 0 (by omega) init)) := by
+  induction n with | zero => _ | succ n IH => _
+  · simp_rw [fold_succ, fold_zero]
+  · rw [fold_succ, IH, fold_succ]
+
+@[simp] theorem foldRev_succ_last {α : Type u} (n : Nat)
+    (f : (i : Nat) → i < n + 1 → α → α) (init : α) :
+    foldRev (n + 1) f init = f 0 (by omega)
+    (foldRev n (fun i hi => f (i + 1) (by omega)) init) := by
+  induction n generalizing init with | zero => _ | succ n IH => _
+  · simp_rw [foldRev_succ, foldRev_zero]
+  · rw [foldRev_succ, IH, foldRev_succ]
+
+theorem foldRev_eq_fold_of_apply_eq_apply_pred_sub' {α : Type u} (n : Nat)
+    (f g : (i : Nat) → i < n → α → α)
+    (hfg : ∀ i (hi : i < n), f i hi = g ((n - 1) - i) (by omega)) (init : α) :
+    foldRev n f init = fold n g init := by
+  induction n generalizing init with | zero => _ | succ n IH => _
+  · simp_rw [foldRev_zero, fold_zero]
+  · rw [foldRev_succ_last, fold_succ, hfg]
+    simp_rw [Nat.add_sub_cancel, Nat.sub_zero]
+    congr
+    refine IH _ _ (fun x hx => ?_) _
+    simp_rw [hfg, Nat.add_one_sub_one]
+    conv =>
+      lhs
+      congr
+      rw [Nat.add_comm, ← Nat.sub_sub]
+
+theorem foldRev_eq_fold_of_apply_eq_apply_pred_sub {α : Type u} (n : Nat)
+    (f g : (i : Nat) → i < n → α → α)
+    (hfg : ∀ i j (hi : i < n) (hj : j < n), i + j = n - 1 → f i hi = g j hj) (init : α) :
+    foldRev n f init = fold n g init := by
+  induction n generalizing init with | zero => _ | succ n IH => _
+  · simp_rw [foldRev_zero, fold_zero]
+  · rw [foldRev_succ_last, fold_succ, hfg 0 n (by omega) (by omega) (by omega)]
+    congr
+    refine IH _ _ (fun x y hx hy hxy => hfg _ _ _ _ ?_) _
+    omega
+
+theorem foldRev_eq_fold {α : Type u} (n : Nat)
+    (f : (i : Nat) → i < n → α → α) (init : α) :
+    foldRev n f init = fold n (fun i (hi : i < n) => f ((n - 1) - i) (by omega)) init := by
+  refine foldRev_eq_fold_of_apply_eq_apply_pred_sub _ _ _ (fun i j hi hj hij => ?_) _
+  conv =>
+    lhs
+    congr
+    rw [Nat.eq_sub_of_add_eq hij]
+
+theorem fold_eq_foldRev {α : Type u} (n : Nat)
+    (f : (i : Nat) → i < n → α → α) (init : α) :
+    fold n f init = foldRev n (fun i (hi : i < n) => f ((n - 1) - i) (by omega)) init := by
+  refine (foldRev_eq_fold_of_apply_eq_apply_pred_sub _ _ _ (fun i j hi hj hij => ?_) _).symm
+  conv =>
+    rhs
+    congr
+    rw [Nat.eq_sub_of_add_eq' hij]
+
+end Nat
 
 namespace Equiv
 
@@ -23,6 +87,8 @@ theorem swap_prop (p : α → Prop) {i j k : α} (hk : p k) (hi : p i) (hj : p j
 end Equiv
 
 namespace Array
+
+variable {α β γ : Type*} {k i : ℕ}
 
 @[simp] theorem size_flatten (ass : Array (Array α)) :
     ass.flatten.size = (List.map size ass.toList).sum := by
@@ -126,6 +192,44 @@ theorem getElem_swapIfInBounds {as : Array α} {i j k : ℕ} (hk : k < (as.swapI
       · simp_rw [hi.not_lt, dite_false, getElem_swapIfInBounds_of_ge_left hi]
     · simp_rw [hi, hj, false_and, dite_false, getElem_swapIfInBounds_of_ne_ne hi hj]
 
+@[simp] theorem getElem_reverse {as : Array α} (hk : k < as.reverse.size) :
+    as.reverse[k] = as[as.size - 1 - k]'
+    (Nat.sub_one_sub_lt_of_lt (hk.trans_eq as.size_reverse)) := by
+  simp_rw [← Array.getElem_toList, Array.toList_reverse, List.getElem_reverse]
+
+theorem eraseIdx_eq_take_append_drop_succ {as : Array α} (hi : i < as.size) :
+    as.eraseIdx i = as.take i ++ as.extract (i + 1) as.size := by
+  cases as with | mk l => _
+  simp_rw [List.eraseIdx_toArray, List.take_toArray, size_toArray, List.extract_toArray,
+    List.append_toArray, mk.injEq, List.take_of_length_le (List.length_drop _ _).le,
+    List.eraseIdx_eq_take_drop_succ]
+
+theorem getElem_eraseIdx {as : Array α} (hi : i < as.size) (hk : k < (as.eraseIdx i).size) :
+    (as.eraseIdx i)[k] = if h : k < i then as[k] else as[k + 1]'
+    (Nat.succ_lt_of_lt_pred (hk.trans_eq (as.size_eraseIdx _ _))) := by
+  simp_rw [eraseIdx_eq_take_append_drop_succ, getElem_append, size_take,
+    min_eq_left_of_lt hi, getElem_take, getElem_extract, add_comm (i + 1), ← add_assoc]
+  rcases lt_or_le k i with hki | hki
+  · simp_rw [dif_pos hki]
+  · simp_rw [dif_neg hki.not_lt, Nat.sub_add_cancel hki]
+
+theorem getElem_eraseIdx_left {as : Array α} (hi : i < as.size) (hki : k < i) :
+    (as.eraseIdx i)[k]'(hki.trans_le ((Nat.le_pred_of_lt hi).trans_eq
+    (as.size_eraseIdx _ _).symm)) = as[k] := by
+  simp_rw [getElem_eraseIdx, dif_pos hki]
+
+theorem getElem_eraseIdx_right {as : Array α} (hi : i < as.size) (hki : i ≤ k)
+    (hk : k < (as.eraseIdx i).size) :
+    (as.eraseIdx i)[k] = as[k + 1]'
+    (Nat.succ_lt_of_lt_pred (hk.trans_eq (as.size_eraseIdx _ _))) := by
+  simp_rw [getElem_eraseIdx, dif_neg hki.not_lt]
+
+@[simp] theorem getElem_eraseIdx_zero {as : Array α} (has : 0 < as.size)
+    (hk : k < (as.eraseIdx 0).size) :
+    (as.eraseIdx 0)[k] = as[k + 1]'
+    (Nat.succ_lt_of_lt_pred (hk.trans_eq (as.size_eraseIdx _ _))) :=
+  getElem_eraseIdx_right _ (zero_le _) _
+
 end Array
 
 namespace MulAction
@@ -161,29 +265,7 @@ end MulAction
 
 namespace Vector
 
-def flatten (a : Vector (Vector α n) m) : Vector α (m * n) :=
-  ⟨(a.toArray.map (Vector.toArray)).flatten, by
-    simp_rw [Array.size_flatten]
-    simp_rw [Array.toList_map, List.map_map,
-      Function.comp_def, size_toArray, List.map_const', Array.length_toList,
-      List.sum_replicate, size_toArray, smul_eq_mul]⟩
-
-theorem flatten_empty {a : Vector (Vector α 0) m}  :
-    (a.flatten)= #v[] := by
-  ext _ hi
-  simp_rw [mul_zero, not_lt_zero'] at hi
-
-theorem empty_flatten {a : Vector (Vector α n) 0}  :
-    (a.flatten) = #v[].cast (zero_mul _).symm := by
-  ext _ hi
-  simp_rw [zero_mul, not_lt_zero'] at hi
-
-/-
-theorem getElem_flatten {a : Vector (Vector α n) m} (hi : i < m * n) :
-    (a.flatten)[i] = (a[i/n]'(Nat.div_lt_of_lt_mul (hi.trans_eq (mul_comm _ _))))[i % n]'
-    (Nat.mod_lt _ (Nat.zero_lt_of_ne_zero (Nat.not_eq_zero_of_lt
-    ((Nat.div_lt_of_lt_mul hi))))) := -/
-
+variable {α β γ : Type*} {n m k i j : ℕ}
 
 @[simp]
 theorem getD_of_lt (a : Vector α n) (x : α) (i : ℕ) (h : i < n) : a[i]?.getD x = a[i] := by
@@ -238,6 +320,10 @@ theorem getElem_swapIfInBounds {as : Vector α n} {i j k : ℕ} (hk : k < n) :
     rcases eq_or_ne k j with rfl | hj
     · simp_rw [ite_true, true_and, hk, and_true]
     · simp_rw [hj, false_and, dite_false, ite_false, dite_eq_ite, ite_self]
+
+@[simp] theorem getElem_reverse {as : Vector α n} (hk : k < n) : as.reverse[k] = as[n - 1 - k] := by
+  cases as with | mk as H => _
+  simp_rw [reverse_mk, getElem_mk, Array.getElem_reverse, H]
 
 protected def finRange (n : ℕ) : Vector (Fin n) n := ⟨Array.finRange n, Array.size_finRange⟩
 
@@ -294,6 +380,11 @@ theorem mem_iff_getElem? {a} (v : Vector α n) : a ∈ v ↔ ∃ i : Nat, v[i]? 
   cases a
   simp_rw [take_mk, getElem_mk, Array.getElem_take]
 
+@[simp] theorem getElem_drop (a : Vector α n) (m : Nat) (hi : i < n - m) :
+    (a.drop m)[i] = a[m + i] := by
+  cases a
+  simp_rw [drop_mk, getElem_mk, Array.getElem_extract]
+
 theorem getElem_append (a : Vector α n) (b : Vector α m) (i : Nat) (hi : i < n + m) :
     (a ++ b)[i] = if h : i < n then a[i] else b[i - n] := by
   rcases a with ⟨a, rfl⟩
@@ -303,9 +394,147 @@ theorem getElem_append (a : Vector α n) (b : Vector α m) (i : Nat) (hi : i < n
 theorem getElem_append_left {a : Vector α n} {b : Vector α m} {i : Nat} (hi : i < n) :
     (a ++ b)[i] = a[i] := by simp [getElem_append, hi]
 
-theorem getElem_append_right {a : Vector α n} {b : Vector α m} {i : Nat} (h : i < n + m)
-    (hi : n ≤ i) : (a ++ b)[i] = b[i - n] := by
+theorem getElem_append_right {a : Vector α n} {b : Vector α m} {i : Nat} (hi : n ≤ i)
+    (h : i < n + m) : (a ++ b)[i] = b[i - n] := by
   rw [getElem_append, dif_neg (by omega)]
+
+theorem getElem_eraseIdx (v : Vector α n) (hi : i < n) (hk : k < n - 1) :
+    (v.eraseIdx i)[k] = if h : k < i then v[k] else v[k + 1]'(Nat.succ_lt_of_lt_pred hk) := by
+  unfold eraseIdx
+  simp_rw [getElem_mk, Array.getElem_eraseIdx, getElem_toArray]
+
+theorem getElem_eraseIdx_left (v : Vector α n) (hi : i < n) (hki : k < i) :
+    (v.eraseIdx i)[k] = v[k] := by
+  simp_rw [getElem_eraseIdx, dif_pos hki]
+
+theorem getElem_eraseIdx_right (v : Vector α n) (hki : i ≤ k) (hk : k < n - 1) :
+    (v.eraseIdx i)[k] = v[k + 1] := by
+  simp_rw [getElem_eraseIdx, dif_neg hki.not_lt]
+
+@[simp] theorem getElem_eraseIdx_zero (v : Vector α n) (hk : k < n - 1) :
+    (v.eraseIdx 0)[k] = v[k + 1] := getElem_eraseIdx_right _ (zero_le _) _
+
+@[simp] theorem getElem_tail (v : Vector α n) (hi : i < n - 1) : (v.tail)[i] = v[i + 1] := by
+  cases n
+  · simp_rw [Nat.zero_sub, not_lt_zero'] at hi
+  · unfold tail
+    simp_rw [Nat.zero_lt_succ, dite_true, getElem_eraseIdx_zero]
+
+@[simp] theorem getElem_singleton (a : α) (hi : i < 1) : (singleton a)[i] = a := by
+  unfold singleton
+  simp_rw [getElem_mk, List.getElem_toArray, List.getElem_singleton]
+
+theorem cast_singleton_head_append_tail [NeZero n] (v : Vector α n) :
+    (singleton (v.head) ++ v.tail).cast
+    (Nat.add_comm _ _ ▸ Nat.sub_add_cancel NeZero.one_le) = v := by
+  ext
+  simp_rw [getElem_cast, getElem_append, getElem_singleton, getElem_tail]
+  split_ifs with hi
+  · simp_rw [Nat.lt_one_iff] at hi
+    simp_rw [hi]
+    rfl
+  · simp_rw [Nat.sub_add_cancel (le_of_not_lt hi)]
+
+@[simp] theorem back_succ (v : Vector α (n + 1)) : v.back = v[n] := by
+  cases v with | mk as has => _
+  unfold back back! Array.back! Array.get! Array.getD
+  simp_rw [has, add_tsub_cancel_right, lt_add_iff_pos_right, zero_lt_one, dite_true,
+    Array.get_eq_getElem, getElem_mk]
+
+def foldl (f : β → α → β) (init : β) (v : Vector α n) : β :=
+  n.fold (fun i _ b => f b v[i]) init
+
+@[simp] theorem foldl_zero (f : β → α → β) (init : β) (v : Vector α 0) :
+    v.foldl f init = init := Nat.fold_zero _ _
+
+theorem foldl_succ (f : β → α → β) (init : β) (v : Vector α (n + 1)) :
+    v.foldl f init = f (v.pop.foldl f init) v[n] := by
+  unfold foldl
+  simp_rw [Nat.fold_succ, Vector.getElem_pop, Nat.add_one_sub_one]
+
+theorem foldl_succ_last (f : β → α → β) (init : β) (v : Vector α (n + 1)) :
+    v.foldl f init = v.tail.foldl f (f init v[0]) := by
+  unfold foldl
+  simp_rw [Nat.fold_succ_last, Vector.getElem_tail, Nat.add_one_sub_one]
+
+def foldr (f : α → β → β) (init : β) (v : Vector α n) : β :=
+  n.foldRev (fun i _ => f v[i]) init
+
+@[simp] theorem foldr_zero (f : α → β → β) (init : β) (v : Vector α 0) :
+    v.foldr f init = init := Nat.foldRev_zero _ _
+
+theorem foldr_succ (f : α → β → β) (init : β) (v : Vector α (n + 1)) :
+    v.foldr f init = v.pop.foldr f (f v[n] init) := by
+  unfold foldr
+  simp_rw [Nat.foldRev_succ, Vector.getElem_pop, Nat.add_one_sub_one]
+
+theorem foldr_succ_last (f : α → β → β)  (init : β) (v : Vector α (n + 1)) :
+    v.foldr f init = f v[0] (v.tail.foldr f init) := by
+  unfold foldr
+  simp_rw [Nat.foldRev_succ_last, Vector.getElem_tail, Nat.add_one_sub_one]
+
+def flatten {m : ℕ} (a : Vector (Vector α n) m) : Vector α (n * m) := match m with
+  | 0 => #v[]
+  | (_ + 1) => a.pop.flatten ++ a.back
+
+theorem flatten_zero {a : Vector (Vector α n) 0} :
+    a.flatten = #v[] := rfl
+
+theorem flatten_succ {a : Vector (Vector α n) (m + 1)} :
+    a.flatten = a.pop.flatten ++ a.back := rfl
+
+@[simp] theorem getElem_flatten {a : Vector (Vector α n) m} (h : i < n * m) :
+    (a.flatten)[i] = (a[i/n]'(Nat.div_lt_of_lt_mul h))[i % n]'
+    (Nat.mod_lt _ (Nat.zero_lt_of_ne_zero (Nat.not_eq_zero_of_lt
+    ((Nat.div_lt_of_lt_mul (h.trans_eq (mul_comm _ _))))))) := by
+  simp_rw [Nat.mod_eq_sub]
+  induction m with | zero => _ | succ m IH => _
+  · simp_rw [mul_zero, not_lt_zero'] at h
+  · simp_rw [flatten_succ, back_succ, Nat.add_one_sub_one]
+    rcases lt_or_le i (n * m) with hi | hi
+    · exact (getElem_append_left hi).trans (getElem_pop' _ _ _ ▸ IH _)
+    · simp_rw [Nat.div_eq_of_lt_le (hi.trans_eq' (mul_comm _ _))
+        (h.trans_eq (mul_comm n (m + 1)))]
+      exact (getElem_append_right hi _)
+
+def toChunks {m : ℕ} (v : Vector α (n * m)) : Vector (Vector α n) m := match m with
+  | 0 => #v[]
+  | (m + 1) => (toChunks ((v.take (n * m)).cast
+      (min_eq_left (n.mul_succ m ▸ Nat.le_add_right _ _))) ).push
+      ((v.drop (n * m)).cast ((n.mul_succ m).symm ▸
+        add_comm (n * m) _ ▸ Nat.add_sub_cancel _ _))
+
+theorem toChunks_zero (v : Vector α 0) : toChunks v (n := n) = #v[] := rfl
+
+theorem toChunks_succ (v : Vector α (n * (m + 1))) :
+    toChunks v = (toChunks ((v.take (n * m)).cast
+      (min_eq_left (n.mul_succ m ▸ Nat.le_add_right _ _))) ).push
+      ((v.drop (n * m)).cast ((n.mul_succ m).symm ▸
+        add_comm (n * m) _ ▸ Nat.add_sub_cancel _ _)) := rfl
+
+@[simp] theorem getElem_getElem_toChunks (v : Vector α (n * m)) (hi : i < m) (hj : j < n) :
+  (v.toChunks)[i][j] = v[n*i + j]'
+    (mul_comm m n ▸ Nat.lt_mul_of_div_lt (Nat.mul_add_div
+    (Nat.zero_lt_of_ne_zero (Nat.not_eq_zero_of_lt hj)) _ _ ▸
+    Nat.div_eq_of_lt hj ▸ Nat.add_zero _ ▸ hi)
+    (Nat.zero_lt_of_ne_zero (Nat.not_eq_zero_of_lt hj))) := by
+  induction m generalizing i with | zero => _ | succ m IH => _
+  · simp_rw [not_lt_zero'] at hi
+  · simp_rw [Nat.lt_succ_iff, le_iff_lt_or_eq] at hi
+    simp_rw [toChunks_succ]
+    rcases hi with hi | hi
+    · simp_rw [getElem_push_lt hi, IH, getElem_cast, getElem_take]
+    · simp_rw [hi, getElem_push_last, getElem_cast, getElem_drop]
+
+@[simp] theorem toChunks_flatten (v : Vector (Vector α n) m) : v.flatten.toChunks = v := by
+  ext i _ j hj
+  simp_rw [getElem_getElem_toChunks, getElem_flatten,
+    Nat.mul_add_div (Nat.zero_lt_of_ne_zero (Nat.not_eq_zero_of_lt hj)), Nat.mul_add_mod,
+    Nat.div_eq_of_lt hj, add_zero, Nat.mod_eq_of_lt hj]
+
+@[simp] theorem flatten_toChunks (v : Vector α (n * m)) : v.toChunks.flatten = v := by
+  ext i hi
+  simp_rw [getElem_flatten, getElem_getElem_toChunks, Nat.div_add_mod]
 
 end Vector
 
@@ -592,16 +821,16 @@ instance : Group (VectorPerm n) := Group.ofLeftAxioms
 
 section Group
 
-theorem getElem_pow_eq_self_of_getElem_eq_self {a : VectorPerm n} {hi : i < n} (hia : a[i] = i) :
-    (a^k)[i] = i := by
+theorem getElem_pow_eq_self_of_getElem_eq_self {a : VectorPerm n} {i k : ℕ} {hi : i < n}
+  (hia : a[i] = i) : (a^k)[i] = i := by
   induction k with | zero => _ | succ k IH => _
   · simp_rw [pow_zero, getElem_one]
   · simp_rw [pow_succ, getElem_mul, hia, IH]
 
-theorem getElem_inv_eq_self_of_getElem_eq_self {a : VectorPerm n} {hi : i < n} (hia : a[i] = i) :
-    (a⁻¹)[i] = i := by simp_rw [getElem_inv_eq_self_iff, hia]
+theorem getElem_inv_eq_self_of_getElem_eq_self {a : VectorPerm n} {i : ℕ} {hi : i < n}
+    (hia : a[i] = i) : (a⁻¹)[i] = i := by simp_rw [getElem_inv_eq_self_iff, hia]
 
-theorem getElem_zpow_eq_self_of_getElem_eq_self {a : VectorPerm n} {k : ℤ} {hi : i < n}
+theorem getElem_zpow_eq_self_of_getElem_eq_self {a : VectorPerm n} {k : ℤ} {i : ℕ} {hi : i < n}
     (hia : a[i] = i) : (a^k)[i] = i := by
   cases k
   · exact getElem_pow_eq_self_of_getElem_eq_self hia
@@ -630,7 +859,7 @@ end Group
 
 section FixLT
 
-variable {a : VectorPerm n}
+variable {a : VectorPerm n} {i m : ℕ}
 
 theorem fixLT_def :
     a.FixLT m ↔ ∀ {i : ℕ}, i < m → ∀ {hi : i < n}, a[i] < m := by
@@ -1143,7 +1372,7 @@ theorem coe_natPerm_range : MonoidHom.range (natPerm (n := n)) =
 
 end NatPerm
 
-def actOnIndices (a : VectorPerm n) (v : Vector α n) : Vector α n :=
+def actOnIndices {α : Type*} (a : VectorPerm n) (v : Vector α n) : Vector α n :=
   v.mapIdx (fun i _ => v[a[i.1]])
 
 section ActOnIndices
@@ -1207,6 +1436,8 @@ instance {α : Type u} : MulAction (VectorPerm n)ᵐᵒᵖ (Vector α n) where
   mul_smul _ _ _ := mul_actOnIndices _ _ _
 
 section MulActionMulOppositeVector
+
+variable {α : Type*}
 
 @[simp] theorem op_smul (a : VectorPerm n) (v : Vector α n) :
     (MulOpposite.op a) • v = a.actOnIndices v := rfl
@@ -1376,13 +1607,13 @@ theorem getElem_cycleMinVector_succ (a : VectorPerm n) {i x : ℕ}
   · simp_rw [getElem_cycleMinVector_zero, le_rfl]
   · simp_rw [getElem_cycleMinVector_succ, min_le_iff, IH, true_or]
 
-@[simp] theorem getElem_one_cycleMinVector (hi : i < n) :
+@[simp] theorem getElem_one_cycleMinVector {k i : ℕ} (hi : i < n) :
     ((1 : VectorPerm n).CycleMinVector k)[i] = i := by
   induction k generalizing n i with | zero => _ | succ k IH => _
   · simp_rw [getElem_cycleMinVector_zero]
   · simp_rw [getElem_cycleMinVector_succ, one_pow, getElem_one, IH, min_self]
 
-theorem one_cycleMinVector : (1 : VectorPerm n).CycleMinVector k = Vector.range n := by
+theorem one_cycleMinVector {k : ℕ} : (1 : VectorPerm n).CycleMinVector k = Vector.range n := by
   ext i hi
   simp_rw [getElem_one_cycleMinVector, Vector.getElem_range]
 
@@ -1431,7 +1662,7 @@ lemma getElem_cycleMinVector_le_getElem_pow_lt (a : VectorPerm n) {i : ℕ} {x :
   simp_rw [Finset.mem_image, Finset.mem_range]
   exact ⟨k, hk, rfl⟩
 
-lemma getElem_cycleMinVector_le (a : VectorPerm n) {i : ℕ} {x : ℕ}
+lemma getElem_cycleMinVector_le (a : VectorPerm n) {i : ℕ} {x y : ℕ}
     {hx : x < n} (hk : ∃ k < 2^i, y = (a ^ k)[x]) :
     (a.CycleMinVector i)[x] ≤ y :=
   hk.choose_spec.2 ▸ a.getElem_cycleMinVector_le_getElem_pow_lt hk.choose_spec.1 _
@@ -1445,7 +1676,7 @@ lemma exists_lt_getElem_cycleMin_eq_getElem_pow (a : VectorPerm n) (i : ℕ) {x 
   simp_rw [Finset.mem_image, Finset.mem_range] at H
   exact ⟨H.choose, H.choose_spec.1, H.choose_spec.2.symm⟩
 
-lemma le_getElem_cycleMin_iff (a : VectorPerm n) (i : ℕ) {x : ℕ}
+lemma le_getElem_cycleMin_iff (a : VectorPerm n) (i : ℕ) {x y : ℕ}
       (hx : x < n) :
     y ≤ (a.CycleMinVector i)[x] ↔ ∀ k < 2^i, y ≤ (a ^ k)[x] := by
   simp_rw [getElem_cycleMinVector_eq_min'_getElem_pow_image_range, Finset.le_min'_iff,
@@ -1510,7 +1741,7 @@ theorem cycleMin_of_getElem {a b : VectorPerm n} {i x : ℕ} (hx : x < n) :
 theorem cycleMin_of_ge (a : VectorPerm n) {i x : ℕ} (hx : n ≤ x) :
     a.CycleMin i x = x := Vector.getD_of_ge _ _ _ hx
 
-@[simp] theorem one_cycleMin : (1 : VectorPerm n).CycleMin k x = x := by
+@[simp] theorem one_cycleMin {k x : ℕ} : (1 : VectorPerm n).CycleMin k x = x := by
   rcases lt_or_le x n with hx | hx
   · rw [cycleMin_of_lt _ hx, one_cycleMinVector, Vector.getElem_range]
   · rwa [cycleMin_of_ge]
@@ -1596,7 +1827,7 @@ lemma cycleMin_eq_apply_cycleMin (a : VectorPerm n) (i : ℕ) {x : ℕ}
 
 section Cast
 
-variable {m : ℕ}
+variable {m n o : ℕ}
 
 /--
 `VectorPerm.cast` re-interprets an `VectorPerm n` as an `VectorPerm m`, where `n = m`.
@@ -1623,7 +1854,7 @@ theorem cast_smul (hnm : n = m) (a : VectorPerm n) (i : ℕ) :
 
 @[simp]
 theorem cast_inv (hnm : n = m) (a : VectorPerm n) :
-    (a.cast hnm)⁻¹ = a⁻¹.cast h := rfl
+    (a.cast hnm)⁻¹ = a⁻¹.cast hnm := rfl
 
 @[simp]
 theorem cast_mul (hnm : n = m) (a b : VectorPerm n) :
@@ -1665,7 +1896,7 @@ def castMulEquiv (hnm : n = m) : VectorPerm n ≃* VectorPerm m where
 
 end Cast
 
-def castGE (hnm : n ≤ m) (a : VectorPerm n) : VectorPerm m where
+def castGE {m n : ℕ} (hnm : n ≤ m) (a : VectorPerm n) : VectorPerm m where
   fwdVector := (a.fwdVector ++ (Vector.range (m - n)).map (· + n)).cast (Nat.add_sub_cancel' hnm)
   bwdVector := (a.bwdVector ++ (Vector.range (m - n)).map (· + n)).cast (Nat.add_sub_cancel' hnm)
   getElem_fwdVector_lt := fun {i} him => by
@@ -1684,10 +1915,10 @@ def castGE (hnm : n ≤ m) (a : VectorPerm n) : VectorPerm m where
 
 section CastGE
 
-variable {n m : ℕ} (a : VectorPerm n)
+variable {n m k i : ℕ} (a : VectorPerm n)
 
 @[simp]
-theorem getElem_castGE {i : ℕ} {hi : i < m} :
+theorem getElem_castGE {i : ℕ} {hi : i < m} {hnm : n ≤ m} :
     (a.castGE hnm)[i] = if hi : i < n then a[i] else i := by
   unfold castGE
   simp_rw [getElem_mk, Vector.getElem_cast, Vector.getElem_append, getElem_fwdVector,
@@ -1700,7 +1931,7 @@ theorem getElem_castGE_of_lt {hnm : n ≤ m} {i : ℕ} (hi : i < n) :
   simp_rw [getElem_castGE, hi, dite_true]
 
 @[simp]
-theorem castGE_inv :
+theorem castGE_inv {hnm : n ≤ m} :
     (a.castGE hnm)⁻¹ = a⁻¹.castGE hnm := rfl
 
 theorem getElem_inv_castGE (hnm : n ≤ m) {i : ℕ} {hi : i < m} :
@@ -1726,7 +1957,7 @@ theorem castGE_mul (hnm : n ≤ m) {a b : VectorPerm n} :
   ext i hi
   simp_rw [getElem_castGE, getElem_cast, hi.trans_eq hnm.symm, dite_true]
 
-@[simp] theorem castGE_trans {hmk : m ≤ k} :
+@[simp] theorem castGE_trans {hnm : n ≤ m} {hmk : m ≤ k} :
     (a.castGE hnm).castGE hmk = a.castGE (hnm.trans hmk) := by
   ext i hi
   simp_rw [getElem_castGE]
@@ -1775,7 +2006,7 @@ theorem castGEMonoidHom_injective {hnm : n ≤ m} :
   fun _ _ h => castGE_injective hnm (Subtype.ext_iff.mp h)
 
 @[simp]
-theorem castGE_smul {i : ℕ} :
+theorem castGE_smul {i : ℕ} {hnm : n ≤ m} :
     (a.castGE hnm) • i = a • i := by
   simp_rw [smul_nat_eq_dite, getElem_castGE, dite_eq_ite, ite_eq_left_iff, not_lt]
   intro hmi
@@ -1783,7 +2014,7 @@ theorem castGE_smul {i : ℕ} :
 
 end CastGE
 
-def castLE (hmn : m ≤ n) (a : VectorPerm n) (ham : a.FixLT m) : VectorPerm m where
+def castLE {m n : ℕ} (hmn : m ≤ n) (a : VectorPerm n) (ham : a.FixLT m) : VectorPerm m where
   fwdVector := (a.fwdVector.take m).cast (min_eq_left hmn)
   bwdVector := (a.bwdVector.take m).cast (min_eq_left hmn)
   getElem_fwdVector_lt := fun him => by
@@ -1793,7 +2024,7 @@ def castLE (hmn : m ≤ n) (a : VectorPerm n) (ham : a.FixLT m) : VectorPerm m w
 
 section CastLE
 
-variable (a : VectorPerm n) (ham : a.FixLT m) {hmn : m ≤ n}
+variable {m i k : ℕ} (a : VectorPerm n) (ham : a.FixLT m) {hmn : m ≤ n}
 
 @[simp] theorem getElem_castLE (him : i < m) :
     (a.castLE hmn ham)[i] = a[i] := by
@@ -1803,11 +2034,11 @@ variable (a : VectorPerm n) (ham : a.FixLT m) {hmn : m ≤ n}
 @[simp] theorem castLE_inv : (a.castLE hmn ham)⁻¹ = a⁻¹.castLE hmn ham.inv := rfl
 
 theorem getElem_inv_castLE (him : i < m) :
-    (a.castLE hnm ham)⁻¹[i] = a⁻¹[i]  := by
+    (a.castLE hmn ham)⁻¹[i] = a⁻¹[i]  := by
   simp_rw [castLE_inv, getElem_castLE]
 
 @[simp]
-theorem castLE_one  : ((1 : VectorPerm n).castLE hnm fixLT_one) = (1 : VectorPerm m) := by
+theorem castLE_one  : ((1 : VectorPerm n).castLE hmn fixLT_one) = (1 : VectorPerm m) := by
   ext i hi : 1
   simp_rw [getElem_castLE, getElem_one]
 
@@ -1829,7 +2060,7 @@ theorem FixLT.castLE {a : VectorPerm n} (ham : a.FixLT m) {hkn : k ≤ n} {hak :
 
 @[simp] theorem castLE_trans {a : VectorPerm n} (ham : a.FixLT m) {hkn : k ≤ n} {hmk : m ≤ k}
     (hak : a.FixLT k) :
-    (a.castLE hkn hak).castLE hmk ham.castLE = a.castLE (hmk.trans hnm) ham := by
+    (a.castLE hkn hak).castLE hmk ham.castLE = a.castLE (hmk.trans hkn) ham := by
   ext i hi
   simp_rw [getElem_castLE]
 
@@ -1860,7 +2091,7 @@ theorem castLE_smul_of_lt {i : ℕ} (him : i < m) :
 
 end CastLE
 
-def castOfFixLT (a : VectorPerm n) (ham : a.FixLT m) :
+def castOfFixLT {m n : ℕ} (a : VectorPerm n) (ham : a.FixLT m) :
     VectorPerm m where
   fwdVector := ((a.fwdVector.take m) ++ (Vector.range (m - n)).map (· + n)).cast
     (Nat.add_comm _ _ ▸ Nat.sub_add_min_cancel m n)
@@ -1892,7 +2123,7 @@ def castOfFixLT (a : VectorPerm n) (ham : a.FixLT m) :
 
 section CastOfFixLT
 
-variable (a : VectorPerm n) (ham : a.FixLT m)
+variable {m i : ℕ} (a : VectorPerm n) (ham : a.FixLT m)
 
 @[simp] theorem getElem_castOfFixLT (him : i < m) :
     (a.castOfFixLT ham)[i] = if hin : i < n then a[i] else i := by

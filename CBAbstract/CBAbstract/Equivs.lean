@@ -1,4 +1,6 @@
-import Mathlib.Logic.Equiv.Fin
+import Mathlib.Data.Fin.Tuple.Basic
+
+variable {n : ℕ} {α : Type*}
 
 open Fin
 

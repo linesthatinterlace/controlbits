@@ -1,8 +1,9 @@
-
-import Mathlib.GroupTheory.Perm.Cycle.Concrete
 import Mathlib.Data.Fintype.Order
+import Mathlib.GroupTheory.Perm.Cycle.Basic
 
 namespace Equiv.Perm
+
+variable {α : Type*}
 
 theorem SameCycle.exists_pow_lt_finset_card_of_apply_zpow_mem {f : Perm α} (s : Finset α) {x y : α}
     (hf : ∀ i : ℤ, (f ^ i) x ∈ s) : SameCycle f x y → ∃ i, i < s.card ∧ (f ^ i) x = y := by
@@ -35,7 +36,7 @@ def FastCycleMin {α : Type*} [Min α] (i : ℕ) (π : Equiv.Perm α) (x : α) :
 
 
 section FastCycleMin
-variable {α : Type*} {x : α} {π : Perm α}
+variable {α : Type*} {x : α} {π : Perm α} {i : ℕ}
 
 section Min
 
@@ -197,7 +198,8 @@ lemma cycleMin_refl : CycleMin (Equiv.refl α) x = x := cycleMin_of_fixed rfl
 
 lemma cycleMin_one : CycleMin (1 : Equiv.Perm α) x = x := cycleMin_refl
 
-lemma le_cycleMin (h : ∀ y, π.SameCycle x y → z ≤ y) : z ≤ CycleMin π x := le_csInf ⟨x, ⟨0, rfl⟩⟩ h
+lemma le_cycleMin {z : α} (h : ∀ y, π.SameCycle x y → z ≤ y) : z ≤ CycleMin π x :=
+  le_csInf ⟨x, ⟨0, rfl⟩⟩ h
 
 section BddBelow
 
@@ -218,7 +220,7 @@ lemma cycleMin_le_pow_apply_of_bddBelow_sameCycle (n : ℕ) : CycleMin π x ≤ 
 lemma cycleMin_le_self_of_bddBelow_sameCycle : CycleMin π x ≤ x :=
   cycleMin_le_zpow_apply_of_bddBelow_sameCycle hsb 0
 
-lemma le_cycleMin_iff_of_bddBelow_sameCycle :
+lemma le_cycleMin_iff_of_bddBelow_sameCycle {z : α}:
   z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y := le_csInf_iff hsb π.sameCycle_nonempty
 
 end BddBelow
@@ -239,7 +241,7 @@ lemma cycleMin_le_pow_apply (n : ℕ) : CycleMin π x ≤ (π^n) x :=
 
 lemma cycleMin_le_self : CycleMin π x ≤ x := cycleMin_le_zpow_apply 0
 
-lemma le_cycleMin_iff : z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y :=
+lemma le_cycleMin_iff {z : α} : z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y :=
   le_cycleMin_iff_of_bddBelow_sameCycle (OrderBot.bddBelow _)
 
 @[simp]
@@ -251,6 +253,8 @@ end OrderBot
 end ConditionallyCompleteLattice
 
 section ConditionallyCompleteLinearOrder
+
+variable {n i : ℕ}
 
 variable [ConditionallyCompleteLinearOrder α]
 
@@ -290,6 +294,8 @@ end ConditionallyCompleteLinearOrder
 
 section ConditionallyCompleteLinearOrderBot
 
+variable {i : ℕ}
+
 variable [ConditionallyCompleteLinearOrderBot α]
 
 lemma cycleMin_le_fastCycleMin : CycleMin π x ≤ FastCycleMin i π x := by
@@ -311,7 +317,7 @@ lemma _root_.Nat.cycleMin_zero {π : Perm ℕ} : CycleMin π (0 : ℕ) = 0 :=
 le_antisymm cycleMin_le_self (zero_le _)
 
 @[simp]
-lemma _root_.Fin.cycleMin_zero [NeZero m] {τ : Equiv.Perm (Fin m)} :
+lemma _root_.Fin.cycleMin_zero {m : ℕ} [NeZero m] {τ : Equiv.Perm (Fin m)} :
   CycleMin τ 0 = 0 := le_antisymm cycleMin_le_self (Fin.zero_le' _)
 
 end CycleMin

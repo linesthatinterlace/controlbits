@@ -1,7 +1,7 @@
-import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Order.Fin.Basic
-import Controlbits.Nat
-import Mathlib.Data.Fintype.Basic
+import Mathlib.Data.Fin.Basic
+
+variable {n m : ℕ}
 
 namespace Fin
 
@@ -70,7 +70,7 @@ theorem succAbove_le_succ (p : Fin (n + 1)) (i : Fin n) : p.succAbove i ≤ succ
   obtain h | h := succAbove_eq_castSucc_or_succ p i <;> rw [h]
   exact (castSucc_lt_succ _).le
 
-lemma succAbove_succAbove_predAbove_succAbove {j : Fin (m + 2)} :
+lemma succAbove_succAbove_predAbove_succAbove {k : Fin m} {i : Fin (m + 1)} {j : Fin (m + 2)} :
 (j.succAbove i).succAbove ((i.predAbove j).succAbove k) = j.succAbove (i.succAbove k) := by
   rcases lt_or_le (castSucc i) j with (hij | hij)
   · rw [succAbove_of_castSucc_lt _ _ hij, predAbove_of_castSucc_lt _ _ hij]

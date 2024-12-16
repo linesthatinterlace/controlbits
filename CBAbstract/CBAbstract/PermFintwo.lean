@@ -1,6 +1,4 @@
-import Mathlib.GroupTheory.Perm.Basic
 import Mathlib.GroupTheory.Commutator.Basic
-import Mathlib.Data.Fin.Basic
 
 namespace Fin
 
@@ -19,7 +17,7 @@ lemma perm_fin_two_mul_self (π : Equiv.Perm (Fin 2)) : π * π = 1 := by
   · rw [Equiv.swap_mul_self]
   · rw [mul_one]
 
-lemma perm_fin_two_apply_apply (π : Equiv.Perm (Fin 2)) : π (π q) = q := by
+lemma perm_fin_two_apply_apply {q : Fin 2} (π : Equiv.Perm (Fin 2)) : π (π q) = q := by
   rw [← Equiv.Perm.mul_apply, perm_fin_two_mul_self, Equiv.Perm.one_apply]
 
 lemma perm_fin_two_of_fix_zero {π : Equiv.Perm (Fin 2)} (h : π 0 = 0) : π = 1 := by

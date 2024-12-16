@@ -1,6 +1,4 @@
 import Mathlib.GroupTheory.Commutator.Basic
-import Mathlib.GroupTheory.Perm.Basic
-import Mathlib.Dynamics.FixedPoints.Basic
 
 set_option autoImplicit false
 
