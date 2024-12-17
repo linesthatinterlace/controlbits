@@ -607,7 +607,6 @@ theorem testRes_mod_two_pow_eq (h : k ≤ i) : q.testRes i % 2^k = q % 2^k := by
 
 theorem testRes_modEq_two_pow (h : k ≤ i) : q.testRes i ≡ q [MOD 2^k] := testRes_mod_two_pow_eq h
 
-
 theorem testRes_lt_iff_lt_two_mul (hin : 2^i ∣ n) : q.testRes i < n ↔ q < 2 * n := by
   rcases hin with ⟨k, rfl⟩
   simp_rw [← mul_assoc, ← pow_succ', mul_comm _ k,
@@ -617,20 +616,6 @@ theorem testRes_lt_div_two_iff_lt (hin : 2^(i + 1) ∣ n) : q.testRes i < n / 2 
   rcases hin with ⟨k, rfl⟩
   rw [pow_succ', mul_assoc, Nat.mul_div_cancel_left _ (zero_lt_two),
     ← testRes_lt_iff_lt_two_mul (dvd_mul_right _ _)]
-
-/-
-theorem lt_of_testRes_le (hq : q.testRes i ≤ n) : q < 2 * n + 2 ^ (i + 1) := by
-  have H := hq.trans_lt <| Nat.lt_mul_div_succ n (Nat.two_pow_pos i)
-  rw [testRes_lt_iff_lt_two_mul (dvd_mul_right _ _), mul_succ, mul_add,
-    ← pow_succ'] at H
-  exact H.trans_le (Nat.add_le_add_right (Nat.mul_le_mul_left _ (Nat.mul_div_le _ _)) _)
-
-theorem testRes_lt_of_le (hq : q ≤ n) : q.testRes i < n / 2 + 2 ^ i := by
-  have H := hq.trans_lt <| Nat.lt_mul_div_succ n (Nat.two_pow_pos (i + 1))
-  rw [pow_succ', mul_assoc, ← testRes_lt_iff_lt_two_mul (dvd_mul_right _ _), mul_succ] at H
-  refine H.trans_le (Nat.add_le_add_right ?_ _)
-  rw [Nat.le_div_iff_mul_le (zero_lt_two), mul_comm, ← mul_assoc]
-  exact (Nat.mul_div_le _ _)-/
 
 theorem testRes_lt_two_pow_mul_iff_lt_two_pow_mul (h : i ≤ k) (n : ℕ) :
     q.testRes i < 2^k * n ↔ q < 2^(k + 1) * n := by
@@ -1515,8 +1500,8 @@ section FlipBit
 
 variable {α : Type*} {n i : ℕ}
 
-def flipBitIndicesAux (v : Vector α n) (i t : ℕ) : Vector α n := t.recOn
-  v fun k v => v.swapIfInBounds (k.mergeBit i false) (k.mergeBit i true)
+def flipBitIndicesAux (v : Vector α n) (i t : ℕ) : Vector α n :=
+  t.fold (fun k _ v => v.swapIfInBounds (k.mergeBit i false) (k.mergeBit i true)) v
 
 @[simp]
 theorem flipBitIndicesAux_zero {v : Vector α n} {i : ℕ} : flipBitIndicesAux v i 0 = v := rfl
@@ -1545,7 +1530,7 @@ theorem getElem_flipBitIndicesAux {v : Vector α n} {i t k : ℕ}
 
 def flipBitIndices (v : Vector α n) (i : ℕ) : Vector α n := v.flipBitIndicesAux i (n.testRes i)
 
-@[simp] theorem getElem_flipBitIndices {v : Vector α n} {i k : ℕ} (hk : k < n) :
+theorem getElem_flipBitIndices {v : Vector α n} {i k : ℕ} (hk : k < n) :
     (v.flipBitIndices i)[k] = if hk : k.flipBit i < n then v[k.flipBit i] else v[k] := by
   refine (getElem_flipBitIndicesAux hk).trans ?_
   simp_rw [Nat.testRes_lt_testRes_iff, hk, true_and, Bool.eq_not]
@@ -1564,7 +1549,6 @@ def flipBitIndices (v : Vector α n) (i : ℕ) : Vector α n := v.flipBitIndices
 def flipBitVals (v : Vector ℕ n) (i : ℕ) : Vector ℕ n := v.map
   (fun k => if k.flipBit i < n then k.flipBit i else k)
 
-@[simp]
 theorem getElem_flipBitVals {v : Vector ℕ n} {i k : ℕ} (hk : k < n) :
     (flipBitVals v i)[k] = if v[k].flipBit i < n then v[k].flipBit i else v[k] := getElem_map _ _ _
 
@@ -1585,7 +1569,7 @@ section CondFlipBit
 variable {α : Type*} {n i l : ℕ} {c : Vector Bool l}
 
 def condFlipBitIndicesAux (v : Vector α n) (i : ℕ) (c : Vector Bool l) (t : ℕ) : Vector α n :=
-    t.recOn v fun k as => as.swapIfInBounds (k.mergeBit i false) (k.mergeBit i (c[k]?.getD false))
+    t.fold (fun k _ v => v.swapIfInBounds (k.mergeBit i false) (k.mergeBit i (c[k]?.getD false))) v
 
 @[simp]
 theorem condFlipBitIndicesAux_zero {v : Vector α n} {i : ℕ} {c : Vector Bool l} :
@@ -1593,7 +1577,7 @@ theorem condFlipBitIndicesAux_zero {v : Vector α n} {i : ℕ} {c : Vector Bool 
 
 @[simp]
 theorem condFlipBitIndicesAux_succ {v : Vector α n} {i t : ℕ} {c : Vector Bool l} :
-    condFlipBitIndicesAux v i c (t.succ) = (condFlipBitIndicesAux v i c t).swapIfInBounds
+    condFlipBitIndicesAux v i c t.succ = (condFlipBitIndicesAux v i c t).swapIfInBounds
     (t.mergeBit i false) (t.mergeBit i (c[t]?.getD false)) := rfl
 
 theorem getElem_condFlipBitIndicesAux {v : Vector α n} {i t k : ℕ} {c : Vector Bool l}
@@ -1736,6 +1720,12 @@ theorem getElem_inv_flipBit {hk : k < n} :
     (flipBit i)⁻¹[k] = if k.flipBit i < n then k.flipBit i else k := by
   unfold flipBit
   simp_rw [getElem_inv_flipBitIndices, inv_one, getElem_one]
+
+@[simp] theorem actOnIndices_flipBit {α : Type*} (v : Vector α n) :
+    ((flipBit i).actOnIndices v) = v.flipBitIndices i := by
+  ext j hj
+  simp_rw [Vector.getElem_flipBitIndices, getElem_actOnIndices, getElem_flipBit]
+  split_ifs <;> rfl
 
 @[simp]
 theorem flipBit_inv : (flipBit i : VectorPerm n)⁻¹ = flipBit i := by
