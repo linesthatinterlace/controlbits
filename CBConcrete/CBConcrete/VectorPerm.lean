@@ -414,6 +414,10 @@ theorem getElem_eraseIdx_right (v : Vector α n) (hki : i ≤ k) (hk : k < n - 1
   · unfold tail
     simp_rw [Nat.zero_lt_succ, dite_true, getElem_eraseIdx_zero]
 
+@[simp] theorem getElem_tail' (v : Vector α (n + 1)) (hi : i < (n + 1) - 1) :
+    @getElem (Vector α n) Nat α (fun _ i => i < n) instGetElemNatLt v.tail i hi = v[i + 1] :=
+  getElem_tail _ _
+
 @[simp] theorem getElem_singleton (a : α) (hi : i < 1) : (singleton a)[i] = a := by
   unfold singleton
   simp_rw [getElem_mk, List.getElem_toArray, List.getElem_singleton]
@@ -435,35 +439,38 @@ theorem cast_singleton_head_append_tail [NeZero n] (v : Vector α n) :
   simp_rw [has, add_tsub_cancel_right, lt_add_iff_pos_right, zero_lt_one, dite_true,
     Array.get_eq_getElem, getElem_mk]
 
-def foldl (f : β → α → β) (init : β) (v : Vector α n) : β :=
-  n.fold (fun i _ b => f b v[i]) init
+def foldl (f : (i : ℕ) → i < n → β → α → β) (init : β) (v : Vector α n) : β :=
+  n.fold (fun i hi => (f i hi · v[i])) init
 
-@[simp] theorem foldl_zero (f : β → α → β) (init : β) (v : Vector α 0) :
+@[simp] theorem foldl_zero (f : (i : ℕ) → i < 0 → β → α → β) (init : β) (v : Vector α 0) :
     v.foldl f init = init := Nat.fold_zero _ _
 
-theorem foldl_succ (f : β → α → β) (init : β) (v : Vector α (n + 1)) :
-    v.foldl f init = f (v.pop.foldl f init) v[n] := by
+theorem foldl_succ (f : (i : ℕ) → i < n + 1 → β → α → β) (init : β) (v : Vector α (n + 1)) :
+    v.foldl f init = f n (by omega)
+    (v.pop.foldl (fun i hi => f i (by omega)) init) v[n] := by
   unfold foldl
-  simp_rw [Nat.fold_succ, Vector.getElem_pop, Nat.add_one_sub_one]
+  simp_rw [Nat.fold_succ, Nat.add_one_sub_one, getElem_pop']
 
-theorem foldl_succ_zero (f : β → α → β) (init : β) (v : Vector α (n + 1)) :
-    v.foldl f init = v.tail.foldl f (f init v[0]) := by
+theorem foldl_succ_last (f : (i : ℕ) → i < n + 1 → β → α → β) (init : β) (v : Vector α (n + 1)) :
+    v.foldl f init = v.tail.foldl (fun i hi => f (i + 1) (by omega))
+    (f 0 (by omega) init v[0]) := by
   unfold foldl
   simp_rw [Nat.fold_succ_zero, Vector.getElem_tail, Nat.add_one_sub_one]
 
-def foldr (f : α → β → β) (init : β) (v : Vector α n) : β :=
-  n.foldRev (fun i _ => f v[i]) init
+def foldr (f : (i : ℕ) → i < n → α → β → β) (init : β) (v : Vector α n) : β :=
+  n.foldRev (fun i hi => f i hi v[i]) init
 
-@[simp] theorem foldr_zero (f : α → β → β) (init : β) (v : Vector α 0) :
+@[simp] theorem foldr_zero (f : (i : ℕ) → i < 0 → α → β → β) (init : β) (v : Vector α 0) :
     v.foldr f init = init := Nat.foldRev_zero _ _
 
-theorem foldr_succ (f : α → β → β) (init : β) (v : Vector α (n + 1)) :
-    v.foldr f init = v.pop.foldr f (f v[n] init) := by
+theorem foldr_succ (f : (i : ℕ) → i < n + 1 → α → β → β) (init : β) (v : Vector α (n + 1)) :
+    v.foldr f init = v.pop.foldr (fun i hi => f i (by omega)) (f n (by omega) v[n] init) := by
   unfold foldr
   simp_rw [Nat.foldRev_succ, Vector.getElem_pop, Nat.add_one_sub_one]
 
-theorem foldr_succ_zero (f : α → β → β)  (init : β) (v : Vector α (n + 1)) :
-    v.foldr f init = f v[0] (v.tail.foldr f init) := by
+theorem foldr_succ_last (f : (i : ℕ) → i < n + 1 → α → β → β) (init : β) (v : Vector α (n + 1)) :
+    v.foldr f init = f 0 (by omega) v[0]
+    (v.tail.foldr (fun i hi => f (i + 1) (by omega)) init) := by
   unfold foldr
   simp_rw [Nat.foldRev_succ_zero, Vector.getElem_tail, Nat.add_one_sub_one]
 
@@ -874,6 +881,38 @@ theorem fixLT_eq : ∀ (a : VectorPerm n), a.FixLT n :=
 
 theorem fixLT_ge (hnm : n ≤ m) : ∀ (a : VectorPerm n), a.FixLT m :=
   fun a => fixLT_of_lt_imp_getElem_lt (fun _ => a.getElem_lt.trans_le hnm)
+
+theorem fixLT_succ : a.FixLT (n + 1) := a.fixLT_ge (Nat.le_succ _)
+
+theorem FixLT.getElem_eq_self {a : VectorPerm (n + 1)} (ha : a.FixLT n) : a[n] = n := by
+  rcases a.getElem_surjective (Nat.lt_succ_self _) with ⟨k, hk, hkn⟩
+  simp_rw [Nat.lt_succ_iff, le_iff_lt_or_eq] at hk
+  rcases hk with hk | rfl
+  · exact ((ha.getElem_lt_of_lt hk).ne hkn).elim
+  · exact hkn
+
+theorem fixLT_of_getElem_eq_self {a : VectorPerm (n + 1)} (ha : a[n] = n) : a.FixLT n :=
+  fixLT_of_lt_imp_getElem_lt (fun {i} hi =>
+    (Nat.le_of_lt_succ a.getElem_lt).lt_or_eq.elim id
+    (fun h => (hi.ne (a.getElem_injective _ _ (h.trans ha.symm))).elim))
+
+theorem fixLT_iff_getElem_eq_self {a : VectorPerm (n + 1)} : a.FixLT n ↔ a[n] = n :=
+    ⟨FixLT.getElem_eq_self, fixLT_of_getElem_eq_self⟩
+
+theorem fixLT_of_getElem_eq_getElem_eq {a : VectorPerm (n + 2)} (ha₁ : a[n + 1] = n + 1)
+    (ha₂ : a[n] = n) : a.FixLT n :=
+  fixLT_of_lt_imp_getElem_lt (fun {i} hi {_} => by
+    have H := (Nat.le_of_lt_succ a.getElem_lt)
+    rcases H.lt_or_eq with H | H
+    · simp_rw [Nat.lt_succ_iff] at H
+      rcases H.lt_or_eq with H | H
+      · exact H
+      · have H := getElem_injective _ _ _ (H.trans ha₂.symm)
+        cases H
+        simp_rw [lt_self_iff_false] at hi
+    · have H := getElem_injective _ _ _ (H.trans ha₁.symm)
+      cases H
+      simp_rw [add_lt_iff_neg_left, not_lt_zero'] at hi)
 
 theorem fixLT_zero : ∀ (a : VectorPerm n), a.FixLT 0 :=
   fun _ => fixLT_of_lt_imp_getElem_lt (fun h => (Nat.not_lt_zero _ h).elim)
@@ -1918,6 +1957,17 @@ theorem getElem_inv_cast (hnm : n = m) (a : VectorPerm n) {i : ℕ} (hi : i < m)
 theorem cast_smul (hnm : n = m) (a : VectorPerm n) (i : ℕ) :
     (a.cast hnm) • i = a • i := by simp only [smul_nat_def, getElem?_def, getElem_cast, hnm]
 
+@[simp] theorem cast_one (hnm : n = m) : (1 : VectorPerm n).cast hnm = 1 := by
+  ext
+  simp_rw [getElem_cast, getElem_one]
+
+@[simp] theorem cast_eq_iff (hnm : n = m) {a : VectorPerm n} {b : VectorPerm m} :
+    a.cast hnm = b ↔ a = b.cast hnm.symm := by
+  simp_rw [VectorPerm.ext_iff, getElem_cast, hnm]
+
+theorem cast_eq_one_iff (hnm : n = m) (a : VectorPerm n) : a.cast hnm = 1 ↔ a = 1 := by
+  simp_rw [cast_eq_iff, cast_one]
+
 @[simp]
 theorem cast_inv (hnm : n = m) (a : VectorPerm n) :
     a⁻¹.cast hnm = (a.cast hnm)⁻¹ := rfl
@@ -1935,7 +1985,6 @@ theorem cast_eq_cast (hnm : n = m) (a : VectorPerm n) :
 
 @[simp] theorem cast_trans {hnm : n = m} {hmo : m = o} (a : VectorPerm n) :
     (a.cast hnm).cast hmo = a.cast (hnm.trans hmo) := rfl
-
 
 theorem cast_inj {a b : VectorPerm n} {hnm : n = m} : a.cast hnm = b.cast hnm ↔ a = b := by
   refine ⟨?_, fun H => H ▸ rfl⟩
@@ -1959,6 +2008,26 @@ def castMulEquiv (hnm : n = m) : VectorPerm n ≃* VectorPerm m where
   left_inv a := a.cast_symm
   right_inv a := a.cast_symm
   map_mul' := cast_mul hnm
+
+@[simp] theorem cast_left_equivNatSMul_iff_equivNatSMul {n' : ℕ} {a : VectorPerm n}
+    {b : VectorPerm n'} {hnm : n = m} :
+    (a.cast hnm).equivNatSMul b ↔ a.equivNatSMul b := by
+  simp_rw [equivNatSMul_iff_smul_eq, cast_smul]
+
+@[simp] theorem cast_right_equivNatSMul_iff_equivNatSMul {n' : ℕ} {a : VectorPerm n}
+    {b : VectorPerm n'} {hnm : n' = m} :
+    a.equivNatSMul (b.cast hnm) ↔ a.equivNatSMul b := by
+  simp_rw [equivNatSMul_iff_smul_eq, cast_smul]
+
+@[simp] theorem cast_equivNatSMul_cast_iff_equivNatSMul {n' m' : ℕ} {a : VectorPerm n}
+    {b : VectorPerm n'} {hnm : n = m} {hnm' : n' = m'} :
+    (a.cast hnm).equivNatSMul (b.cast hnm') ↔ a.equivNatSMul b := by
+  simp_rw [cast_left_equivNatSMul_iff_equivNatSMul, cast_right_equivNatSMul_iff_equivNatSMul]
+
+theorem cast_equivNatSMul_cast {k : ℕ}  {a : VectorPerm n} {hnm : n = m} {hnk : n = k} :
+    (a.cast hnk).equivNatSMul (a.cast hnm) := by
+  simp_rw [cast_equivNatSMul_cast_iff_equivNatSMul, equivNatSMul_iff_eq]
+
 
 end Cast
 
@@ -2093,8 +2162,6 @@ theorem castGE_equivNatSMul_castGE {hnm : n ≤ m} {hnk : n ≤ k} :
     (a.castGE hnk).equivNatSMul (a.castGE hnm) := by
   simp_rw [castGE_equivNatSMul_castGE_iff_equivNatSMul, equivNatSMul_iff_eq]
 
-
-
 end CastGE
 
 def castLE {m n : ℕ} (hmn : m ≤ n) (a : VectorPerm n) (ham : a.FixLT m) : VectorPerm m where
@@ -2121,7 +2188,7 @@ theorem getElem_inv_castLE (him : i < m) :
   simp_rw [← castLE_inv, getElem_castLE]
 
 @[simp]
-theorem castLE_one  : ((1 : VectorPerm n).castLE hmn fixLT_one) = (1 : VectorPerm m) := by
+theorem castLE_one : ((1 : VectorPerm n).castLE hmn fixLT_one) = (1 : VectorPerm m) := by
   ext i hi : 1
   simp_rw [getElem_castLE, getElem_one]
 
@@ -2173,6 +2240,180 @@ theorem castLE_smul_of_lt {i : ℕ} (him : i < m) :
   simp_rw [smul_of_lt _ him, smul_of_lt _ (him.trans_le hmn), getElem_castLE]
 
 end CastLE
+
+def castSucc (a : VectorPerm n) : VectorPerm (n + 1) := a.castGE (Nat.le_succ _)
+
+section CastSucc
+
+variable {n m k i : ℕ} {a : VectorPerm n}
+
+theorem getElem_castSucc {i : ℕ} {hi : i < n + 1} :
+    (a.castSucc)[i] = if hi : i = n then n else a[i] := by
+  unfold castSucc
+  simp_rw [getElem_castGE, ← (Nat.le_of_lt_succ hi).ge_iff_eq]
+  rcases lt_or_le i n with hi' | hi'
+  · simp_rw [dif_pos hi', dif_neg hi'.not_le]
+  · simp_rw [dif_pos hi', dif_neg hi'.not_lt, ← hi'.le_iff_eq, Nat.le_of_lt_succ hi]
+
+@[simp]
+theorem getElem_castSucc_of_lt {i : ℕ} (hi : i < n) :
+    (a.castSucc)[i] = a[i] := by
+  simp_rw [getElem_castSucc, hi.ne, dite_false]
+
+@[simp] theorem getElem_castSucc_of_eq : (a.castSucc)[n] = n := by
+  simp_rw [getElem_castSucc, dite_true]
+
+@[simp]
+theorem castSucc_inv :
+    a⁻¹.castSucc = (a.castSucc)⁻¹ := rfl
+
+theorem getElem_inv_castSucc {i : ℕ} {hi : i < n + 1} :
+    (a.castSucc)⁻¹[i] = if hi : i = n then n else a⁻¹[i] :=
+  a.castSucc_inv ▸ a⁻¹.getElem_castSucc
+
+@[simp]
+theorem castSucc_one : (1 : VectorPerm n).castSucc = 1 := castGE_one
+
+@[simp]
+theorem castSucc_mul {a b : VectorPerm n} :
+    (a * b).castSucc = a.castSucc * b.castSucc := castGE_mul _
+
+@[simp] theorem castSucc_trans :
+    a.castSucc.castSucc = a.castGE (by omega) := castGE_trans
+
+theorem fixLT_castSucc (hnk : n ≤ k) : a.castSucc.FixLT k := fixLT_castGE hnk
+
+theorem fixLT_castSucc_eq : (a.castSucc).FixLT n := a.fixLT_castSucc le_rfl
+
+theorem castSucc_mem_fixLTSubgroup (hnk : n ≤ k) :
+    a.castSucc ∈ fixLTSubgroup (n + 1) k := a.fixLT_castGE hnk
+
+theorem castSucc_mem_fixLTSubgroup_eq :
+    a.castSucc ∈ fixLTSubgroup (n + 1) n := a.fixLT_castGE_eq
+
+theorem castSucc_lt_imp_getElem_lt (hi : i < n) : (a.castSucc)[i] < n := by
+  simp_rw [getElem_castSucc, hi.ne, dite_false]
+  exact a.getElem_lt
+
+theorem castSucc_inj {a b : VectorPerm n} : a.castSucc = b.castSucc ↔ a = b := castGE_inj
+
+theorem castSucc_injective : Function.Injective (castSucc (n := n)) :=
+  fun _ _ => castSucc_inj.mp
+
+@[simps! apply_coe]
+def castSuccMonoidHom : VectorPerm n →* fixLTSubgroup (n + 1) n where
+  toFun a := ⟨a.castSucc, a.castSucc_mem_fixLTSubgroup_eq⟩
+  map_mul' := fun _ _ => Subtype.ext castSucc_mul
+  map_one' := Subtype.ext <| by simp_rw [castSucc_one, Subgroup.coe_one]
+
+theorem castSuccMonoidHom_injective :
+    (⇑(castSuccMonoidHom (n := n))).Injective :=
+  fun _ _ h => castSucc_injective (Subtype.ext_iff.mp h)
+
+@[simp]
+theorem castSucc_smul {i : ℕ} :
+    a.castSucc • i = a • i := castGE_smul
+
+@[simp] theorem castSucc_equivNatSMul:
+  a.castSucc.equivNatSMul a := fun _ _ => castSucc_smul
+
+@[simp] theorem equivNatSMul_castSucc : a.equivNatSMul a.castSucc :=
+  castSucc_equivNatSMul.symm
+
+@[simp] theorem castSucc_equivNatSMul_castSucc_iff_equivNatSMul {n' : ℕ} {b : VectorPerm n'} :
+    a.castSucc.equivNatSMul b.castSucc ↔ a.equivNatSMul b := by
+  simp_rw [equivNatSMul_iff_smul_eq, castSucc_smul]
+
+theorem castSucc_equivNatSMul_castSucc :
+    a.castSucc.equivNatSMul a.castSucc := by
+  simp_rw [castSucc_equivNatSMul_castSucc_iff_equivNatSMul, equivNatSMul_iff_eq]
+
+end CastSucc
+
+def castPred (a : VectorPerm (n + 1)) (ha : a[n] = n) : VectorPerm n :=
+    a.castLE (Nat.le_succ _) (a.fixLT_of_getElem_eq_self ha)
+
+section CastPred
+
+variable {m i k : ℕ} (a : VectorPerm (n + 1)) (ha : a[n] = n)
+
+@[simp] theorem getElem_castPred (him : i < n) :
+    (a.castPred ha)[i] = a[i] := getElem_castLE _ _ _
+
+@[simp] theorem castPred_inv {ha : a⁻¹[n] = n} : a⁻¹.castPred ha =
+    (a.castPred ((a.getElem_inv_eq_iff _ _).mp ha).symm)⁻¹ := rfl
+
+theorem getElem_inv_castPred (hi : i < n) :
+    (a.castPred ha)⁻¹[i] = a⁻¹[i]  := getElem_inv_castLE _ _ _
+
+@[simp]
+theorem castPred_one :
+    ((1 : VectorPerm (n + 1)).castPred (getElem_one _)) = (1 : VectorPerm n) := castLE_one
+
+@[simp]
+theorem castPred_mul {a b : VectorPerm (n + 1)} (ha : a[n] = n) (hb : b[n] = n) :
+    (a * b).castPred (by simp_rw [getElem_mul, hb, ha]) = a.castPred ha * b.castPred hb :=
+  castLE_mul _ _ _
+
+theorem FixLT.castPred {a : VectorPerm (n + 1)} (ha : a[n] = n) {hak : a.FixLT m} :
+    (a.castPred ha).FixLT m := FixLT.castLE hak
+
+@[simp] theorem castPred_trans {a : VectorPerm (n + 2)} (ha₁ : a[n + 1] = n + 1)
+    (ha₂ : a[n] = n) :
+    (a.castPred ha₁).castPred (by simp_rw [getElem_castPred, ha₂]) =
+    a.castLE (Nat.le_add_right _ _) (a.fixLT_of_getElem_eq_getElem_eq ha₁ ha₂):= castLE_trans _ _
+
+@[simp] theorem castPred_castSucc {a : VectorPerm n} :
+    a.castSucc.castPred getElem_castSucc_of_eq = a := castLE_castGE _
+
+theorem getElem_castSucc_castPred_of_lt (hi : i < n) :
+    ((a.castPred ha).castSucc)[i] = a[i] := getElem_castGE_castLE_of_lt _ _ hi
+
+theorem castPred_surjective (b : VectorPerm n) :
+    ∃ (a : VectorPerm (n + 1)), ∃ (ha : a[n] = n), a.castPred ha = b :=
+  ⟨_, _, b.castPred_castSucc⟩
+
+@[simps! apply]
+def castPredMonoidHom : fixLTSubgroup (n + 1) n →* VectorPerm n where
+  toFun  := fun ⟨a, h⟩ => a.castPred h.getElem_eq_self
+  map_mul' a b := castPred_mul a.2.getElem_eq_self b.2.getElem_eq_self
+  map_one' := by simp_rw [castPred_one]
+
+theorem castPredMonoidHom_surjective :
+  (⇑(castPredMonoidHom (n := n))).Surjective := fun a => Subtype.exists.mpr
+    (by rcases a.castPred_surjective with ⟨b, hb, h⟩ ;
+        exact ⟨b, fixLT_of_getElem_eq_self hb, h⟩)
+
+theorem castPred_smul_of_lt {i : ℕ} (hi : i < n) :
+    (a.castPred ha) • i = a • i := castLE_smul_of_lt _ _ hi
+
+theorem castPred_smul_of_eq : (a.castPred ha) • n = a • n := by
+  rw [smul_of_ge _ le_rfl, smul_of_lt _ (Nat.lt_succ_self _), ha]
+
+@[simp] theorem castPred_equivNatSMul : (a.castPred ha).equivNatSMul a := by
+  simp_rw [equivNatSMul_iff_smul_eq_of_lt, sup_of_le_left (Nat.le_succ _), Nat.lt_succ_iff,
+    le_iff_eq_or_lt]
+  rintro i (rfl | hi)
+  · simp_rw [castPred_smul_of_eq]
+  · exact castPred_smul_of_lt _ _ hi
+
+@[simp] theorem equivNatSMul_castPred : a.equivNatSMul (a.castPred ha) :=
+  (a.castPred_equivNatSMul ha).symm
+
+theorem castPred_cast {hnm : n + 1 = m + 1} {ha : (cast hnm a)[m] = m} :
+    (a.cast hnm).castPred ha =
+    (a.castPred (by rw [getElem_cast] at ha ; simp_rw [Nat.succ_injective hnm, ha])).cast
+    (Nat.succ_injective hnm) := by
+  ext
+  simp_rw [getElem_cast, getElem_castPred, getElem_cast]
+
+theorem castPred_castGE {a : VectorPerm n} {hnm : n < m + 1} {ha : (castGE hnm.le a)[m] = m} :
+    (a.castGE hnm.le).castPred ha =
+    (a.castPred _).castGE _ := by
+  ext
+  simp_rw [getElem_cast, getElem_castPred, getElem_cast]
+
+end CastPred
 
 def castOfFixLT {m n : ℕ} (a : VectorPerm n) (ham : a.FixLT m) :
     VectorPerm m where
@@ -2334,6 +2575,124 @@ theorem castOfFixLT_smul_eq_smul_of_lt {i : ℕ} (hi : i < m) :
 
 end CastOfFixLT
 
+def minLen {n : ℕ} (a : VectorPerm n) : ℕ := match n with
+  | 0 => 0
+  | (n + 1) => if ha : a[n] = n then (a.castPred ha).minLen else n + 1
+
+section MinLen
+
+@[simp] theorem minLen_zero {a : VectorPerm 0} : a.minLen = 0 := rfl
+
+theorem minLen_succ {a : VectorPerm (n + 1)} :
+    a.minLen = if ha : a[n] = n then (a.castPred ha).minLen else n + 1 := rfl
+
+theorem minLen_succ_of_getElem_eq {a : VectorPerm (n + 1)} (ha : a[n] = n) :
+    a.minLen = (a.castPred ha).minLen := by
+  simp_rw [minLen_succ, ha, dite_true]
+
+theorem minLen_succ_of_getElem_ne {a : VectorPerm (n + 1)} (ha : a[n] ≠ n) :
+    a.minLen = n + 1 := by
+  simp_rw [minLen_succ, ha, dite_false]
+
+@[simp] theorem minLen_le {a : VectorPerm n} : a.minLen ≤ n := by
+  induction n with | zero => _ | succ n IH => _
+  · simp_rw [minLen_zero, le_rfl]
+  · by_cases ha : a[n] = n
+    · simp_rw [minLen_succ_of_getElem_eq ha]
+      exact IH.trans (Nat.le_succ _)
+    · simp_rw [minLen_succ_of_getElem_ne ha, le_rfl]
+
+@[simp] theorem succ_minLen_le_of_getElem_eq {a : VectorPerm (n + 1)} (ha : a[n] = n) :
+    a.minLen ≤ n := by simp_rw [minLen_succ_of_getElem_eq ha, minLen_le]
+
+theorem minLen_one : (1 : VectorPerm n).minLen = 0 := by
+  induction n with | zero => _ | succ n IH => _
+  · simp_rw [minLen_zero]
+  · rw [minLen_succ_of_getElem_eq (getElem_one _), castPred_one, IH]
+
+@[simp] theorem minLen_castPred {a : VectorPerm (n + 1)} (ha : a[n] = n) :
+    (a.castPred ha).minLen = a.minLen := by
+  rw [minLen_succ_of_getElem_eq ha]
+
+@[simp] theorem minLen_cast {m : ℕ} {a : VectorPerm n} (hnm : n = m) :
+    (a.cast hnm).minLen = a.minLen := by
+  cases hnm
+  induction n with | zero => _ | succ n IH => _
+  · simp_rw [minLen_zero]
+  · simp_rw [minLen_succ, getElem_cast, castPred_cast, IH]
+
+@[simp] theorem minLen_castSucc {a : VectorPerm n} :
+    a.castSucc.minLen = a.minLen := by
+  rw [minLen_succ_of_getElem_eq (getElem_castSucc_of_eq), castPred_castSucc]
+
+@[simp] theorem minLen_castGE {m : ℕ} {a : VectorPerm n} (hnm : n ≤ m) :
+    (a.castGE hnm).minLen = a.minLen := by
+  induction m generalizing n with | zero => _ | succ m IH => _
+  · simp_rw [nonpos_iff_eq_zero] at hnm
+    cases hnm
+    simp_rw [minLen_zero]
+  · rcases hnm.eq_or_lt with rfl | hnm
+    · simp_rw [castGE_of_eq, minLen_cast]
+    · simp_rw [Nat.lt_succ_iff] at hnm
+      cases n with | zero => _ | succ n => _
+      · simp?
+      simp_rw [minLen_succ, getElem_castGE, Nat.lt_succ_self, dite_true, castPred_cast, IH]
+
+end MinLen
+
+def minPerm {n : ℕ} (a : VectorPerm n) : VectorPerm a.minLen := match n with
+  | 0 => 1
+  | (n + 1) =>
+    if ha : a[n] = n
+    then (a.castPred ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm
+    else a.cast (minLen_succ_of_getElem_ne ha).symm
+
+section MinPerm
+
+@[simp] theorem minPerm_zero {a : VectorPerm 0} : a.minPerm = 1 := rfl
+
+theorem minPerm_succ {a : VectorPerm (n + 1)} :
+    a.minPerm = if ha : a[n] = n
+    then (a.castPred ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm
+    else a.cast (minLen_succ_of_getElem_ne ha).symm := rfl
+
+@[simp] theorem minPerm_succ_of_getElem_eq {a : VectorPerm (n + 1)}  (ha : a[n] = n) :
+    a.minPerm = (a.castPred ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm := by
+  simp_rw [minPerm_succ, ha, dite_true]
+
+@[simp] theorem minPerm_succ_of_getElem_ne {a : VectorPerm (n + 1)} (ha : a[n] ≠ n) :
+    a.minPerm = a.cast (minLen_succ_of_getElem_ne ha).symm := by
+  simp_rw [minPerm_succ, ha, dite_false]
+
+theorem minPerm_equivNatSMul {a : VectorPerm n} : a.minPerm.equivNatSMul a := by
+  induction n with | zero => _ | succ n IH => _
+  · simp_rw [minPerm_zero, one_equivNatSMul_iff_eq_one]
+    exact Subsingleton.elim _ _
+  · by_cases ha : a[n] = n
+    · simp_rw [minPerm_succ_of_getElem_eq ha, cast_left_equivNatSMul_iff_equivNatSMul]
+      exact IH.trans (castPred_equivNatSMul _ _)
+    · simp_rw [minPerm_succ_of_getElem_ne ha, cast_left_equivNatSMul_iff_equivNatSMul,
+        equivNatSMul_iff_eq]
+
+theorem equivNatSMul_minPerm {a : VectorPerm n} : a.equivNatSMul a.minPerm :=
+  minPerm_equivNatSMul.symm
+
+theorem minPerm_one : (1 : VectorPerm n).minPerm = 1 := by
+  induction n with | zero => _ | succ n IH => _
+  · simp_rw [minPerm_zero]
+  · simp_rw [minPerm_succ_of_getElem_eq (getElem_one _), cast_eq_one_iff]
+    exact castPred_one.symm ▸ IH
+
+theorem minLen_minPerm {a : VectorPerm n} : a.minPerm.minLen = a.minLen := by
+  induction n with | zero => _ | succ n IH => _
+  · simp_rw [minPerm_zero, Unique.eq_default, Unique.default_eq (1 : VectorPerm 0)]
+  · by_cases ha : a[n] = n
+    · simp_rw [minPerm_succ_of_getElem_eq ha, cast_eq_iff, IH]
+    · simp_rw [ha, dite_false, minRep_succ_of_getElem_ne ha]
+
+
+end MinPerm
+
 instance : Setoid (Σ n, VectorPerm n) where
   r a b := a.2.equivNatSMul b.2
   iseqv := ⟨fun _ => equivNatSMul.rfl, equivNatSMul.symm, equivNatSMul.trans⟩
@@ -2355,6 +2714,28 @@ theorem sigma_eq_of_eq_of_equiv : ∀ {a b : Σ n, VectorPerm n}, a.1 = b.1 → 
 
 theorem sigma_eq_iff_eq_of_equiv {a b : Σ n, VectorPerm n} : a = b ↔ a.1 = b.1 ∧ a ≈ b :=
   ⟨fun h => h ▸ ⟨rfl, Setoid.refl _⟩, fun h => sigma_eq_of_eq_of_equiv h.1 h.2⟩
+
+def minRep (a : Σ n, VectorPerm n) : Σ n, VectorPerm n := ⟨a.2.minLen, a.2.minPerm⟩
+
+@[simp] theorem minRep_mk {a : VectorPerm n} : minRep ⟨n, a⟩ = ⟨a.minLen, a.minPerm⟩ := rfl
+
+theorem castGE_minRep_snd {a : Σ n, VectorPerm n} {i : ℕ} (hi : (minRep a).1 ≤ i)
+    (hi' : i < a.fst) : a.snd[i] = i := by
+  cases a with | mk n a => _
+  dsimp
+  induction n with | zero => _ | succ n IH => _
+  · simp_rw [not_lt_zero'] at hi'
+  · dsimp at IH
+    dsimp at hi'
+    simp_rw [minRep_succ] at hi
+    by_cases ha : a[n] = n
+    · simp_rw [ha, dite_true] at hi
+      have HH := (IH _ hi _)
+      simp [minRep_succ]
+    by_cases ha : a[n] = n
+    · simp_rw [ha, dite_true]
+      exact (IH _).trans (Nat.le_succ _)
+    · simp_rw [ha, dite_false, le_rfl]
 
 instance : Mul (Σ n, VectorPerm n) where
   mul := fun ⟨n, a⟩ ⟨m, b⟩ =>
