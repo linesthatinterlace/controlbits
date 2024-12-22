@@ -2,19 +2,20 @@ import Batteries.Data.Vector.Lemmas
 import Mathlib.Algebra.Group.MinimalAxioms
 import Mathlib.Data.Fintype.Perm
 import Mathlib.GroupTheory.GroupAction.Period
+import Mathlib.GroupTheory.Congruence.Basic
 
 universe u
 
 namespace Nat
 
-@[simp] theorem fold_succ_zero {α : Type u} (n : Nat)
+theorem fold_succ_zero {α : Type u} (n : Nat)
     (f : (i : Nat) → i < n + 1 → α → α) (init : α) :
     fold (n + 1) f init = (fold n (fun i h => f (i + 1) (by omega)) (f 0 (by omega) init)) := by
   induction n with | zero => _ | succ n IH => _
   · simp_rw [fold_succ, fold_zero]
   · rw [fold_succ, IH, fold_succ]
 
-@[simp] theorem foldRev_succ_zero {α : Type u} (n : Nat)
+theorem foldRev_succ_zero {α : Type u} (n : Nat)
     (f : (i : Nat) → i < n + 1 → α → α) (init : α) :
     foldRev (n + 1) f init = f 0 (by omega)
     (foldRev n (fun i hi => f (i + 1) (by omega)) init) := by
@@ -280,7 +281,7 @@ theorem getD_of_ge (a : Vector α n) (x : α) (i : ℕ) (h : n ≤ i) : a[i]?.ge
 @[simp] theorem getElem_cast {n m i : ℕ} (hnm : n = m) (v : Vector α n) (hi : i < m)  :
   (v.cast hnm)[i] = v[i] := rfl
 
-@[simp] theorem getElem_range_lt {n i : ℕ} (hi : i < n) : (range n)[i] < n := getElem_range _ ▸ hi
+theorem getElem_range_lt {n i : ℕ} (hi : i < n) : (range n)[i] < n := getElem_range _ ▸ hi
 
 @[simp]
 theorem getElem_zipWith  {n i : ℕ} (hi : i < n) {as : Vector α n} {bs : Vector β n}
@@ -565,7 +566,7 @@ namespace PermOf
 
 open Function Equiv
 
-variable {n : ℕ}
+variable {n m : ℕ}
 
 instance : Repr (PermOf n) where
   reprPrec a _ :=
@@ -1069,7 +1070,7 @@ end MulActionFin
 
 open Equiv.Perm in
 /--
-`PermOf n` is equivalent to `Perm (Fin n)`, and this equivalence respects the
+`PermOf n` is IsCongralent to `Perm (Fin n)`, and this IsCongralence respects the
 multiplication (and, indeed, the scalar action on `Fin n`).
 -/
 @[simps! apply_apply_val apply_symm_apply_val]
@@ -1302,31 +1303,31 @@ theorem exists_pos_le_pow_getElem_eq (a : PermOf n) {i : ℕ} (hi : i < n) :
 end MulActionNat
 
 
-@[irreducible] def equiv {n m : ℕ} (a : PermOf n) (b : PermOf m) : Prop :=
+@[irreducible] def IsCongr {n m : ℕ} (a : PermOf n) (b : PermOf m) : Prop :=
   ∀ {i}, i < max m n → a • i = b • i
 
-section equiv
+section IsCongr
 
 variable {m l i : ℕ} {a : PermOf n} {b : PermOf m} {c : PermOf l}
 
-theorem equiv_iff_smul_eq_of_lt :
-    a.equiv b ↔ ∀ {i}, i < max m n → a • i = b • i := by
-  unfold equiv
+theorem isCongr_iff_smul_eq_of_lt :
+    a.IsCongr b ↔ ∀ {i}, i < max m n → a • i = b • i := by
+  unfold IsCongr
   exact Iff.rfl
 
-instance {a : PermOf n} {b : PermOf m} : Decidable (a.equiv b) :=
-  decidable_of_decidable_of_iff equiv_iff_smul_eq_of_lt.symm
+instance {a : PermOf n} {b : PermOf m} : Decidable (a.IsCongr b) :=
+  decidable_of_decidable_of_iff isCongr_iff_smul_eq_of_lt.symm
 
-theorem equiv_iff_smul_eq : a.equiv b ↔ ∀ {i : ℕ}, a • i = b • i :=
-  ⟨fun h i => (lt_or_le i (max m n)).elim (equiv_iff_smul_eq_of_lt.mp h)
+theorem isCongr_iff_smul_eq : a.IsCongr b ↔ ∀ {i : ℕ}, a • i = b • i :=
+  ⟨fun h i => (lt_or_le i (max m n)).elim (isCongr_iff_smul_eq_of_lt.mp h)
     (fun hmn => (a.smul_of_ge (le_of_max_le_right hmn)).trans
     (b.smul_of_ge (le_of_max_le_left hmn)).symm),
-    fun h => equiv_iff_smul_eq_of_lt.mpr (fun _ => h)⟩
+    fun h => isCongr_iff_smul_eq_of_lt.mpr (fun _ => h)⟩
 
-theorem equiv_iff_getElem_eq_getElem_and_getElem_eq_of_le (hnm : n ≤ m) :
-    a.equiv b ↔ (∀ {i} (hi : i < n), a[i] = b[i]) ∧
+theorem isCongr_iff_getElem_eq_getElem_and_getElem_eq_of_le (hnm : n ≤ m) :
+    a.IsCongr b ↔ (∀ {i} (hi : i < n), a[i] = b[i]) ∧
     (∀ {i}, n ≤ i → ∀ (hi' : i < m), b[i] = i) := by
-  simp_rw [equiv_iff_smul_eq_of_lt, max_eq_left hnm, smul_nat_eq_dite]
+  simp_rw [isCongr_iff_smul_eq_of_lt, max_eq_left hnm, smul_nat_eq_dite]
   refine ⟨fun h => ⟨?_, ?_⟩, fun h => ?_⟩
   · intro i hi
     have H :=  dif_pos hi ▸ dif_pos (hi.trans_le hnm) ▸ h (hi.trans_le hnm)
@@ -1340,115 +1341,116 @@ theorem equiv_iff_getElem_eq_getElem_and_getElem_eq_of_le (hnm : n ≤ m) :
     · exact h.1 _
     · exact (h.2 (le_of_not_lt hi) _).symm
 
-theorem equiv.smul_eq (hab : a.equiv b) : ∀ {i : ℕ}, a • i = b • i :=
-  equiv_iff_smul_eq.mp hab
+theorem IsCongr.smul_eq (hab : a.IsCongr b) : ∀ {i : ℕ}, a • i = b • i :=
+  isCongr_iff_smul_eq.mp hab
 
-theorem equiv.refl (a : PermOf n) : a.equiv a := by
-  simp_rw [equiv_iff_smul_eq, implies_true]
+theorem isCongr_refl (a : PermOf n) : a.IsCongr a := by
+  simp_rw [isCongr_iff_smul_eq, implies_true]
 
-theorem equiv.rfl : a.equiv a := equiv.refl a
+theorem isCongr_rfl : a.IsCongr a := isCongr_refl a
 
-theorem equiv.symm : a.equiv b → b.equiv a := by
-  simp_rw [equiv_iff_smul_eq, eq_comm, imp_self]
+theorem IsCongr.symm : a.IsCongr b → b.IsCongr a := by
+  simp_rw [isCongr_iff_smul_eq, eq_comm, imp_self]
 
-theorem equiv_comm : a.equiv b ↔ b.equiv a :=
-  ⟨equiv.symm, equiv.symm⟩
+theorem isCongr_comm : a.IsCongr b ↔ b.IsCongr a :=
+  ⟨IsCongr.symm, IsCongr.symm⟩
 
-theorem equiv_iff_getElem_eq_getElem_and_getElem_eq_of_ge (hmn : m ≤ n) :
-    a.equiv b ↔ (∀ {i} (hi : i < m), a[i] = b[i]) ∧
+theorem isCongr_iff_getElem_eq_getElem_and_getElem_eq_of_ge (hmn : m ≤ n) :
+    a.IsCongr b ↔ (∀ {i} (hi : i < m), a[i] = b[i]) ∧
     (∀ {i}, m ≤ i → ∀ (hi' : i < n), a[i] = i) := by
-  refine equiv_comm.trans
-    ((equiv_iff_getElem_eq_getElem_and_getElem_eq_of_le hmn).trans ?_)
+  refine isCongr_comm.trans
+    ((isCongr_iff_getElem_eq_getElem_and_getElem_eq_of_le hmn).trans ?_)
   simp_rw [and_congr_left_iff]
   exact fun _ => ⟨fun h _ _ => (h _).symm, fun h _ _ => (h _).symm⟩
 
-theorem equiv.trans : a.equiv b → b.equiv c → a.equiv c := by
-  simp_rw [equiv_iff_smul_eq]
+theorem IsCongr.trans : a.IsCongr b → b.IsCongr c → a.IsCongr c := by
+  simp_rw [isCongr_iff_smul_eq]
   intro h₁ h₂
   exact (h₁.trans h₂)
 
-@[simp] theorem equiv_one_iff_eq_one : a.equiv (1 : PermOf m) ↔ a = 1 := by
-  simp_rw [equiv_iff_smul_eq, one_smul, smul_nat_eq_iff_eq_one]
+@[simp] theorem isCongr_one_iff_eq_one : a.IsCongr (1 : PermOf m) ↔ a = 1 := by
+  simp_rw [isCongr_iff_smul_eq, one_smul, smul_nat_eq_iff_eq_one]
 
-@[simp] theorem one_equiv_iff_eq_one : (1 : PermOf m).equiv a ↔ a = 1 := by
-  simp_rw [equiv_comm, equiv_one_iff_eq_one]
+@[simp] theorem one_isCongr_iff_eq_one : (1 : PermOf m).IsCongr a ↔ a = 1 := by
+  simp_rw [isCongr_comm, isCongr_one_iff_eq_one]
 
-@[simp] theorem equiv_one_one : (1 : PermOf n).equiv (1 : PermOf m) := by
-  simp_rw [equiv_one_iff_eq_one]
+theorem isCongr_one_one : (1 : PermOf n).IsCongr (1 : PermOf m) := by
+  simp_rw [isCongr_one_iff_eq_one]
 
-theorem equiv.inv_right (hab : a.equiv b⁻¹) : a⁻¹.equiv b := by
-  simp_rw [equiv_iff_smul_eq, inv_smul_eq_iff, hab.smul_eq,
-    inv_smul_smul, implies_true]
-
-theorem equiv.inv_left (hab : a⁻¹.equiv b) : a.equiv b⁻¹ := by
-  simp_rw [equiv_iff_smul_eq, eq_inv_smul_iff, hab.symm.smul_eq,
-    inv_smul_smul, implies_true]
-
-theorem equiv.inv_inv (hab : a.equiv b) : a⁻¹.equiv b⁻¹ := by
-  simp_rw [equiv_iff_smul_eq, eq_inv_smul_iff, hab.symm.smul_eq,
+theorem IsCongr.inv_inv (hab : a.IsCongr b) : a⁻¹.IsCongr b⁻¹ := by
+  simp_rw [isCongr_iff_smul_eq, eq_inv_smul_iff, hab.symm.smul_eq,
     smul_inv_smul, implies_true]
 
-@[simp] theorem equiv_inv_inv_iff : a⁻¹.equiv b⁻¹ ↔ a.equiv b :=
+theorem IsCongr.inv_right (hab : a.IsCongr b⁻¹) : a⁻¹.IsCongr b := hab.inv_inv
+
+theorem IsCongr.inv_left (hab : a⁻¹.IsCongr b) : a.IsCongr b⁻¹ := hab.inv_inv
+
+theorem inv_isCongr_iff_isCongr_inv : a⁻¹.IsCongr b ↔ a.IsCongr b⁻¹ :=
+  ⟨fun hab => hab.inv_left, fun hab => hab.inv_right⟩
+
+@[simp] theorem inv_isCongr_inv_iff : a⁻¹.IsCongr b⁻¹ ↔ a.IsCongr b :=
   ⟨fun hab => hab.inv_inv, fun hab => hab.inv_inv⟩
 
-theorem equiv.mul_mul {a' : PermOf n} {b' : PermOf m} (hab : a.equiv b)
-    (hab' : a'.equiv b') : (a*a').equiv (b*b') := by
-  simp_rw [equiv_iff_smul_eq, mul_smul, hab.smul_eq, hab'.smul_eq, implies_true]
+theorem IsCongr.mul_mul {a' : PermOf n} {b' : PermOf m} (hab : a.IsCongr b)
+    (hab' : a'.IsCongr b') : (a*a').IsCongr (b*b') := by
+  simp_rw [isCongr_iff_smul_eq, mul_smul, hab.smul_eq, hab'.smul_eq, implies_true]
 
-theorem equiv.eq {a' : PermOf n} (h : a.equiv a') : a = a' := by
+theorem IsCongr.eq {a' : PermOf n} (h : a.IsCongr a') : a = a' := by
   ext i hi
   simp_rw [← smul_of_lt _ hi, h.smul_eq]
 
-@[simp] theorem equiv_iff_eq {a' : PermOf n} : a.equiv a' ↔ a = a' :=
-  ⟨equiv.eq, fun h => h ▸ equiv.rfl⟩
+@[simp] theorem isCongr_iff_eq {a' : PermOf n} : a.IsCongr a' ↔ a = a' :=
+  ⟨IsCongr.eq, fun h => h ▸ isCongr_rfl⟩
 
 @[simps!]
-instance equivSubgroup (n m : ℕ) : Subgroup (PermOf n × PermOf m) where
-  carrier a := a.1.equiv a.2
-  mul_mem' := equiv.mul_mul
-  one_mem' := equiv_one_one
-  inv_mem' := equiv.inv_inv
+def IsCongrSubgroup (n m : ℕ) : Subgroup (PermOf n × PermOf m) where
+  carrier a := a.1.IsCongr a.2
+  mul_mem' := IsCongr.mul_mul
+  one_mem' := isCongr_one_one
+  inv_mem' := IsCongr.inv_inv
 
-@[simp] theorem mem_equivSubgroup_iff (ab : PermOf n × PermOf m) :
-    ab ∈ equivSubgroup n m ↔ ab.1.equiv ab.2 := Iff.rfl
+@[simp] theorem mem_IsCongrSubgroup_iff (ab : PermOf n × PermOf m) :
+    ab ∈ IsCongrSubgroup n m ↔ ab.1.IsCongr ab.2 := Iff.rfl
 
-end equiv
+end IsCongr
 
 /--
 `ofNatPerm` maps a member of `Perm ℕ` which maps the subtype `< n` to itself to the corresponding
 `PermOf n`.
 -/
-def ofNatPerm (f : Perm ℕ) (hf : ∀ i, f i < n ↔ i < n) : PermOf n where
+
+def ofNatPerm (f : Perm ℕ) (hf : ∀ i, i < n → f i < n) : PermOf n where
   fwdVector := (Vector.range n).map f
   bwdVector := (Vector.range n).map ⇑f⁻¹
   getElem_fwdVector_lt := fun {i} => by
-    simp_rw [Vector.getElem_map, Vector.getElem_range, hf, imp_self]
+    simp_rw [Vector.getElem_map, Vector.getElem_range]
+    exact hf _
   getElem_bwdVector_getElem_fwdVector := by
     simp only [Vector.getElem_map, Vector.getElem_range, Perm.inv_apply_self, implies_true]
 
 section ofNatPerm
 
 @[simp]
-theorem getElem_ofNatPerm {f : Perm ℕ} {hf : ∀ i, f i < n ↔ i < n} {i : ℕ}
+theorem getElem_ofNatPerm {f : Perm ℕ} {hf : ∀ i, i < n → f i < n} {i : ℕ}
     (hi : i < n) : (ofNatPerm f hf)[i] = f i := by
   unfold ofNatPerm
   simp_rw [getElem_mk, Vector.getElem_map, Vector.getElem_range]
 
 @[simp]
-theorem getElem_ofNatPerm_inv {f : Perm ℕ} {hf : ∀ i, f i < n ↔ i < n} {i : ℕ} (hi : i < n) :
+theorem getElem_ofNatPerm_inv {f : Perm ℕ} {hf : ∀ i, i < n → f i < n} {i : ℕ} (hi : i < n) :
     (ofNatPerm f hf)⁻¹[i] = f⁻¹ i := by
   unfold ofNatPerm
   simp_rw [getElem_inv_mk, Vector.getElem_map, Vector.getElem_range]
 
-@[simp]
-theorem ofNatPerm_inv {f : Perm ℕ} {hf : ∀ i, f i < n ↔ i < n} :
+theorem ofNatPerm_inv {f : Perm ℕ} {hf : ∀ i, i < n → f i < n} :
     (ofNatPerm f hf)⁻¹ =
-    ofNatPerm f⁻¹ (fun x => (hf (f⁻¹ x)).symm.trans (Perm.apply_inv_self _ _ ▸ Iff.rfl)) := rfl
+    ofNatPerm f⁻¹ (fun _ hi => ((ofNatPerm f hf)⁻¹.getElem_lt hi).trans_eq'
+    (getElem_ofNatPerm_inv _).symm) := rfl
 
 @[simp]
-theorem mul_ofNatPerm {f g : Perm ℕ} {hf : ∀ i, f i < n ↔ i < n} {hg : ∀ i, g i < n ↔ i < n} :
+theorem mul_ofNatPerm {f g : Perm ℕ} {hf : ∀ i, i < n → f i < n} {hg : ∀ i, i < n → g i < n} :
     (ofNatPerm f hf) * (ofNatPerm g hg) =
-    ofNatPerm (f * g) (fun x => (hf (g x)).trans (hg x)) := by
+    ofNatPerm (f * g) (fun _ hi => hf _ (hg _ hi)) := by
   simp only [PermOf.ext_iff, getElem_mul, getElem_ofNatPerm, Perm.mul_apply, implies_true]
 
 end ofNatPerm
@@ -1457,25 +1459,15 @@ end ofNatPerm
 `natPerm` is the injective monoid homomorphism from `PermOf n` to `Perm ℕ`.
 -/
 
-def natPerm (n : ℕ) : PermOf n →* Perm ℕ :=
-  (Perm.extendDomainHom Fin.equivSubtype).comp (finPerm n : PermOf _ →* Equiv.Perm (Fin n))
+@[simps!]
+def natPerm (n : ℕ) : PermOf n →* Perm ℕ where
+  toFun a := ⟨(a • ·), (a⁻¹ • ·), inv_smul_smul _, smul_inv_smul _⟩
+  map_one' := Equiv.ext <| fun _ => by simp_rw [one_smul, inv_one, coe_fn_mk, Perm.coe_one, id_eq]
+  map_mul' a b := Equiv.ext <| fun _ => by simp_rw [mul_inv_rev, Perm.coe_mul,
+    comp_apply, coe_fn_mk, mul_smul]
 
 section NatPerm
 
-@[simp]
-theorem natPerm_apply_apply (a : PermOf n) {i : ℕ} : natPerm n a i = a • i := by
-  unfold natPerm
-  simp_rw [MonoidHom.comp_apply, MonoidHom.coe_coe, Perm.extendDomainHom_apply]
-  rcases lt_or_le i n with hi | hi
-  · simp_rw [Perm.extendDomain_apply_subtype _ Fin.equivSubtype hi, a.smul_of_lt hi,
-      Fin.equivSubtype_symm_apply, Fin.equivSubtype_apply, finPerm_apply_apply_val]
-  · simp_rw [Perm.extendDomain_apply_not_subtype _ Fin.equivSubtype hi.not_lt, a.smul_of_ge hi]
-
-@[simp]
-theorem natPerm_apply_symm_apply (a : PermOf n) {i : ℕ} : (natPerm n a).symm i = a⁻¹ • i := by
-  rw [← Perm.inv_def, ← map_inv, natPerm_apply_apply]
-
-@[simp]
 theorem natPerm_lt_iff_lt (a : PermOf n) {i : ℕ} : natPerm n a i < n ↔ i < n := by
   rw [natPerm_apply_apply, smul_lt_iff_lt]
 
@@ -1492,31 +1484,30 @@ theorem natPerm_apply_symm_apply_of_lt (a : PermOf n) {i : ℕ} (h : i < n) :
 theorem natPerm_apply_symm_apply_of_ge (a : PermOf n) {i : ℕ} (h : n ≤ i) :
     (natPerm n a)⁻¹ i = i := by rw [← MonoidHom.map_inv, natPerm_apply_apply_of_ge _ h]
 
-theorem natPerm_injective : Function.Injective (natPerm n) :=
-  (Equiv.Perm.extendDomainHom_injective Fin.equivSubtype).comp (finPerm n).injective
+theorem natPerm_injective : Function.Injective (natPerm n) := fun _ _ h =>
+  FaithfulSMul.eq_of_smul_eq_smul (Equiv.ext_iff.mp h)
 
 theorem natPerm_inj {a b : PermOf n} : natPerm n a = natPerm n b ↔ a = b :=
   natPerm_injective.eq_iff
 
-theorem natPerm_ofNatPerm (f : Perm ℕ) (hf : ∀ i, f i < n ↔ i < n) (i : ℕ) :
+theorem natPerm_ofNatPerm (f : Perm ℕ) (hf : ∀ i, i < n → f i < n) (i : ℕ) :
     natPerm n (ofNatPerm f hf) i = if i < n then f i else i := by
   rcases lt_or_le i n with hi | hi
   · simp_rw [natPerm_apply_apply_of_lt _ hi, getElem_ofNatPerm, hi, if_true]
   · simp_rw [natPerm_apply_apply_of_ge _ hi, hi.not_lt, if_false]
 
 theorem ofNatPerm_natPerm (a : PermOf n) :
-    ofNatPerm (natPerm n a) (fun _ => a.natPerm_lt_iff_lt) = a := by
+    ofNatPerm (natPerm n a) (fun _ => a.natPerm_lt_iff_lt.mpr) = a := by
   ext i hi
   simp_rw [getElem_ofNatPerm, a.natPerm_apply_apply_of_lt hi]
 
 theorem apply_eq_of_ge_iff_exists_natPerm_apply (e : Perm ℕ) :
     (∀ i ≥ n, e i = i) ↔ ∃ a : PermOf n, natPerm n a = e := by
   refine ⟨fun h => ?_, ?_⟩
-  · have H : ∀ i, e i < n ↔ i < n := fun i => by
-      simp_rw [← not_le, not_iff_not]
-      exact ⟨fun hi => by rwa [e.injective (h _ hi).symm], fun hi => (h _ hi).symm ▸ hi⟩
+  · have H : ∀ i, i < n → e i < n :=
+      fun i hi => lt_of_not_le (fun C =>  (e.injective (h _ C) ▸ C).not_lt hi)
     use ofNatPerm e H
-    simp_rw [Equiv.ext_iff, natPerm_ofNatPerm e H, ite_eq_left_iff, not_lt]
+    simp_rw [Equiv.ext_iff, natPerm_ofNatPerm, ite_eq_left_iff, not_lt]
     exact fun _ hi => (h _ hi).symm
   · rintro ⟨a, rfl⟩ i hi
     exact a.natPerm_apply_apply_of_ge hi
@@ -1526,12 +1517,24 @@ theorem coe_natPerm_range : MonoidHom.range (natPerm (n := n)) =
   simp_rw [Set.ext_iff, MonoidHom.coe_range, Set.mem_range, ge_iff_le, Set.mem_setOf_eq,
   apply_eq_of_ge_iff_exists_natPerm_apply, implies_true]
 
-theorem equiv_iff_natPerm_eq {a : PermOf n} {m : ℕ} {b : PermOf m} :
-    a.equiv b ↔ a.natPerm n = b.natPerm m := by
-  simp_rw [Equiv.ext_iff, natPerm_apply_apply, equiv_iff_smul_eq]
+@[simp]
+theorem natPerm_eq_iff_isCongr {a : PermOf n} {m : ℕ} {b : PermOf m} :
+    a.natPerm n = b.natPerm m ↔ a.IsCongr b := by
+  simp_rw [Equiv.ext_iff, natPerm_apply_apply, isCongr_iff_smul_eq]
 
-theorem equiv.natPerm_eq {a : PermOf n} {m : ℕ} {b : PermOf m}
-    (hab : a.equiv b) : a.natPerm n = b.natPerm m := equiv_iff_natPerm_eq.mp hab
+theorem IsCongr.natPerm_eq {a : PermOf n} {m : ℕ} {b : PermOf m}
+    (hab : a.IsCongr b) : a.natPerm n = b.natPerm m := natPerm_eq_iff_isCongr.mpr hab
+
+theorem natPerm_eq_extendDomainHom_comp_finPerm {n : ℕ} :
+    natPerm n = (Perm.extendDomainHom Fin.equivSubtype).comp
+    (finPerm n : PermOf _ →* Equiv.Perm (Fin n)) := by
+  ext a i
+  simp_rw [natPerm_apply_apply, MonoidHom.comp_apply,
+    MonoidHom.coe_coe, Perm.extendDomainHom_apply]
+  rcases lt_or_le i n with hi | hi
+  · simp_rw [Perm.extendDomain_apply_subtype _ Fin.equivSubtype hi, a.smul_of_lt hi,
+      Fin.equivSubtype_symm_apply, Fin.equivSubtype_apply, finPerm_apply_apply_val]
+  · simp_rw [Perm.extendDomain_apply_not_subtype _ Fin.equivSubtype hi.not_lt, a.smul_of_ge hi]
 
 end NatPerm
 
@@ -1718,7 +1721,6 @@ theorem actOnIndices_range (a : PermOf n) :
   simp_rw [Vector.ext_iff, getElem_actOnIndices, Vector.getElem_range,
     getElem_fwdVector, implies_true]
 
-@[simp]
 theorem inv_actOnIndices_range (a : PermOf n) :
     (a⁻¹).actOnIndices (Vector.range n) = a.bwdVector := by
   simp_rw [Vector.ext_iff, getElem_actOnIndices, Vector.getElem_range,
@@ -1903,7 +1905,7 @@ theorem getElem_cycleMinVector_succ (a : PermOf n) {i x : ℕ}
   · simp_rw [getElem_cycleMinVector_zero, le_rfl]
   · simp_rw [getElem_cycleMinVector_succ, min_le_iff, IH, true_or]
 
-@[simp] theorem getElem_one_cycleMinVector {k i : ℕ} (hi : i < n) :
+theorem getElem_one_cycleMinVector {k i : ℕ} (hi : i < n) :
     ((1 : PermOf n).CycleMinVector k)[i] = i := by
   induction k generalizing n i with | zero => _ | succ k IH => _
   · simp_rw [getElem_cycleMinVector_zero]
@@ -1983,7 +1985,7 @@ lemma le_getElem_cycleMin_iff (a : PermOf n) (i : ℕ) {x y : ℕ}
   simp_rw [le_antisymm_iff, le_getElem_cycleMin_iff, hxa,
     getElem_cycleMinVector_le_self, implies_true, and_self]
 
-@[simp] theorem getElem_zero_cycleMinVector [NeZero n]
+theorem getElem_zero_cycleMinVector [NeZero n]
     {a : PermOf n} {k : ℕ} : (a.CycleMinVector k)[0]'(NeZero.pos _) = 0 :=
   getElem_cycleMinVector_of_self_le_getElem (fun _ => zero_le _)
 
@@ -2128,7 +2130,7 @@ variable {m n o : ℕ}
 /--
 `PermOf.cast` re-interprets an `PermOf n` as an `PermOf m`, where `n = m`.
 -/
-def cast (hnm : n = m) (a : PermOf n) : PermOf m where
+@[inline] protected def cast (hnm : n = m) (a : PermOf n) : PermOf m where
   fwdVector := a.fwdVector.cast hnm
   bwdVector := a.bwdVector.cast hnm
   getElem_fwdVector_lt := fun _ => by
@@ -2160,12 +2162,12 @@ theorem cast_eq_one_iff (hnm : n = m) (a : PermOf n) : a.cast hnm = 1 ↔ a = 1 
   simp_rw [cast_eq_iff, cast_one]
 
 @[simp]
-theorem cast_inv (hnm : n = m) (a : PermOf n) :
-    a⁻¹.cast hnm = (a.cast hnm)⁻¹ := rfl
+theorem inv_cast (hnm : n = m) (a : PermOf n) :
+    (a.cast hnm)⁻¹ = a⁻¹.cast hnm := rfl
 
 @[simp]
 theorem cast_mul (hnm : n = m) (a b : PermOf n) :
-    (a * b).cast hnm = a.cast hnm * b.cast hnm := ext <| fun hi => by
+    a.cast hnm * b.cast hnm = (a * b).cast hnm := ext <| fun hi => by
   simp only [getElem_cast, getElem_mul]
 
 theorem cast_eq_cast (hnm : n = m) (a : PermOf n) :
@@ -2183,41 +2185,41 @@ theorem cast_inj {a b : PermOf n} {hnm : n = m} : a.cast hnm = b.cast hnm ↔ a 
   refine fun H _ hi => ?_
   exact H (hnm ▸ hi)
 
-theorem cast_injective (h : n = m) : Function.Injective (cast h) := fun _ _ => cast_inj.mp
+theorem cast_injective (h : n = m) : Function.Injective (PermOf.cast h) := fun _ _ => cast_inj.mp
 
-theorem cast_surjective (h : n = m) : Function.Surjective (cast h) :=
+theorem cast_surjective (h : n = m) : Function.Surjective (PermOf.cast h) :=
   fun a => ⟨a.cast h.symm, a.cast_symm⟩
 
 /--
-When `n = m`, `PermOf n` is multiplicatively equivalent to `PermOf m`.
+When `n = m`, `PermOf n` is multiplicatively IsCongralent to `PermOf m`.
 -/
 
 @[simps! apply symm_apply]
 def castMulEquiv (hnm : n = m) : PermOf n ≃* PermOf m where
-  toFun := cast hnm
-  invFun := cast hnm.symm
+  toFun := PermOf.cast hnm
+  invFun := PermOf.cast hnm.symm
   left_inv a := a.cast_symm
   right_inv a := a.cast_symm
-  map_mul' := cast_mul hnm
+  map_mul' _ _ := (cast_mul hnm _ _).symm
 
-@[simp] theorem cast_left_equiv_def {n' : ℕ} {a : PermOf n}
+@[simp] theorem cast_left_isCongr {n' : ℕ} {a : PermOf n}
     {b : PermOf n'} {hnm : n = m} :
-    (a.cast hnm).equiv b ↔ a.equiv b := by
-  simp_rw [equiv_iff_smul_eq, cast_smul]
+    (a.cast hnm).IsCongr b ↔ a.IsCongr b := by
+  simp_rw [isCongr_iff_smul_eq, cast_smul]
 
-@[simp] theorem cast_right_equiv_def {n' : ℕ} {a : PermOf n}
+@[simp] theorem cast_right_isCongr {n' : ℕ} {a : PermOf n}
     {b : PermOf n'} {hnm : n' = m} :
-    a.equiv (b.cast hnm) ↔ a.equiv b := by
-  simp_rw [equiv_iff_smul_eq, cast_smul]
+    a.IsCongr (b.cast hnm) ↔ a.IsCongr b := by
+  simp_rw [isCongr_iff_smul_eq, cast_smul]
 
-@[simp] theorem cast_equiv_cast_iff_equiv {n' m' : ℕ} {a : PermOf n}
+theorem cast_isCongr_cast_iff_isCongr {n' m' : ℕ} {a : PermOf n}
     {b : PermOf n'} {hnm : n = m} {hnm' : n' = m'} :
-    (a.cast hnm).equiv (b.cast hnm') ↔ a.equiv b := by
-  simp_rw [cast_left_equiv_def, cast_right_equiv_def]
+    (a.cast hnm).IsCongr (b.cast hnm') ↔ a.IsCongr b := by
+  simp_rw [cast_left_isCongr, cast_right_isCongr]
 
-theorem cast_equiv_cast {k : ℕ}  {a : PermOf n} {hnm : n = m} {hnk : n = k} :
-    (a.cast hnk).equiv (a.cast hnm) := by
-  simp_rw [cast_equiv_cast_iff_equiv, equiv_iff_eq]
+theorem cast_isCongr_cast {k : ℕ}  {a : PermOf n} {hnm : n = m} {hnk : n = k} :
+    (a.cast hnk).IsCongr (a.cast hnm) := by
+  simp_rw [cast_isCongr_cast_iff_isCongr, isCongr_iff_eq]
 
 
 end Cast
@@ -2250,7 +2252,6 @@ theorem getElem_castGE {i : ℕ} {hi : i < m} {hnm : n ≤ m} :
     Vector.getElem_map, Vector.getElem_range]
   exact dite_congr rfl (fun _ => rfl) (fun hin => Nat.sub_add_cancel (le_of_not_lt hin))
 
-@[simp]
 theorem getElem_castGE_of_lt {hnm : n ≤ m} {i : ℕ} (hi : i < n) :
     (a.castGE hnm)[i] = a[i] := by
   simp_rw [getElem_castGE, hi, dite_true]
@@ -2261,12 +2262,12 @@ theorem getElem_castGE_of_ge {hnm : n ≤ m} {i : ℕ} (hi : n ≤ i) {h : i < m
   simp_rw [getElem_castGE, hi.not_lt, dite_false]
 
 @[simp]
-theorem castGE_inv {hnm : n ≤ m} :
-    a⁻¹.castGE hnm = (a.castGE hnm)⁻¹ := rfl
+theorem inv_castGE {hnm : n ≤ m} :
+    (a.castGE hnm)⁻¹ = a⁻¹.castGE hnm := rfl
 
 theorem getElem_inv_castGE (hnm : n ≤ m) {i : ℕ} {hi : i < m} :
     (a.castGE hnm)⁻¹[i] = if hi : i < n then a⁻¹[i] else i :=
-  a.castGE_inv ▸ a⁻¹.getElem_castGE
+  a.inv_castGE ▸ a⁻¹.getElem_castGE
 
 @[simp]
 theorem castGE_one {hnm : n ≤ m} : ((1 : PermOf n).castGE hnm) = 1 := by
@@ -2274,14 +2275,16 @@ theorem castGE_one {hnm : n ≤ m} : ((1 : PermOf n).castGE hnm) = 1 := by
   simp_rw [getElem_castGE, getElem_one, dite_eq_ite, ite_self]
 
 @[simp]
-theorem castGE_mul (hnm : n ≤ m) {a b : PermOf n} :
-    (a * b).castGE hnm = a.castGE hnm * b.castGE hnm := by
-  ext i
-  simp_rw [getElem_castGE, getElem_mul, getElem_castGE]
-  rcases lt_or_le i n with hi | hi
-  · simp only [hi, dite_true, getElem_lt]
-  · simp only [hi.not_lt, dite_false]
+theorem castGE_smul {i : ℕ} {hnm : n ≤ m} :
+    (a.castGE hnm) • i = a • i := by
+  simp_rw [smul_nat_eq_dite, getElem_castGE, dite_eq_ite, ite_eq_left_iff, not_lt]
+  intro hmi
+  simp_rw [(hnm.trans hmi).not_lt, dite_false]
 
+@[simp]
+theorem castGE_mul (hnm : n ≤ m) {a b : PermOf n} :
+    a.castGE hnm * b.castGE hnm = (a * b).castGE hnm := by
+  simp_rw [eq_iff_smul_nat_eq_smul_nat, mul_smul, castGE_smul, mul_smul, implies_true]
 
 @[simp] theorem castGE_of_eq (hnm : n = m) (hnm' : n ≤ m := hnm.le) :
     a.castGE hnm' = a.cast hnm := by
@@ -2297,17 +2300,22 @@ theorem castGE_mul (hnm : n ≤ m) {a b : PermOf n} :
   · simp_rw [him.not_lt, (hnm.trans him).not_lt, dite_false]
 
 
+@[simp]
+theorem castGE_castGE_mul {l : ℕ} {a : PermOf n} {b : PermOf l} {hnm : n ≤ m} {hlm : l ≤ m}
+    {hmk : m ≤ k} :
+    (a.castGE hnm * b.castGE hlm).castGE hmk =
+    a.castGE (hnm.trans hmk) * b.castGE (hlm.trans hmk) := by
+  simp only [eq_iff_smul_nat_eq_smul_nat, mul_smul, castGE_smul, implies_true]
+
 theorem castGE_mul_castGE_of_le {m : ℕ} {b : PermOf m} (hnm : n ≤ m) :
     (a.castGE (le_max_left _ _)) * (b.castGE (le_max_right _ _)) =
     ((a.castGE hnm) * b).castGE (le_max_right _ _) := by
-  ext
-  simp only [getElem_mul, castGE_mul, castGE_trans]
+  simp only [eq_iff_smul_nat_eq_smul_nat, mul_smul, castGE_smul, implies_true]
 
 theorem castGE_mul_castGE_of_ge {m : ℕ} {b : PermOf m} (hmn : m ≤ n) :
     (a.castGE (le_max_left _ _)) * (b.castGE (le_max_right _ _)) =
     (a * b.castGE hmn).castGE (le_max_left _ _) := by
-  ext
-  simp only [getElem_mul, castGE_mul, castGE_trans]
+  simp only [eq_iff_smul_nat_eq_smul_nat, mul_smul, castGE_smul, implies_true]
 
 theorem fixLT_castGE {hnm : n ≤ m} (hnk : n ≤ k) : (a.castGE hnm).FixLT k :=
   fixLT_of_lt_imp_getElem_lt (fun hik => by
@@ -2342,40 +2350,36 @@ theorem castGE_injective (hnm : n ≤ m) : Function.Injective (castGE hnm) :=
 @[simps! apply_coe]
 def castGEMonoidHom (hnm : n ≤ m) : PermOf n →* fixLTSubgroup m n where
   toFun a := ⟨a.castGE hnm, a.castGE_mem_fixLTSubgroup_eq⟩
-  map_mul' := fun _ _ => Subtype.ext (castGE_mul hnm)
+  map_mul' := fun _ _ => Subtype.ext (castGE_mul hnm).symm
   map_one' := Subtype.ext <| by simp_rw [castGE_one, Subgroup.coe_one]
 
 theorem castGEMonoidHom_injective {hnm : n ≤ m} :
     (⇑(castGEMonoidHom hnm)).Injective :=
   fun _ _ h => castGE_injective hnm (Subtype.ext_iff.mp h)
 
-@[simp]
-theorem castGE_smul {i : ℕ} {hnm : n ≤ m} :
-    (a.castGE hnm) • i = a • i := by
-  simp_rw [smul_nat_eq_dite, getElem_castGE, dite_eq_ite, ite_eq_left_iff, not_lt]
-  intro hmi
-  simp_rw [(hnm.trans hmi).not_lt, dite_false]
+@[simp] theorem castGE_isCongr {hnm : n ≤ m} :
+    (a.castGE hnm).IsCongr a := by
+  simp_rw [isCongr_iff_smul_eq, castGE_smul, implies_true]
 
-@[simp] theorem castGE_equiv {hnm : n ≤ m} :
-    (a.castGE hnm).equiv a := by
-  simp_rw [equiv_iff_smul_eq, castGE_smul, implies_true]
+@[simp] theorem isCongr_castGE {hnm : n ≤ m} : a.IsCongr (a.castGE hnm) :=
+  castGE_isCongr.symm
 
-@[simp] theorem equiv_castGE {hnm : n ≤ m} : a.equiv (a.castGE hnm) :=
-  castGE_equiv.symm
-
-@[simp] theorem castGE_equiv_castGE_iff_equiv {n' m' : ℕ} {b : PermOf n'}
+@[simp] theorem castGE_isCongr_castGE_iff_isCongr {n' m' : ℕ} {b : PermOf n'}
     {hnm : n ≤ m} {hnm' : n' ≤ m'} :
-    (a.castGE hnm).equiv (b.castGE hnm') ↔ a.equiv b := by
-  simp_rw [equiv_iff_smul_eq, castGE_smul]
+    (a.castGE hnm).IsCongr (b.castGE hnm') ↔ a.IsCongr b := by
+  simp_rw [isCongr_iff_smul_eq, castGE_smul]
 
-theorem castGE_equiv_castGE {hnm : n ≤ m} {hnk : n ≤ k} :
-    (a.castGE hnk).equiv (a.castGE hnm) := by
-  simp_rw [castGE_equiv_castGE_iff_equiv, equiv_iff_eq]
+@[simp] theorem IsCongr.castGE_isCongr_castGE {n' m' : ℕ} {b : PermOf n'}
+    {hnm : n ≤ m} {hnm' : n' ≤ m'} (hab : a.IsCongr b) :
+    (a.castGE hnm).IsCongr (b.castGE hnm') := castGE_isCongr_castGE_iff_isCongr.mpr hab
 
-theorem equiv_iff_eq_castGE_of_le {b : PermOf m} (hnm : n ≤ m) :
-    a.equiv b ↔ b = a.castGE hnm := by
+theorem castGE_isCongr_castGE_rfl {hnm : n ≤ m} {hnk : n ≤ k} :
+    (a.castGE hnk).IsCongr (a.castGE hnm) := isCongr_rfl.castGE_isCongr_castGE
+
+theorem isCongr_iff_eq_castGE_of_le {b : PermOf m} (hnm : n ≤ m) :
+    a.IsCongr b ↔ b = a.castGE hnm := by
   simp_rw [PermOf.ext_iff, getElem_castGE]
-  simp_rw [equiv_iff_smul_eq_of_lt, max_eq_left hnm, smul_nat_eq_dite]
+  simp_rw [isCongr_iff_smul_eq_of_lt, max_eq_left hnm, smul_nat_eq_dite]
   refine ⟨fun h => ?_, fun h => ?_⟩
   · intro i hi
     have H :=  dif_pos hi ▸ h hi
@@ -2384,9 +2388,9 @@ theorem equiv_iff_eq_castGE_of_le {b : PermOf m} (hnm : n ≤ m) :
     have H := h hi
     simp_rw [hi, dite_true, H]
 
-theorem equiv_iff_eq_castGE_of_ge {b : PermOf m} (hmn : m ≤ n) :
-    a.equiv b ↔ a = b.castGE hmn := by
-  rw [equiv_comm, equiv_iff_eq_castGE_of_le hmn]
+theorem isCongr_iff_eq_castGE_of_ge {b : PermOf m} (hmn : m ≤ n) :
+    a.IsCongr b ↔ a = b.castGE hmn := by
+  rw [isCongr_comm, isCongr_iff_eq_castGE_of_le hmn]
 
 end CastGE
 
@@ -2407,18 +2411,17 @@ variable {m i k : ℕ} (a : PermOf n) (ham : a.FixLT m) {hmn : m ≤ n}
   unfold castLE
   simp_rw [getElem_mk, Vector.getElem_cast, Vector.getElem_take, getElem_fwdVector]
 
-@[simp] theorem castLE_inv : a⁻¹.castLE hmn ham.inv = (a.castLE hmn ham)⁻¹ := rfl
+theorem inv_castLE : (a.castLE hmn ham)⁻¹ = a⁻¹.castLE hmn ham.inv := rfl
 
 theorem getElem_inv_castLE (him : i < m) :
     (a.castLE hmn ham)⁻¹[i] = a⁻¹[i]  := by
-  simp_rw [← castLE_inv, getElem_castLE]
+  simp_rw [inv_castLE, getElem_castLE]
 
 @[simp]
 theorem castLE_one : ((1 : PermOf n).castLE hmn fixLT_one) = (1 : PermOf m) := by
   ext i hi : 1
   simp_rw [getElem_castLE, getElem_one]
 
-@[simp]
 theorem castLE_mul (hmn : m ≤ n) {a b : PermOf n} (ham : a.FixLT m) (hbm : b.FixLT m) :
     (a * b).castLE hmn (ham.mul hbm) = a.castLE hmn ham * b.castLE hmn hbm := by
   ext i
@@ -2434,7 +2437,7 @@ theorem FixLT.castLE {a : PermOf n} (ham : a.FixLT m) {hkn : k ≤ n} {hak : a.F
     simp_rw [getElem_castLE]
     exact ham.getElem_lt_of_lt hik)
 
-@[simp] theorem castLE_trans {a : PermOf n} (ham : a.FixLT m) {hkn : k ≤ n} {hmk : m ≤ k}
+theorem castLE_trans {a : PermOf n} (ham : a.FixLT m) {hkn : k ≤ n} {hmk : m ≤ k}
     (hak : a.FixLT k) :
     (a.castLE hkn hak).castLE hmk ham.castLE = a.castLE (hmk.trans hkn) ham := by
   ext i hi
@@ -2481,28 +2484,27 @@ theorem getElem_castSucc {i : ℕ} {hi : i < n + 1} :
   · simp_rw [dif_pos hi', dif_neg hi'.not_le]
   · simp_rw [dif_pos hi', dif_neg hi'.not_lt, ← hi'.le_iff_eq, Nat.le_of_lt_succ hi]
 
-@[simp]
 theorem getElem_castSucc_of_lt {i : ℕ} (hi : i < n) :
     (a.castSucc)[i] = a[i] := by
   simp_rw [getElem_castSucc, hi.ne, dite_false]
 
-@[simp] theorem getElem_castSucc_of_eq : (a.castSucc)[n] = n := by
+theorem getElem_castSucc_of_eq : (a.castSucc)[n] = n := by
   simp_rw [getElem_castSucc, dite_true]
 
 @[simp]
-theorem castSucc_inv :
-    a⁻¹.castSucc = (a.castSucc)⁻¹ := rfl
+theorem inv_castSucc :
+    (a.castSucc)⁻¹ = a⁻¹.castSucc := rfl
 
 theorem getElem_inv_castSucc {i : ℕ} {hi : i < n + 1} :
     (a.castSucc)⁻¹[i] = if hi : i = n then n else a⁻¹[i] :=
-  a.castSucc_inv ▸ a⁻¹.getElem_castSucc
+  a.inv_castSucc ▸ a⁻¹.getElem_castSucc
 
 @[simp]
 theorem castSucc_one : (1 : PermOf n).castSucc = 1 := castGE_one
 
 @[simp]
 theorem castSucc_mul {a b : PermOf n} :
-    (a * b).castSucc = a.castSucc * b.castSucc := castGE_mul _
+    a.castSucc * b.castSucc = (a * b).castSucc := castGE_mul _
 
 @[simp] theorem castSucc_castSucc :
     a.castSucc.castSucc = a.castGE (by omega) := castGE_trans
@@ -2535,7 +2537,7 @@ theorem castSucc_injective : Function.Injective (castSucc (n := n)) :=
 @[simps! apply_coe]
 def castSuccMonoidHom : PermOf n →* fixLTSubgroup (n + 1) n where
   toFun a := ⟨a.castSucc, a.castSucc_mem_fixLTSubgroup_eq⟩
-  map_mul' := fun _ _ => Subtype.ext castSucc_mul
+  map_mul' := fun _ _ => Subtype.ext castSucc_mul.symm
   map_one' := Subtype.ext <| by simp_rw [castSucc_one, Subgroup.coe_one]
 
 theorem castSuccMonoidHom_injective :
@@ -2546,19 +2548,19 @@ theorem castSuccMonoidHom_injective :
 theorem castSucc_smul {i : ℕ} :
     a.castSucc • i = a • i := castGE_smul
 
-@[simp] theorem castSucc_equiv:
-  a.castSucc.equiv a := by simp_rw [equiv_iff_smul_eq, castSucc_smul, implies_true]
+@[simp] theorem castSucc_isCongr :
+  a.castSucc.IsCongr a := by simp_rw [isCongr_iff_smul_eq, castSucc_smul, implies_true]
 
-@[simp] theorem equiv_castSucc : a.equiv a.castSucc :=
-  castSucc_equiv.symm
+@[simp] theorem isCongr_castSucc : a.IsCongr a.castSucc :=
+  castSucc_isCongr.symm
 
-@[simp] theorem castSucc_equiv_castSucc_iff_equiv {n' : ℕ} {b : PermOf n'} :
-    a.castSucc.equiv b.castSucc ↔ a.equiv b := by
-  simp_rw [equiv_iff_smul_eq, castSucc_smul]
+@[simp] theorem castSucc_isCongr_castSucc_iff_isCongr {n' : ℕ} {b : PermOf n'} :
+    a.castSucc.IsCongr b.castSucc ↔ a.IsCongr b := by
+  simp_rw [isCongr_iff_smul_eq, castSucc_smul]
 
-theorem castSucc_equiv_castSucc :
-    a.castSucc.equiv a.castSucc := by
-  simp_rw [castSucc_equiv_castSucc_iff_equiv, equiv_iff_eq]
+theorem castSucc_isCongr_castSucc :
+    a.castSucc.IsCongr a.castSucc := by
+  simp_rw [castSucc_isCongr_castSucc_iff_isCongr, isCongr_iff_eq]
 
 end CastSucc
 
@@ -2588,7 +2590,6 @@ theorem castPred_mul' {a b : PermOf (n + 1)} (hb : b[n] = n) {hab : (a * b)[n] =
     a.castPred (by simpa only [getElem_mul, hb] using hab) * b.castPred hb :=
   castLE_mul _ _ _
 
-@[simp]
 theorem castPred_mul {a b : PermOf (n + 1)} (ha : a[n] = n) (hb : b[n] = n) :
     (a * b).castPred (by simp_rw [getElem_mul, hb, ha]) = a.castPred ha * b.castPred hb :=
   castLE_mul _ _ _
@@ -2596,7 +2597,7 @@ theorem castPred_mul {a b : PermOf (n + 1)} (ha : a[n] = n) (hb : b[n] = n) :
 theorem FixLT.castPred {a : PermOf (n + 1)} (ha : a[n] = n) {hak : a.FixLT m} :
     (a.castPred ha).FixLT m := FixLT.castLE hak
 
-@[simp] theorem castPred_trans {a : PermOf (n + 2)} (ha₁ : a[n + 1] = n + 1)
+theorem castPred_trans {a : PermOf (n + 2)} (ha₁ : a[n + 1] = n + 1)
     (ha₂ : a[n] = n) :
     (a.castPred ha₁).castPred (by simp_rw [getElem_castPred, ha₂]) =
     a.castLE (Nat.le_add_right _ _) (a.fixLT_of_getElem_eq_getElem_eq ha₁ ha₂):= castLE_trans _ _
@@ -2628,17 +2629,17 @@ theorem castPred_smul_of_lt {i : ℕ} (hi : i < n) :
 theorem castPred_smul_of_eq : (a.castPred ha) • n = a • n := by
   rw [smul_of_ge _ le_rfl, smul_of_lt _ (Nat.lt_succ_self _), ha]
 
-@[simp] theorem castPred_equiv : (a.castPred ha).equiv a := by
-  simp_rw [equiv_iff_smul_eq_of_lt, sup_of_le_left (Nat.le_succ _), Nat.lt_succ_iff,
+@[simp] theorem castPred_isCongr : (a.castPred ha).IsCongr a := by
+  simp_rw [isCongr_iff_smul_eq_of_lt, sup_of_le_left (Nat.le_succ _), Nat.lt_succ_iff,
     le_iff_eq_or_lt]
   rintro i (rfl | hi)
   · simp_rw [castPred_smul_of_eq]
   · exact castPred_smul_of_lt _ _ hi
 
-@[simp] theorem equiv_castPred : a.equiv (a.castPred ha) :=
-  (a.castPred_equiv ha).symm
+@[simp] theorem isCongr_castPred : a.IsCongr (a.castPred ha) :=
+  (a.castPred_isCongr ha).symm
 
-theorem castPred_cast {hnm : n + 1 = m + 1} {ha : (cast hnm a)[m] = m} :
+theorem castPred_cast {hnm : n + 1 = m + 1} {ha : (a.cast hnm)[m] = m} :
     (a.cast hnm).castPred ha =
     (a.castPred (by rw [getElem_cast] at ha ; simp_rw [Nat.succ_injective hnm, ha])).cast
     (Nat.succ_injective hnm) := by
@@ -2837,11 +2838,24 @@ theorem minLen_succ_of_getElem_ne {a : PermOf (n + 1)} (ha : a[n] ≠ n) :
 @[simp] theorem succ_minLen_le_of_getElem_eq {a : PermOf (n + 1)} (ha : a[n] = n) :
     a.minLen ≤ n := by simp_rw [minLen_succ_of_getElem_eq ha, minLen_le]
 
-theorem minLen_one : (1 : PermOf n).minLen = 0 := by
+@[simp] theorem minLen_one : (1 : PermOf n).minLen = 0 := by
   induction n with | zero => _ | succ n IH => _
   · simp_rw [minLen_zero]
   · rw [minLen_succ_of_getElem_eq (getElem_one _), castPred_one, IH]
 
+theorem eq_one_of_minLen_eq_zero {a : PermOf n} (ha : a.minLen = 0) : a = 1 := by
+  induction n with | zero => _ | succ n IH => _
+  · exact Subsingleton.elim _ _
+  · by_cases ha' : a[n] = n
+    · simp_rw [minLen_succ_of_getElem_eq ha'] at ha
+      have ha := IH ha
+      simp_rw [PermOf.ext_iff, getElem_one, getElem_castPred] at ha
+      simp_rw [PermOf.ext_iff, getElem_one, Nat.lt_succ_iff, le_iff_lt_or_eq]
+      exact fun _ hi => hi.elim ha (fun hi => hi ▸ ha')
+    · simp_rw [minLen_succ_of_getElem_ne ha', Nat.succ_ne_zero] at ha
+
+@[simp] theorem minLen_eq_zero_iff_eq_one {a : PermOf n} : a.minLen = 0 ↔ a = 1 :=
+  ⟨eq_one_of_minLen_eq_zero, fun h => h ▸ minLen_one⟩
 
 @[simp] theorem minLen_inv {a : PermOf n} : a⁻¹.minLen = a.minLen := by
   induction n with | zero => _ | succ n IH => _
@@ -2862,7 +2876,7 @@ theorem minLen_one : (1 : PermOf n).minLen = 0 := by
 theorem minLen_castPred {a : PermOf (n + 1)} {ha : a[n] = n} :
     (a.castPred ha).minLen = a.minLen := (minLen_succ_of_getElem_eq _).symm
 
-@[simp] theorem minLen_castSucc {a : PermOf n} :
+theorem minLen_castSucc {a : PermOf n} :
     a.castSucc.minLen = a.minLen := by
   rw [minLen_succ_of_getElem_eq (getElem_castSucc_of_eq), castPred_castSucc]
 
@@ -2890,16 +2904,19 @@ theorem minLen_castPred {a : PermOf (n + 1)} {ha : a[n] = n} :
     · simp_rw [minLen_succ_of_getElem_ne ha] at hi
       exact (hi'.not_le hi).elim
 
-theorem equiv.minLen_le {a : PermOf n} {m : ℕ} {b : PermOf m}
-    (hab : a.equiv b) : a.minLen ≤ m := by
+theorem IsCongr.minLen_eq {a : PermOf n} {m : ℕ} {b : PermOf m}
+    (hab : a.IsCongr b) : a.minLen = b.minLen := by
   rcases Nat.le_or_le m n with hmn | hnm
-  · simp_rw [equiv_iff_eq_castGE_of_ge hmn] at hab
+  · simp_rw [isCongr_iff_eq_castGE_of_ge hmn] at hab
     simp_rw [hab, minLen_castGE]
-    exact b.minLen_le
-  · exact (a.minLen_le).trans hnm
+  · simp_rw [isCongr_iff_eq_castGE_of_le hnm] at hab
+    simp_rw [hab, minLen_castGE]
 
-theorem equiv.minLen_le' {a : PermOf n} {m : ℕ} {b : PermOf m}
-    (hab : b.equiv a) : a.minLen ≤ m := hab.symm.minLen_le
+theorem IsCongr.minLen_le {a : PermOf n} {m : ℕ} {b : PermOf m}
+    (hab : a.IsCongr b) : a.minLen ≤ m := hab.minLen_eq ▸ b.minLen_le
+
+theorem IsCongr.minLen_le_min {a : PermOf n} {m : ℕ} {b : PermOf m}
+    (hab : a.IsCongr b) : a.minLen ≤ n ⊓ m := le_inf a.minLen_le hab.minLen_le
 
 end MinLen
 
@@ -2911,6 +2928,8 @@ def minPerm {n : ℕ} (a : PermOf n) : PermOf a.minLen := match n with
     else a.cast (minLen_succ_of_getElem_ne ha).symm
 
 section MinPerm
+
+variable {m : ℕ}
 
 @[simp] theorem minPerm_zero {a : PermOf 0} : a.minPerm = 1 := rfl
 
@@ -2943,49 +2962,69 @@ theorem minPerm_succ {a : PermOf (n + 1)} :
     · simp_rw [minPerm_succ_of_getElem_eq ha, getElem_inv_cast, IH, getElem_inv_castPred]
     · simp_rw [minPerm_succ_of_getElem_ne ha, getElem_inv_cast]
 
-theorem minPerm_equiv {a : PermOf n} : a.minPerm.equiv a := by
-  simp_rw [equiv_iff_getElem_eq_getElem_and_getElem_eq_of_le minLen_le,
-    getElem_minPerm, implies_true, true_and]
-  exact getElem_of_ge_minLen
+theorem castGE_minPerm_minLen_le {a : PermOf n} : a.minPerm.castGE minLen_le = a := by
+  ext i
+  rcases lt_or_ge i (a.minLen) with hi | hi
+  · simp_rw [getElem_castGE_of_lt hi, getElem_minPerm]
+  · simp_rw [getElem_castGE_of_ge hi, getElem_of_ge_minLen hi]
 
-theorem equiv_minPerm {a : PermOf n} : a.equiv a.minPerm :=
-  minPerm_equiv.symm
+@[simp] theorem minPerm_isCongr {a : PermOf n} : a.minPerm.IsCongr a := by
+  simp_rw [isCongr_iff_eq_castGE_of_le minLen_le, castGE_minPerm_minLen_le]
+
+@[simp] theorem isCongr_minPerm {a : PermOf n} : a.IsCongr a.minPerm :=
+  minPerm_isCongr.symm
+
+theorem natPerm_minPerm {a : PermOf n} : natPerm a.minLen a.minPerm = natPerm n a := by
+  simp_rw [natPerm_eq_iff_isCongr, minPerm_isCongr]
 
 @[simp] theorem minPerm_smul {a : PermOf n} {i : ℕ} :
-    a.minPerm • i = a • i := by simp_rw [minPerm_equiv.smul_eq]
+    a.minPerm • i = a • i := by simp_rw [minPerm_isCongr.smul_eq]
 
-@[simp] theorem equiv_minPerm_right {a : PermOf n} {m : ℕ} {b : PermOf m} :
-    a.equiv b.minPerm ↔ a.equiv b := by
-  simp_rw [equiv_iff_smul_eq, minPerm_equiv.smul_eq]
+theorem isCongr_minPerm_right {a : PermOf n} {b : PermOf m} :
+    a.IsCongr b.minPerm ↔ a.IsCongr b := by
+  simp_rw [isCongr_iff_smul_eq, minPerm_isCongr.smul_eq]
 
-@[simp] theorem equiv_minPerm_left {a : PermOf n} {m : ℕ} {b : PermOf m} :
-    a.minPerm.equiv b ↔ a.equiv b := by
-  simp_rw [equiv_iff_smul_eq, minPerm_equiv.smul_eq]
+theorem isCongr_minPerm_left {a : PermOf n} {b : PermOf m} :
+    a.minPerm.IsCongr b ↔ a.IsCongr b := by
+  simp_rw [isCongr_iff_smul_eq, minPerm_isCongr.smul_eq]
 
-theorem equiv_minPerm_minPerm {a : PermOf n} {m : ℕ} {b : PermOf m} :
-    a.minPerm.equiv b.minPerm ↔ a.equiv b := by
-  simp_rw [equiv_minPerm_right, equiv_minPerm_left]
+@[simp] theorem isCongr_minPerm_minPerm {a : PermOf n} {b : PermOf m} :
+    a.minPerm.IsCongr b.minPerm ↔ a.IsCongr b := by
+  simp_rw [isCongr_minPerm_right, isCongr_minPerm_left]
 
-theorem equiv.minPerm_left {a : PermOf n} {m : ℕ} {b : PermOf m}
-    (hab : a.equiv b) : a.minPerm.equiv b :=
-  equiv_minPerm_left.mpr hab
+theorem IsCongr.minPerm_left {a : PermOf n} {b : PermOf m}
+    (hab : a.IsCongr b) : a.minPerm.IsCongr b :=
+  isCongr_minPerm_left.mpr hab
 
-theorem equiv.minPerm_right {a : PermOf n} {m : ℕ} {b : PermOf m}
-    (hab : a.equiv b) : a.equiv b.minPerm :=
-  equiv_minPerm_right.mpr hab
+theorem IsCongr.minPerm_right {a : PermOf n} {b : PermOf m}
+    (hab : a.IsCongr b) : a.IsCongr b.minPerm :=
+  isCongr_minPerm_right.mpr hab
 
-theorem equiv.minPerm_minPerm {a : PermOf n} {m : ℕ} {b : PermOf m}
-    (hab : a.equiv b) : a.minPerm.equiv b.minPerm :=
-  equiv_minPerm_minPerm.mpr hab
+theorem IsCongr.minPerm_minPerm {a : PermOf n} {b : PermOf m}
+    (hab : a.IsCongr b) : a.minPerm.IsCongr b.minPerm :=
+  isCongr_minPerm_minPerm.mpr hab
 
-theorem minPerm_one : (1 : PermOf n).minPerm = (1 : PermOf 0).cast minLen_one.symm := by
+theorem isCongr_minPerm_inv_inv_minPerm {a : PermOf n} : a⁻¹.minPerm.IsCongr (a.minPerm)⁻¹ := by
+  simp_rw [isCongr_minPerm_left, inv_isCongr_inv_iff, isCongr_minPerm_right, isCongr_iff_eq]
+
+@[simp] theorem minPerm_one : (1 : PermOf n).minPerm = 1 := by
   ext
-  simp_rw [getElem_minPerm, getElem_cast, getElem_one]
+  simp_rw [getElem_minPerm, getElem_one]
+
+theorem castGE_mul_castGE_isCongr_castGE_minPerm_mul_castGE_minPerm
+    {a : PermOf n} {b : PermOf m} :
+    (a.castGE (le_max_left _ _) * b.castGE (le_max_right _ _)).IsCongr
+    ((a.minPerm.castGE (le_max_left _ _)) * (b.minPerm.castGE (le_max_right _ _))) :=
+  isCongr_minPerm.castGE_isCongr_castGE.mul_mul isCongr_minPerm.castGE_isCongr_castGE
+
+/-
+(castGE ⋯ a.snd * castGE ⋯ b.snd).minPerm.IsCongr (castGE ⋯ a.snd.minPerm * castGE ⋯ b.snd.minPerm)
+-/
 
 @[simp] theorem minPerm_inv {a : PermOf n} :
     a⁻¹.minPerm = a.minPerm⁻¹.cast minLen_inv.symm := by
   ext
-  simp_rw [getElem_minPerm, cast_inv, getElem_inv_cast, getElem_inv_minPerm]
+  simp_rw [getElem_minPerm, getElem_cast, getElem_inv_minPerm]
 
 @[simp] theorem minPerm_cast {m : ℕ} {a : PermOf n} (hnm : n = m) :
     (a.cast hnm).minPerm = a.minPerm.cast minLen_cast.symm := by
@@ -2997,7 +3036,7 @@ theorem minPerm_one : (1 : PermOf n).minPerm = (1 : PermOf 0).cast minLen_one.sy
   ext
   simp_rw [getElem_minPerm, getElem_castPred, getElem_cast, getElem_minPerm]
 
-@[simp] theorem minPerm_castSucc {a : PermOf n} :
+theorem minPerm_castSucc {a : PermOf n} :
     a.castSucc.minPerm = a.minPerm.cast minLen_castSucc.symm := by
   ext i hi
   simp_rw [minLen_castSucc] at hi
@@ -3011,6 +3050,21 @@ theorem minPerm_one : (1 : PermOf n).minPerm = (1 : PermOf 0).cast minLen_one.sy
   simp_rw [getElem_minPerm, getElem_cast,
     getElem_castGE_of_lt (hi.trans_le minLen_le), getElem_minPerm]
 
+theorem eq_one_of_minPerm_eq_one {a : PermOf n} (ha : a.minPerm = 1) : a = 1 := by
+  induction n with | zero => _ | succ n IH => _
+  · exact Subsingleton.elim _ _
+  · by_cases ha' : a[n] = n
+    · simp_rw [minPerm_succ_of_getElem_eq ha', cast_eq_one_iff] at ha
+      have ha := IH ha
+      simp_rw [PermOf.ext_iff, getElem_one, getElem_castPred] at ha
+      simp_rw [PermOf.ext_iff, getElem_one, Nat.lt_succ_iff, le_iff_lt_or_eq]
+      exact fun _ hi => hi.elim ha (fun hi => hi ▸ ha')
+    · simp_rw [minPerm_succ_of_getElem_ne ha', cast_eq_one_iff] at ha
+      exact ha
+
+theorem minPerm_eq_one_iff_eq_one {a : PermOf n} : a.minPerm = 1 ↔ a = 1 :=
+  ⟨eq_one_of_minPerm_eq_one, fun h => h ▸ minPerm_one⟩
+
 @[simp] theorem minLen_minPerm {a : PermOf n} : a.minPerm.minLen = a.minLen := by
   induction n with | zero => _ | succ n IH => _
   · simp_rw [minPerm_zero, Unique.eq_default, Unique.default_eq (1 : PermOf 0)]
@@ -3023,123 +3077,163 @@ theorem minPerm_one : (1 : PermOf n).minPerm = (1 : PermOf 0).cast minLen_one.sy
   ext
   simp_rw [getElem_minPerm, getElem_cast, getElem_minPerm]
 
-theorem equiv.minLen_eq {a : PermOf n} {m : ℕ} {b : PermOf m}
-    (hab : a.equiv b) : a.minLen = b.minLen :=
-  le_antisymm (minLen_minPerm ▸ hab.minPerm_minPerm.minLen_le)
-    (minLen_minPerm ▸ hab.symm.minPerm_minPerm.minLen_le)
-
-theorem equiv_minPerm_inv_inv_minPerm {a : PermOf n} : a⁻¹.minPerm.equiv (a.minPerm)⁻¹ := by
-  simp_rw [equiv_minPerm_left, equiv_inv_inv_iff, equiv_minPerm_right, equiv_iff_eq]
-
 end MinPerm
 
 end PermOf
 
-@[simps!]
-instance SigmaPermOf : Setoid (Σ n, PermOf n) where
-  r a b := a.2.equiv b.2
-  iseqv := ⟨fun _ => PermOf.equiv.rfl, PermOf.equiv.symm, PermOf.equiv.trans⟩
+@[reducible] def SigmaPermOf := Σ n, PermOf n
+
 
 namespace SigmaPermOf
 
-open PermOf
+open PermOf Equiv
 
-theorem equiv_def {a b : Σ n, PermOf n} :
-    a ≈ b ↔ a.2.equiv b.2 := Iff.rfl
-
-instance {a b : (n : ℕ) × PermOf n} : Decidable (a ≈ b) :=
-  decidable_of_decidable_of_iff equiv_def.symm
-
-theorem sigma_eq_of_eq_of_equiv : ∀ {a b : Σ n, PermOf n}, a.1 = b.1 → a ≈ b → a = b
+theorem sigma_eq_of_eq_of_isCongr : ∀ {a b : SigmaPermOf}, a.1 = b.1 → a.2.IsCongr b.2 → a = b
   | ⟨n, a⟩, ⟨m, b⟩, hab, heq => by
     dsimp only at hab
+    simp_rw [Sigma.mk.inj_iff]
     subst hab
-    simp_rw [equiv_def] at heq
-    simpa using heq
+    simp_rw [isCongr_iff_eq] at heq
+    subst heq
+    simp_rw [heq_eq_eq, and_self]
 
-theorem sigma_eq_iff_eq_of_equiv {a b : Σ n, PermOf n} : a = b ↔ a.1 = b.1 ∧ a ≈ b :=
-  ⟨fun h => h ▸ ⟨rfl, Setoid.refl _⟩, fun h => sigma_eq_of_eq_of_equiv h.1 h.2⟩
+theorem sigma_eq_iff_eq_and_isCongr {a b : SigmaPermOf} : a = b ↔ a.1 = b.1 ∧ a.2.IsCongr b.2 :=
+  ⟨fun h => h ▸ ⟨rfl, isCongr_rfl⟩, fun h => sigma_eq_of_eq_of_isCongr h.1 h.2⟩
 
-instance : Mul (Σ n, PermOf n) where
+instance : Mul SigmaPermOf where
   mul := fun ⟨n, a⟩ ⟨m, b⟩ =>
   ⟨max n m, (a.castGE (le_max_left _ _)) * (b.castGE (le_max_right _ _))⟩
 
-theorem mul_eq_max_castGE {a b : Σ n, PermOf n} : a * b =
+theorem mul_def {a b : SigmaPermOf} : a * b =
     ⟨max a.1 b.1, (a.2.castGE (le_max_left _ _)) * (b.2.castGE (le_max_right _ _))⟩ := rfl
 
-instance : One (Σ n, PermOf n) where
+@[simp] theorem mk_mul {n : ℕ} {a b : PermOf n} :
+    (⟨n, a * b⟩ : SigmaPermOf) = ⟨n, a⟩ * ⟨n, b⟩ := by
+  simp_rw [sigma_eq_iff_eq_and_isCongr, mul_def, castGE_mul, isCongr_castGE,
+    max_self, true_and]
+
+@[simp] theorem mul_mk_one {a : SigmaPermOf} {n : ℕ} :
+    a * ⟨n, 1⟩ = ⟨a.1 ⊔ n, a.2.castGE (le_max_left _ _)⟩ := by
+  simp_rw [sigma_eq_iff_eq_and_isCongr, mul_def, castGE_one,
+    mul_one, isCongr_rfl, true_and]
+
+@[simp] theorem mk_one_mul {a : SigmaPermOf} {n : ℕ} :
+    ⟨n, 1⟩ * a = ⟨n ⊔ a.1, a.2.castGE (le_max_right _ _)⟩ := by
+  simp_rw [sigma_eq_iff_eq_and_isCongr, mul_def, castGE_one,
+    one_mul, isCongr_rfl, true_and]
+
+instance : One SigmaPermOf where
   one := ⟨0, 1⟩
 
-theorem one_eq_zero_one : (1 : Σ n, PermOf n) = ⟨0, 1⟩ := rfl
+theorem one_def : (1 : SigmaPermOf) = ⟨0, 1⟩ := rfl
 
-theorem equiv_one_iff_snd_eq_one {a : Σ n, PermOf n} :
-    a ≈ 1 ↔ a.2 = 1 := by
-  simp_rw [equiv_def, one_eq_zero_one, equiv_one_iff_eq_one]
-
-instance : Inv (Σ n, PermOf n) where
+instance : Inv SigmaPermOf where
   inv := fun ⟨_, a⟩ => ⟨_, a⁻¹⟩
 
-theorem inv_eq_mk_inv {a : Σ n, PermOf n} : a⁻¹ = ⟨a.1, a.2⁻¹⟩ := rfl
+theorem inv_def {a : SigmaPermOf} : a⁻¹ = ⟨a.1, a.2⁻¹⟩ := rfl
 
-instance : DivisionMonoid (Σ n, PermOf n) where
+@[simp] theorem mul_inv_self {a : SigmaPermOf} : a * a⁻¹ = ⟨a.fst, 1⟩ := by
+  simp_rw [sigma_eq_iff_eq_and_isCongr, isCongr_one_iff_eq_one, mul_def, inv_def,
+    max_self, castGE_of_eq (max_self _).symm, cast_mul, mul_inv_cancel, cast_one, and_self]
+
+@[simp] theorem inv_self_mul {a : SigmaPermOf} : a⁻¹ * a = ⟨a.fst, 1⟩ := by
+  simp_rw [sigma_eq_iff_eq_and_isCongr, isCongr_one_iff_eq_one, mul_def, inv_def,
+    max_self, castGE_of_eq (max_self _).symm, cast_mul, inv_mul_cancel, cast_one, and_self]
+
+instance : DivisionMonoid SigmaPermOf where
   mul_assoc := (fun ⟨n, a⟩ ⟨m, b⟩ ⟨l, c⟩ => by
-    simp_rw [sigma_eq_iff_eq_of_equiv, mul_eq_max_castGE, max_assoc, true_and,
-      equiv_def, castGE_mul, castGE_trans, mul_assoc]
-    exact castGE_equiv_castGE.mul_mul
-      (castGE_equiv_castGE.mul_mul castGE_equiv_castGE))
-  one_mul := (fun ⟨n, a⟩ => by simp_rw [sigma_eq_iff_eq_of_equiv,
-    mul_eq_max_castGE, one_eq_zero_one, Nat.zero_max, true_and,
-    equiv_def, castGE_one, one_mul, castGE_equiv])
-  mul_one := (fun ⟨n, a⟩ => by simp_rw [sigma_eq_iff_eq_of_equiv,
-    mul_eq_max_castGE, one_eq_zero_one, Nat.max_zero, true_and,
-    equiv_def, castGE_one, mul_one, castGE_equiv])
+    simp_rw [sigma_eq_iff_eq_and_isCongr, mul_def, castGE_castGE_mul, mul_assoc]
+    exact ⟨max_assoc _ _ _,
+      castGE_isCongr_castGE_rfl.mul_mul
+      (castGE_isCongr_castGE_rfl.mul_mul castGE_isCongr_castGE_rfl)⟩)
+  one_mul := (fun ⟨n, a⟩ => by
+    simp_rw [one_def, mk_one_mul, sigma_eq_iff_eq_and_isCongr]
+    exact ⟨Nat.zero_max _, castGE_isCongr⟩)
+  mul_one := (fun ⟨n, a⟩ => by
+    simp_rw [one_def, mul_mk_one, sigma_eq_iff_eq_and_isCongr]
+    exact ⟨Nat.max_zero _, castGE_isCongr⟩)
   inv_inv _ := rfl
   mul_inv_rev _ _ := by
-    simp_rw [sigma_eq_iff_eq_of_equiv, mul_eq_max_castGE, inv_eq_mk_inv, equiv_def,
-      equiv_iff_smul_eq, mul_inv_rev, mul_smul, inv_smul_eq_iff, castGE_smul,
-      smul_inv_smul, implies_true, max_comm, and_true]
+    simp_rw [sigma_eq_iff_eq_and_isCongr, mul_def, inv_def, mul_inv_rev,
+      inv_castGE]
+    exact ⟨max_comm _ _, castGE_isCongr_castGE_rfl.mul_mul castGE_isCongr_castGE_rfl⟩
   inv_eq_of_mul _ _ := by
-    simp_rw [sigma_eq_iff_eq_of_equiv, mul_eq_max_castGE, inv_eq_mk_inv, one_eq_zero_one,
-      Nat.max_eq_zero_iff, and_imp, equiv_def, equiv_one_iff_eq_one, equiv_iff_smul_eq,
-      eq_iff_smul_nat_eq_smul_nat, mul_smul, castGE_smul, one_smul, inv_smul_eq_iff]
+    simp_rw [sigma_eq_iff_eq_and_isCongr, mul_def, inv_def, one_def,
+      Nat.max_eq_zero_iff, and_imp, isCongr_iff_smul_eq, one_smul, mul_smul, castGE_smul,
+      inv_smul_eq_iff]
     exact fun ha hb hab => ⟨ha.trans hb.symm, hab.symm⟩
 
-theorem equiv_mul_mul_of_equiv_equiv {a b c d : Σ n, PermOf n} :
-    a ≈ b → c ≈ d → a*c ≈ b*d := by
-  simp_rw [equiv_def, mul_eq_max_castGE, equiv_iff_smul_eq, mul_smul, castGE_smul]
-  exact fun hab hcd => by simp_rw [hab, hcd, implies_true]
+@[simps! apply]
+def natPerm : SigmaPermOf →* Perm ℕ where
+  toFun a := a.2.natPerm _
+  map_one' := by simp_rw [one_def, map_one]
+  map_mul' := by
+    simp_rw [mul_def, map_mul, Equiv.ext_iff, Perm.mul_apply,
+      natPerm_apply_apply, castGE_smul, implies_true]
 
-theorem equiv_iff_mul_inv_equiv_one {a b : Σ n, PermOf n} : a ≈ b ↔ a * b⁻¹ ≈ 1 := by
-  simp_rw [equiv_def, mul_eq_max_castGE, inv_eq_mk_inv, one_eq_zero_one,
-    equiv_one_iff_eq_one, equiv_iff_smul_eq, castGE_inv, mul_inv_eq_one,
-    eq_iff_smul_nat_eq_smul_nat, castGE_smul]
+theorem natPerm_eq_iff_snd_isCongr_snd {a b : SigmaPermOf} :
+    natPerm a = natPerm b ↔ a.snd.IsCongr b.snd := by
+  simp_rw [natPerm_apply, natPerm_eq_iff_isCongr]
 
-theorem equiv_iff_inv_mul_equiv_one {a b : Σ n, PermOf n} : a ≈ b ↔ b⁻¹ * a ≈ 1 := by
-  simp_rw [equiv_def, mul_eq_max_castGE, inv_eq_mk_inv, one_eq_zero_one,
-    equiv_one_iff_eq_one, equiv_iff_smul_eq, castGE_inv, inv_mul_eq_one,
-    eq_iff_smul_nat_eq_smul_nat, castGE_smul, eq_comm]
+theorem natPerm_apply_apply_of_ge_fst {a : SigmaPermOf} {i : ℕ} (hi : a.fst ≤ i) :
+    a.natPerm i = i := by
+  simp_rw [natPerm_apply, natPerm_apply_apply, smul_of_ge a.snd hi]
 
-theorem inv_equiv_inv_of_equiv {a b : Σ n, PermOf n} : a ≈ b → a⁻¹ ≈ b⁻¹ := by
-  simp_rw [equiv_def,  inv_eq_mk_inv, equiv_iff_smul_eq, inv_smul_eq_iff]
-  exact fun H => by simp_rw [H, smul_inv_smul, implies_true]
+theorem lt_fst_of_natPerm_unfix {a : SigmaPermOf} {i : ℕ} (hi : a.natPerm i ≠ i) : i < a.fst :=
+  lt_of_not_le (Function.mt natPerm_apply_apply_of_ge_fst hi)
 
-theorem equiv_iff_inv_equiv_inv {a b : Σ n, PermOf n} : a ≈ b ↔ a⁻¹ ≈ b⁻¹ :=
-  ⟨inv_equiv_inv_of_equiv, inv_equiv_inv_of_equiv⟩
+instance IsCongr : Con SigmaPermOf := Con.ker natPerm
 
-@[simp] theorem mul_inv_equiv_one {a : Σ n, PermOf n} : a * a⁻¹ ≈ 1 := by
-  simp_rw [equiv_def, mul_eq_max_castGE, inv_eq_mk_inv, one_eq_zero_one,
-    equiv_one_iff_eq_one, castGE_inv, mul_inv_cancel]
+@[simp] theorem isCongr_iff_snd_isCongr_snd {a b : SigmaPermOf} :
+    IsCongr a b ↔ a.2.IsCongr b.2 := by
+  unfold IsCongr
+  simp_rw [Con.ker_rel, natPerm_eq_iff_snd_isCongr_snd]
 
-@[simp] theorem inv_mul_equiv_one {a : Σ n, PermOf n} : a⁻¹ * a ≈ 1 := by
-  simp_rw [equiv_def, mul_eq_max_castGE, inv_eq_mk_inv, one_eq_zero_one,
-    equiv_one_iff_eq_one, castGE_inv, inv_mul_cancel]
+theorem IsCongr_mul {a b c d : SigmaPermOf} :
+    IsCongr a b → IsCongr c d → IsCongr (a*c) (b*d) := IsCongr.mul
 
-instance equivSubmonoid : Submonoid ((Σ n, PermOf n) × (Σ n, PermOf n)) where
-  carrier a := a.1 ≈ a.2
-  mul_mem' := equiv_mul_mul_of_equiv_equiv
-  one_mem' := Setoid.refl 1
+instance {a b : SigmaPermOf} : Decidable (IsCongr a b) :=
+  decidable_of_decidable_of_iff isCongr_iff_snd_isCongr_snd.symm
 
-def minRep (a : Σ n, PermOf n) : Σ n, PermOf n := ⟨a.2.minLen, a.2.minPerm⟩
+theorem isCongr_mk_one_iff_snd_eq_one {a : SigmaPermOf} {n : ℕ} :
+    IsCongr a ⟨n, 1⟩ ↔ a.2 = 1 := by
+  simp_rw [isCongr_iff_snd_isCongr_snd, isCongr_one_iff_eq_one]
+
+theorem isCongr_one_iff_snd_eq_one {a : SigmaPermOf} :
+    IsCongr a 1 ↔ a.2 = 1 := isCongr_mk_one_iff_snd_eq_one
+
+theorem mk_one_isCongr_one {n : ℕ} : IsCongr (⟨n, 1⟩ : SigmaPermOf) 1 := by
+  simp_rw [isCongr_one_iff_snd_eq_one]
+
+@[simp] theorem mul_inv_isCongr_one {a : SigmaPermOf} : IsCongr (a * a⁻¹) 1 := by
+  simp_rw [mul_inv_self, mk_one_isCongr_one]
+
+@[simp] theorem inv_mul_isCongr_one {a : SigmaPermOf} : IsCongr (a⁻¹ * a) 1 := by
+  simp_rw [inv_self_mul, mk_one_isCongr_one]
+
+@[simp]
+theorem inv_isCongr_inv_iff_isCongr {a b : SigmaPermOf} : IsCongr a⁻¹ b⁻¹ ↔ IsCongr a b := by
+    simp_rw [isCongr_iff_snd_isCongr_snd, inv_def, inv_isCongr_inv_iff]
+
+theorem inv_isCongr_inv_of_isCongr {a b : SigmaPermOf} : IsCongr a b → IsCongr a⁻¹ b⁻¹ :=
+  inv_isCongr_inv_iff_isCongr.mpr
+
+theorem isCongr_iff_mul_inv_isCongr_one {a b : SigmaPermOf} :
+    IsCongr a b ↔ IsCongr (a * b⁻¹) 1 := by
+  simp_rw [isCongr_one_iff_snd_eq_one, mul_def, inv_def, mul_eq_one_iff_eq_inv,
+    inv_castGE, inv_inv, ← isCongr_iff_eq, castGE_isCongr_castGE_iff_isCongr,
+    isCongr_iff_snd_isCongr_snd]
+
+theorem isCongr_iff_inv_mul_isCongr_one {a b : SigmaPermOf} : IsCongr a b ↔ IsCongr (b⁻¹ * a) 1 := by
+  simp_rw [isCongr_one_iff_snd_eq_one, mul_def, inv_def, mul_eq_one_iff_eq_inv',
+    inv_castGE, inv_inv, ← isCongr_iff_eq, castGE_isCongr_castGE_iff_isCongr,
+    isCongr_iff_snd_isCongr_snd]
+
+@[simps!]
+def isCongrSubmonoid : Submonoid (SigmaPermOf × SigmaPermOf) := IsCongr.submonoid
+
+@[simps!]
+def minRep (a : SigmaPermOf) : SigmaPermOf := ⟨a.2.minLen, a.2.minPerm⟩
 
 section MinRep
 
@@ -3147,145 +3241,126 @@ variable {n : ℕ}
 
 @[simp] theorem minRep_mk {a : PermOf n} : minRep ⟨n, a⟩ = ⟨a.minLen, a.minPerm⟩ := rfl
 
-@[simp] theorem minRep_fst {a : Σ n, PermOf n} : (minRep a).fst = a.snd.minLen := rfl
+theorem minRep_eq_iff_isCongr {a b : SigmaPermOf} : minRep a = minRep b ↔ IsCongr a b := by
+  simp_rw [sigma_eq_iff_eq_and_isCongr, isCongr_iff_snd_isCongr_snd, minRep_fst, minRep_snd,
+    isCongr_minPerm_minPerm, and_iff_right_iff_imp]
+  exact IsCongr.minLen_eq
 
-@[simp] theorem minRep_snd {a : Σ n, PermOf n} : (minRep a).snd = a.snd.minPerm := rfl
+@[simp] theorem isCongr_minRep {a : SigmaPermOf} : IsCongr (minRep a) a := by
+  simp_rw [isCongr_iff_snd_isCongr_snd]
+  exact minPerm_isCongr
 
-theorem minRep_minRep {a : Σ n, PermOf n} : minRep (minRep a) = minRep a := by
+theorem minRep_minRep {a : SigmaPermOf} : minRep (minRep a) = minRep a := by
+  simp_rw [minRep_eq_iff_isCongr, isCongr_minRep]
+
+@[simp] theorem minRep_eq_one_iff {a : SigmaPermOf} : minRep a = 1 ↔ IsCongr a 1 := by
+  simp_rw [sigma_eq_iff_eq_and_isCongr, one_def, isCongr_mk_one_iff_snd_eq_one,
+    isCongr_one_iff_eq_one, minRep_fst, minRep_snd, minLen_eq_zero_iff_eq_one,
+    minPerm_eq_one_iff_eq_one, and_self]
+
+@[simp] theorem minRep_one : minRep (1 : SigmaPermOf) = 1 := by
+  simp_rw [minRep_eq_one_iff, IsCongr.refl]
+
+theorem minRep_mul {a b : SigmaPermOf} :
+    (a * b).minRep = (minRep a * minRep b).minRep := by
+  simp_rw [minRep_eq_iff_isCongr, isCongr_iff_snd_isCongr_snd]
+  exact castGE_mul_castGE_isCongr_castGE_minPerm_mul_castGE_minPerm
+
+@[simp] theorem minRep_inv {a : SigmaPermOf} : minRep a⁻¹ = (minRep a)⁻¹ := by
   cases a
-  simp_rw [minRep_mk, sigma_eq_iff_eq_of_equiv, minLen_minPerm, equiv_def,
-    minPerm_minPerm, cast_left_equiv_def, equiv_iff_eq, and_self]
+  simp_rw [inv_def, minRep_mk, sigma_eq_iff_eq_and_isCongr, minLen_inv,
+    isCongr_minPerm_inv_inv_minPerm, and_self]
 
-@[simp] theorem minRep_equiv {a : Σ n, PermOf n} : minRep a ≈ a := by
-  simp_rw [equiv_def]
-  exact minPerm_equiv
-
-theorem minRep_eq_of_equiv {a b : Σ n, PermOf n} : a ≈ b → minRep a = minRep b := by
-  simp_rw [sigma_eq_iff_eq_of_equiv, equiv_def]
-  exact fun h => ⟨h.minLen_eq, h.minPerm_minPerm⟩
-
-theorem equiv_of_minRep_eq {a b : Σ n, PermOf n} : minRep a = minRep b → a ≈ b := by
-  simp_rw [sigma_eq_iff_eq_of_equiv, equiv_def]
-  exact fun h => equiv_minPerm_minPerm.mp h.2
-
-theorem minRep_eq_iff_equiv {a b : Σ n, PermOf n} : minRep a = minRep b ↔ a ≈ b :=
-  ⟨equiv_of_minRep_eq, minRep_eq_of_equiv⟩
-
-@[simp] theorem minRep_one : minRep (1 : Σ n, PermOf n) = 1 := by
-  simp_rw [one_eq_zero_one, minRep_mk, minLen_zero, minPerm_zero]
-
-@[simp] theorem minRep_inv {a : Σ n, PermOf n} : minRep a⁻¹ = (minRep a)⁻¹ := by
-  cases a
-  simp_rw [inv_eq_mk_inv, minRep_mk, sigma_eq_iff_eq_of_equiv, minLen_inv, equiv_def,
-    equiv_minPerm_inv_inv_minPerm, and_self]
-
-@[simp] theorem minRep_mul {a b : Σ n, PermOf n} : minRep (a * b) ≈ minRep a * minRep b := by
-  cases a ; cases b
-  simp_rw [mul_eq_max_castGE, minRep_mk, equiv_def, equiv_minPerm_left]
-  exact equiv.mul_mul (by simp_rw [castGE_equiv_castGE_iff_equiv, equiv_minPerm])
-    (by simp_rw [castGE_equiv_castGE_iff_equiv, equiv_minPerm])
+@[simp] theorem minRep_mul_IsCongr {a b : SigmaPermOf} :
+    IsCongr (minRep (a * b)) (minRep a * minRep b) := by
+  rw [minRep_mul]
+  exact isCongr_minRep
 
 end MinRep
 
+def ofPermOf (n : ℕ) : OneHom (PermOf n) SigmaPermOf where
+  toFun a := minRep (Sigma.mk n a)
+  map_one' := by simp_rw [minRep_eq_one_iff, isCongr_one_iff_snd_eq_one]
+
+def ofPermOf' (n : ℕ) : PermOf n →ₙ* SigmaPermOf where
+  toFun a := Sigma.mk n a
+  map_mul' _ _ := mk_mul
+
 end SigmaPermOf
 
-@[reducible] def FinitePerm : Type := Quotient SigmaPermOf
+@[reducible] def FinitePerm : Type := SigmaPermOf.IsCongr.Quotient
 
 namespace FinitePerm
 
-open PermOf SigmaPermOf
+open SigmaPermOf Equiv
 
-instance : DecidableEq FinitePerm := Quotient.decidableEq
-
-instance : One FinitePerm := ⟨Quotient.mk _ 1⟩
-
-theorem one_eq_one_class : (1 : FinitePerm) = ⟦1⟧ := rfl
-
-instance : Mul FinitePerm :=
-  ⟨(Quotient.map₂ (· * ·) (fun _ _ ha _ _ => equiv_mul_mul_of_equiv_equiv ha) · ·)⟩
-
-theorem mul_eq_mul_class {a b : Σ n, PermOf n} :
-    ⟦a⟧ * ⟦b⟧ = (⟦a * b⟧ : FinitePerm) := Quotient.map₂_mk _ _ _ _
-
-instance : Inv FinitePerm := ⟨(Quotient.map (·⁻¹) (fun _ _ => inv_equiv_inv_of_equiv) ·)⟩
-
-theorem inv_eq_inv_class {a : Σ n, PermOf n} :
-    (⟦a⟧ : FinitePerm)⁻¹ = (⟦a⁻¹⟧ : FinitePerm) := Quotient.map_mk _ _ _
+instance : DecidableEq FinitePerm := IsCongr.instDecidableEqQuotientOfDecidableCoeForallProp
 
 instance : Group FinitePerm where
-  mul_assoc a b c := Quotient.inductionOn₃ a b c (by
-    simp_rw [mul_eq_mul_class, mul_assoc, implies_true])
-  one_mul a := Quotient.inductionOn a (by
-    simp_rw [one_eq_one_class, mul_eq_mul_class, one_mul, implies_true])
-  mul_one a := Quotient.inductionOn a (by
-    simp_rw [one_eq_one_class, mul_eq_mul_class, mul_one, implies_true])
-  inv_mul_cancel a := Quotient.inductionOn a (by
-    simp_rw [one_eq_one_class, inv_eq_inv_class, mul_eq_mul_class, Quotient.eq_iff_equiv]
-    exact fun _ => inv_mul_equiv_one)
+  inv a := IsCongr.liftOn a (fun a => (a⁻¹ : SigmaPermOf))
+    (fun _ _ => SigmaPermOf.IsCongr.eq.mpr ∘ inv_isCongr_inv_of_isCongr)
+  inv_mul_cancel a := IsCongr.induction_on a
+    fun _ => SigmaPermOf.IsCongr.eq.mpr inv_mul_isCongr_one
 
-def mk : (Σ n, PermOf n) →* FinitePerm where
-  toFun a := ⟦a⟧
-  map_one' := one_eq_one_class.symm
-  map_mul' _ _ := mul_eq_mul_class.symm
+def mk : SigmaPermOf →* FinitePerm where
+  toFun a := a
+  map_one' := rfl
+  map_mul' _ _ := rfl
 
-theorem mk_eq_mk' {a : Σ n, PermOf n} : mk a = ⟦a⟧ := rfl
+@[simp] theorem coe_eq_mk {a : SigmaPermOf} : (a : FinitePerm) = mk a := rfl
 
-@[simp low] theorem mk_map_inv {a : Σ n, PermOf n} : mk a⁻¹ = (mk a)⁻¹ := inv_eq_inv_class.symm
+@[simp low] theorem mk_map_inv {a : SigmaPermOf} : mk a⁻¹ = (mk a)⁻¹ := rfl
 
-@[simp low] theorem mk_map_div {a b : Σ n, PermOf n} :
+@[simp low] theorem mk_map_div {a b : SigmaPermOf} :
   mk (a / b) = mk a / mk b := map_div' _ (fun _ => mk_map_inv) _ _
 
-theorem mk_eq_mk_iff {a b : Σ n, PermOf n} : mk a = mk b ↔ a ≈ b := Quotient.eq_iff_equiv
+theorem mk_eq_mk_iff {a b : SigmaPermOf} : mk a = mk b ↔ IsCongr a b := IsCongr.eq
 
-theorem mk_one {n : ℕ} : mk ⟨n, 1⟩ = 1 := by
-  simp_rw [one_eq_one_class, one_eq_zero_one,  mk_eq_mk', Quotient.eq_iff_equiv,
-    equiv_def, equiv_one_one]
+theorem mk_mk_one {n : ℕ} : mk ⟨n, 1⟩ = 1 := IsCongr.eq.mpr mk_one_isCongr_one
 
-theorem mk_mul {n : ℕ} {a b : PermOf n} : mk ⟨n, a * b⟩ = mk ⟨n, a⟩ * mk ⟨n, b⟩ := by
-  simp_rw [mk_eq_mk', mul_eq_mul_class, mul_eq_max_castGE, Quotient.eq_iff_equiv,
-    equiv_def, equiv_iff_smul_eq, mul_smul, castGE_smul, implies_true]
+theorem mk_mk_mul {n : ℕ} {a b : PermOf n} : mk ⟨n, a * b⟩ = mk ⟨n, a⟩ * mk ⟨n, b⟩ := by
+  simp_rw [mk_mul, map_mul]
 
-theorem mk_sound {a b : Σ n, PermOf n} : a ≈ b → mk a = mk b := Quotient.sound
+theorem mk_minRep {a : SigmaPermOf} : mk (minRep a) = mk a := by
+  simp_rw [mk_eq_mk_iff, isCongr_minRep]
 
-theorem mk_minRep {a : Σ n, PermOf n} : mk (minRep a) = mk a := by
-  simp_rw [mk_eq_mk_iff, minRep_equiv]
-
-theorem ind {β : FinitePerm → Prop} : (∀ (a : Σ n, PermOf n), β (mk a)) → ∀ q, β q :=
-  Quotient.ind
-
-def lift : OneHom FinitePerm (Σ n, PermOf n) where
-  toFun := Quotient.lift minRep (fun _ _ => minRep_eq_of_equiv)
+def lift : OneHom FinitePerm SigmaPermOf where
+  toFun := (IsCongr.liftOn · minRep (fun _ _ => minRep_eq_iff_isCongr.mpr))
   map_one' := minRep_one
 
 instance : Repr FinitePerm := ⟨fun a i => Std.Format.bracketFill "⟦" (reprPrec (lift a) i) "⟧"⟩
 
-@[simp] theorem lift_mk' {a : Σ n, PermOf n} : lift ⟦a⟧ = minRep a := rfl
-
-@[simp] theorem lift_mk {a : Σ n, PermOf n} : lift (mk a) = minRep a := rfl
-
-@[simp] theorem mk'_lift {a : FinitePerm} : ⟦a.lift⟧ = a := Quotient.inductionOn a
-  (fun _ => by simp_rw [lift_mk', Quotient.eq_iff_equiv] ; exact minRep_equiv)
+@[simp] theorem lift_mk {a : SigmaPermOf} : lift (mk a) = minRep a := rfl
 
 @[simp] theorem mk_lift {a : FinitePerm} : mk (a.lift) = a :=
-  Quotient.inductionOn a (fun _ => by simp_rw [lift_mk', mk_minRep, mk_eq_mk'])
+  IsCongr.induction_on a (fun _ => mk_minRep)
 
 @[simp] theorem minRep_lift {a : FinitePerm} : minRep a.lift = a.lift :=
-  Quotient.inductionOn a (fun _ => by simp_rw [lift_mk', minRep_minRep])
+  IsCongr.induction_on a (fun _ => minRep_minRep)
 
-@[ext] theorem ext {a b : FinitePerm} : a.lift = b.lift → a = b := Quotient.inductionOn₂ a b
-  (fun _ _ => by simp_rw [lift_mk', Quotient.eq_iff_equiv] ; exact equiv_of_minRep_eq)
+@[ext] theorem ext {a b : FinitePerm} : a.lift = b.lift → a = b := IsCongr.induction_on₂ a b
+  (fun _ _ => by simp_rw [coe_eq_mk, lift_mk, mk_eq_mk_iff] ; exact minRep_eq_iff_isCongr.mp)
 
 @[simp] theorem lift_inv {a : FinitePerm} : lift a⁻¹ = (lift a)⁻¹ :=
-  Quotient.inductionOn a (fun _ => by simp_rw [inv_eq_inv_class, lift_mk', minRep_inv])
-@[simp] theorem lift_mul {a b : FinitePerm} : lift (a * b) ≈ lift a * lift b :=
-  Quotient.inductionOn₂ a b (fun _ _ => by simp_rw [mul_eq_mul_class, lift_mk', minRep_mul])
+  IsCongr.induction_on a (fun _ => minRep_inv)
+
+@[simp] theorem lift_mul {a b : FinitePerm} : (lift (a * b)).IsCongr (lift a * lift b) := by
+  simp_rw [← mk_eq_mk_iff, map_mul, mk_lift]
 
 def ofPermOf (n : ℕ) : PermOf n →* FinitePerm where
   toFun a := mk ⟨n, a⟩
-  map_one' := mk_one
-  map_mul' _ _ := mk_mul
+  map_one' := mk_mk_one
+  map_mul' _ _ := mk_mk_mul
 
 def ofVector {n : ℕ} (a : Vector ℕ n) (hx : ∀ {x} (hx : x < n), a[x] < n := by decide)
   (ha : a.toList.Nodup := by decide) : FinitePerm := ofPermOf n (PermOf.ofVector a hx ha)
+
+def natPerm : FinitePerm →* Perm ℕ := Con.kerLift _
+
+theorem natPerm_apply (a : FinitePerm) : natPerm a = a.lift.snd.natPerm a.lift.fst :=
+  IsCongr.induction_on a <| fun _ => (Con.kerLift_mk _).trans <|
+    (SigmaPermOf.natPerm_apply _).trans PermOf.natPerm_minPerm.symm
+
+
 
 end FinitePerm
