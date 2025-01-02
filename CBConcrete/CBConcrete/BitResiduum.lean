@@ -1824,7 +1824,7 @@ theorem getElem_flipBit_of_le_flipBit {hk : k < n} (hk' : n ≤ k.flipBit i) :
 
 theorem flipBit_smul_eq_self {x : ℕ} :
     (flipBit i : PermOf n) • x = x ↔ n ≤ x ∨ n ≤ x.flipBit i := by
-  simp_rw [smul_nat_eq_dite, getElem_flipBit,
+  simp_rw [smul_eq_dite, getElem_flipBit,
     dite_eq_ite, ite_eq_right_iff, Nat.flipBit_ne_self, imp_false,
     imp_iff_or_not, not_lt, or_comm]
 
@@ -1935,7 +1935,7 @@ theorem getElem_flipBitVals_ne_self_of_div {hk : k < n} :
   exact Nat.flipBit_ne_self
 
 open Equiv.Perm in
-theorem natPerm_flipBit : natPerm n (flipBit i) =
+theorem natPerm_flipBit : natPerm (n := n) (flipBit i) =
     ofSubtype ((Nat.flipBitPerm i).subtypePerm (fun k => (k.flipBit_lt_iff_lt hin).symm)) := by
   ext k : 1
   simp_rw [natPerm_apply_apply]
@@ -1945,12 +1945,6 @@ theorem natPerm_flipBit : natPerm n (flipBit i) =
       if_pos hk]
   · rw [Equiv.Perm.ofSubtype_subtypePerm_of_not_mem (p := fun i => i < n) _ hk.not_lt,
       smul_of_ge _ hk]
-
-theorem ofNatPerm_flipBit :
-    ofNatPerm (Nat.flipBitPerm i) (fun k => k.flipBit_lt_iff_lt hin) = flipBit i := by
-  ext k hk : 1
-  simp only [getElem_ofNatPerm, Nat.flipBitPerm_apply, getElem_flipBit, getElem_one,
-  k.flipBit_lt_iff_lt hin, hk, ite_true]
 
 end FlipBit
 
@@ -2168,7 +2162,7 @@ theorem getElem_inv_condFlipBitVals_of_div {hk : k < n} :
   simp_rw [getElem_inv_condFlipBitVals, (k.condFlipBit_lt_iff_lt hin), hk, dite_true]
 
 open Equiv.Perm in
-theorem natPerm_condFlipBit : natPerm n (condFlipBit i c) =
+theorem natPerm_condFlipBit : natPerm (n := n) (condFlipBit i c) =
     ofSubtype ((Nat.condFlipBitPerm i c).subtypePerm
     (fun k => (k.condFlipBit_lt_iff_lt hin).symm)) := by
   ext k : 1
@@ -2179,13 +2173,6 @@ theorem natPerm_condFlipBit : natPerm n (condFlipBit i c) =
       Nat.condFlipBit_lt_iff_lt hin, if_pos hk]
   · rw [Equiv.Perm.ofSubtype_subtypePerm_of_not_mem (p := fun i => i < n) _ hk.not_lt,
       smul_of_ge _ hk]
-
-theorem ofNatPerm_condFlipBit :
-    ofNatPerm (Nat.condFlipBitPerm i c)
-    (fun k => k.condFlipBit_lt_iff_lt hin) = condFlipBit i c := by
-  ext k hk : 1
-  simp only [getElem_ofNatPerm, Nat.condFlipBitPerm_apply, getElem_condFlipBit, getElem_one,
-  k.condFlipBit_lt_iff_lt hin, hk, ite_true]
 
 end CondFlipBit
 
