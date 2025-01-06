@@ -2369,7 +2369,7 @@ theorem ofNatSepAt_surjective : Function.Surjective (ofNatSepAt (n := n)) := by
   let b : NatSepAt n := ⟨⟨(a • ·), (a⁻¹ • ·), inv_smul_smul _, smul_inv_smul _⟩,
     fun _ => a.smul_lt_of_lt⟩
   refine ⟨b, PermOf.ext ?_⟩
-  simp_rw [getElem_ofNatSepAt, coe_fn_mk]
+  simp_rw [getElem_ofNatSepAt]
   exact a.smul_of_lt
 
 theorem ker_ofNatSepAt : (ofNatSepAt (n := n)).ker = (NatFixLT n).subgroupOf (NatSepAt n) := by

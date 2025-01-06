@@ -33,16 +33,10 @@ theorem lt_length_right_of_zip {i : ℕ} {as : Array α} {bs : Array β} (h : i 
     i < bs.size := lt_length_right_of_zipWith h
 
 @[simp]
-theorem getElem_zipWith {as : Array α} {bs : Array β} {f : α → β → γ} {i : ℕ}
-    (h : i < (as.zipWith bs f).size) : (as.zipWith bs f)[i] =
-    f (as[i]'(lt_length_left_of_zipWith h)) (bs[i]'(lt_length_right_of_zipWith h)) := by
-  simp_rw [getElem_eq_getElem_toList, Array.toList_zipWith, List.getElem_zipWith]
-
-@[simp]
 theorem getElem_zip {as : Array α} {bs : Array β} {i : ℕ}
     (h : i < (as.zip bs).size) : (as.zip bs)[i] =
     (as[i]'(lt_length_left_of_zip h), bs[i]'(lt_length_right_of_zip h)) := by
-  simp_rw [getElem_eq_getElem_toList, Array.toList_zip, List.getElem_zip]
+  simp_rw [← Array.getElem_toList, Array.toList_zip, List.getElem_zip]
 
 @[simp]
 theorem getElem_zipWithIndex {as : Array α} {i : ℕ}
@@ -105,11 +99,6 @@ theorem getElem_swapIfInBounds {as : Array α} {i j k : ℕ} (hk : k < (as.swapI
       · simp_rw [hi, dite_true, getElem_swapIfInBounds_right hi]
       · simp_rw [hi.not_lt, dite_false, getElem_swapIfInBounds_of_ge_left hi]
     · simp_rw [hi, hj, false_and, dite_false, getElem_swapIfInBounds_of_ne_ne hi hj]
-
-@[simp] theorem getElem_reverse {as : Array α} (hk : k < as.reverse.size) :
-    as.reverse[k] = as[as.size - 1 - k]'
-    (Nat.sub_one_sub_lt_of_lt (hk.trans_eq as.size_reverse)) := by
-  simp_rw [← Array.getElem_toList, Array.toList_reverse, List.getElem_reverse]
 
 theorem eraseIdx_eq_take_append_drop_succ {as : Array α} (hi : i < as.size) :
     as.eraseIdx i = as.take i ++ as.extract (i + 1) as.size := by

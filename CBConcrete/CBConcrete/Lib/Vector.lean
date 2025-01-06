@@ -85,12 +85,6 @@ def mapIdx (f : Fin n → α → β) (v : Vector α n) : Vector β n :=
   unfold mapIdx
   simp_rw [getElem_mk, Array.getElem_mapFinIdx, Fin.cast_mk, getElem_toArray]
 
-structure Mem (v : Vector α n) (a : α) : Prop where
-  val : a ∈ v.toArray
-
-instance : Membership α (Vector α n) where
-  mem := Mem
-
 theorem mem_def {a : α} (v : Vector α n) : a ∈ v ↔ a ∈ v.toArray :=
   ⟨fun | .mk h => h, Vector.Mem.mk⟩
 
@@ -182,9 +176,9 @@ theorem cast_singleton_head_append_tail [NeZero n] (v : Vector α n) :
 
 @[simp] theorem back_succ (v : Vector α (n + 1)) : v.back = v[n] := by
   cases v with | mk as has => _
-  unfold back back! Array.back! Array.get! Array.getD
-  simp_rw [has, add_tsub_cancel_right, lt_add_iff_pos_right, zero_lt_one, dite_true,
-    Array.get_eq_getElem, getElem_mk]
+  unfold back back! Array.back!
+  simp_rw [has, add_tsub_cancel_right, getElem_mk, getElem!_def, getElem?_def,
+    has, Nat.lt_succ_self, dite_true]
 
 def foldl (f : (i : ℕ) → i < n → β → α → β) (init : β) (v : Vector α n) : β :=
   n.fold (fun i hi => (f i hi · v[i])) init
