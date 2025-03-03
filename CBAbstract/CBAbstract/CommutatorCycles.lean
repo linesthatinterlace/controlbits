@@ -51,23 +51,3 @@ CycleMin ⁅x, y⁆ (y q) = y (CycleMin ⁅x, y⁆ q) := by
     · exact ((⁅x, y⁆).cycleMin_le ⟨-k, rfl⟩).not_lt (hjq₂.symm ▸ H)
     · exact False.elim (lt_irrefl _ (H ▸ h))
     · exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy (hy₂ H h)
-
-
-lemma cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr' [ConditionallyCompleteLinearOrderBot α]
-    [IsWellOrder α (· < ·)](hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q)
-    (hy₂ : ∀ {i j : ℤ} {q}, (⁅x, y⁆ ^ i) q < (⁅x, y⁆ ^ j) q →
-      y ((⁅x, y⁆ ^ j) q) < y ((⁅x, y⁆ ^ i) q) → ((⁅x, y⁆ ^ i) q) = y ((⁅x, y⁆ ^ j) q)) :
-CycleMin ⁅x, y⁆ (y q) = y (CycleMin ⁅x, y⁆ q) := by
-  rcases (⁅x, y⁆).cycleMin_exists_zpow_apply q with ⟨j, hjq₂⟩
-  refine eq_of_le_of_not_lt ?_ (fun h => ?_)
-  let H : OrderBot α := inferInstance
-  · refine (⁅x, y⁆).cycleMin_le  ⟨-j, ?_⟩
-    simp_rw [zpow_neg, ← Perm.mul_apply, cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow, hxy,
-      Perm.mul_apply, hjq₂]
-  · rcases (⁅x, y⁆).cycleMin_exists_zpow_apply (y q) with ⟨k, hkq₂⟩
-    rw [←hkq₂, ← hjq₂, ← Perm.mul_apply, cmtr_zpow_mul_eq_mul_inv_cmtr_zpow_inv, Perm.mul_apply,
-      hxy, ← zpow_neg] at h
-    rcases lt_trichotomy ((⁅x, y⁆ ^ (-k)) q) ((⁅x, y⁆ ^ j) q) with H | H | H
-    · exact ((⁅x, y⁆).cycleMin_le ⟨-k, rfl⟩).not_lt (hjq₂.symm ▸ H)
-    · exact False.elim (lt_irrefl _ (H ▸ h))
-    · exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy (hy₂ H h)

@@ -33,7 +33,7 @@ lemma cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF {π : Perm (BV (m
   cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr
     rfl flipBit_ne_self eq_flipBit_of_lt_of_flipBit_gt
 
-lemma cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply {q : BV (m + 1)} :
+lemma cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero {q : BV (m + 1)} :
 (XBackXForth π).CycleMin (π (flipBit 0 q)) = (XBackXForth π).CycleMin (flipBit 0 (π q)) :=
 cycleMin_cmtr_apply_comm
 
@@ -102,11 +102,11 @@ condFlipBit_mul_cancel_left
 -- Theorem 5.3
 lemma getBit_zero_firstLayerPerm_apply_eq_getBit_zero_cycleMin {q : BV (m + 1)} :
     getBit 0 (FirstLayerPerm π q) = getBit 0 ((XBackXForth π).CycleMin q) := by
-  simp_rw [firstLayerPerm_apply, Bool.apply_cond (getBit 0), getBit_flipBit]
+  simp_rw [firstLayerPerm_apply, Bool.apply_cond (getBit 0), getBit_flipBit_of_eq]
   rcases mergeBitRes_getRes_cases_flipBit 0 q false with (⟨h₁, h₂⟩ | ⟨h₁, h₂⟩)
   · simp_rw [h₁, h₂, Bool.not_false, Bool.cond_false_right, Bool.and_true]
   · simp_rw [h₁, h₂, cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF,
-    getBit_flipBit, Bool.not_false, Bool.not_true,  Bool.cond_false_left, Bool.and_true,
+    getBit_flipBit_of_eq, Bool.not_false, Bool.not_true,  Bool.cond_false_left, Bool.and_true,
     Bool.not_not]
 
 def LastLayer (π : Perm (BV (m + 1))) : ControlBitsLayer m :=
@@ -160,12 +160,12 @@ condFlipBit_mul_cancel_left
 lemma getBit_zero_lastLayerPerm_apply_eq_getBit_zero_firstLayerPerm_perm_apply :
     getBit 0 (LastLayerPerm π q) = getBit 0 (FirstLayerPerm π (π q)) := by
   rw [getBit_zero_firstLayerPerm_apply_eq_getBit_zero_cycleMin]
-  rw [lastLayerPerm_apply, Bool.apply_cond (getBit 0), getBit_flipBit]
+  rw [lastLayerPerm_apply, Bool.apply_cond (getBit 0), getBit_flipBit_of_eq]
   rcases mergeBitRes_getRes_cases_flipBit 0 q false with (⟨h₁, h₂⟩ | ⟨h₁, h₂⟩)
   · rw [h₁, h₂, Bool.not_false, Bool.cond_false_right, Bool.and_true]
   · rw [h₁, h₂, Bool.not_false, Bool.not_true, Bool.cond_true_right, Bool.or_false,
-    cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero_apply,
-    cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF, getBit_flipBit, Bool.not_not]
+    cycleMin_xBXF_apply_flipBit_zero_eq_cycleMin_xBXF_flipBit_zero,
+    cycleMin_xBXF_flipBit_zero_eq_flipBit_zero_cycleMin_xBXF, getBit_flipBit_of_eq, Bool.not_not]
 
 def MiddlePerm (π : Perm (BV (m + 1))) : bitInvarSubgroup (0 : Fin (m + 1)) :=
   ⟨(FirstLayerPerm π) * π * (LastLayerPerm π), by
