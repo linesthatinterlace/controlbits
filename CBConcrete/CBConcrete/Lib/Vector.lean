@@ -16,29 +16,8 @@ theorem getD_of_lt (a : Vector α n) (x : α) (i : ℕ) (h : i < n) : a[i]?.getD
 theorem getD_of_ge (a : Vector α n) (x : α) (i : ℕ) (h : n ≤ i) : a[i]?.getD x = x := by
   rw [getElem?_neg a i h.not_lt, Option.getD_none]
 
-@[simp] theorem getElem_map {n i : ℕ} (hi : i < n) (f : α → β) (v : Vector α n) :
-    (v.map f)[i] = f v[i] := by
-  cases v ; simp_rw [map_mk, getElem_mk, Array.getElem_map]
-
-@[simp] theorem getElem_range {n i : ℕ} (hi : i < n) : (range n)[i] = i := by
-  unfold range
-  simp_rw [getElem_mk, Array.getElem_range]
-
-@[simp] theorem getElem_cast {n m i : ℕ} (hnm : n = m) (v : Vector α n) (hi : i < m)  :
-  (v.cast hnm)[i] = v[i] := rfl
-
-theorem getElem_range_lt {n i : ℕ} (hi : i < n) : (range n)[i] < n := getElem_range _ ▸ hi
-
-@[simp]
-theorem getElem_zipWith  {n i : ℕ} (hi : i < n) {as : Vector α n} {bs : Vector β n}
-    {f : α → β → γ} : (as.zipWith bs f)[i] = f (as[i]) (bs[i]) := by
-  cases as ; cases bs ; simp_rw [mk_zipWith_mk, getElem_mk, Array.getElem_zipWith]
-
-theorem getElem_swap {α : Type u_1} (a : Vector α n) (i j : ℕ) (hi : i < n)
-    {hj : j < n} (k : ℕ) (hk : k < n) :
-    (a.swap i j hi hj)[k] = if k = i then a[j] else if k = j then a[i] else a[k] := by
-  cases a
-  simp_rw [swap_mk, getElem_mk, Array.getElem_swap]
+theorem getElem_range_lt {n i : ℕ} (hi : i < n) : (range n)[i] < n :=
+  (getElem_range i hi).trans_lt hi
 
 theorem getElem_swap_eq_getElem_swap_apply (as : Vector α n) (i j : ℕ) (hi : i < n)
     (hj : j < n)
@@ -62,81 +41,9 @@ theorem getElem_swapIfInBounds {as : Vector α n} {i j k : ℕ} (hk : k < n) :
     · simp_rw [ite_true, true_and, hk, and_true]
     · simp_rw [hj, false_and, dite_false, ite_false, dite_eq_ite, ite_self]
 
-@[simp] theorem getElem_reverse {as : Vector α n} (hk : k < n) : as.reverse[k] = as[n - 1 - k] := by
-  cases as with | mk as H => _
-  simp_rw [reverse_mk, getElem_mk, Array.getElem_reverse, H]
-
-protected def finRange (n : ℕ) : Vector (Fin n) n := ⟨Array.finRange n, Array.size_finRange⟩
-
-@[simp] theorem getElem_finRange (hi : i < n) : (Vector.finRange n)[i] = ⟨i, hi⟩ := by
-  unfold Vector.finRange
-  simp_rw [getElem_mk, Array.getElem_finRange]
-
-@[simp] theorem getElem_mkVector {a : α} (hi : i < n) : (Vector.mkVector n a)[i] = a := by
-  unfold Vector.mkVector
-  simp_rw [getElem_mk, Array.getElem_mkArray]
-
-def mapIdx (f : Fin n → α → β) (v : Vector α n) : Vector β n :=
-  ⟨v.toArray.mapFinIdx fun i a => f (i.cast v.size_toArray) a,
-  (Array.size_mapFinIdx _ _).trans v.size_toArray⟩
-
-@[simp] theorem getElem_mapIdx (f : Fin n → α → β) (v : Vector α n) {i : ℕ} (hi : i < n) :
-    (v.mapIdx f)[i] = f ⟨i, hi⟩ v[i] := by
-  unfold mapIdx
-  simp_rw [getElem_mk, Array.getElem_mapFinIdx, Fin.cast_mk, getElem_toArray]
 
 theorem mem_def {a : α} (v : Vector α n) : a ∈ v ↔ a ∈ v.toArray :=
   ⟨fun | .mk h => h, Vector.Mem.mk⟩
-
-@[simp] theorem getElem_mem (v : Vector α n) {i : ℕ} (h : i < n) : v[i] ∈ v := by
-  rw [Vector.mem_def, ← getElem_toArray]
-  exact Array.getElem_mem (h.trans_eq v.size_toArray.symm)
-
-theorem getElem_of_mem {a} (v : Vector α n) : a ∈ v → ∃ (i : Nat) (h : i < n), v[i]'h = a := by
-  simp_rw [mem_def, Array.mem_iff_getElem, v.size_toArray, getElem_toArray, imp_self]
-
-theorem getElem?_of_mem {a} (v : Vector α n) (h : a ∈ v) : ∃ i : Nat, v[i]? = some a := by
-  simp_rw [getElem?_def]
-  rcases (v.getElem_of_mem h) with ⟨i, hi, hiv⟩
-  exact ⟨i, hiv ▸ dif_pos _⟩
-
-theorem mem_of_getElem? (v : Vector α n) {i : Nat} {a : α} : v[i]? = some a → a ∈ v := by
-  simp_rw [getElem?_def, Option.dite_none_right_eq_some, Option.some.injEq, forall_exists_index]
-  exact fun _ h => h ▸ v.getElem_mem _
-
-theorem mem_iff_getElem {a} (v : Vector α n) : a ∈ v ↔ ∃ (i : Nat) (h : i < n), v[i]'h = a :=
-  ⟨v.getElem_of_mem, fun ⟨_, _, e⟩ => e ▸ getElem_mem ..⟩
-
-theorem mem_iff_getElem? {a} (v : Vector α n) : a ∈ v ↔ ∃ i : Nat, v[i]? = some a := by
-  simp_rw [mem_iff_getElem, getElem?_def, Option.dite_none_right_eq_some, Option.some.injEq]
-
-@[simp] theorem getElem_take (a : Vector α n) (m : Nat) (hi : i < min m n) :
-    (a.take m)[i] = a[i] := by
-  cases a
-  simp_rw [take_mk, getElem_mk, Array.getElem_take]
-
-@[simp] theorem getElem_drop (a : Vector α n) (m : Nat) (hi : i < n - m) :
-    (a.drop m)[i] = a[m + i] := by
-  cases a
-  simp_rw [drop_mk, getElem_mk, Array.getElem_extract]
-
-theorem getElem_append (a : Vector α n) (b : Vector α m) (i : Nat) (hi : i < n + m) :
-    (a ++ b)[i] = if h : i < n then a[i] else b[i - n] := by
-  rcases a with ⟨a, rfl⟩
-  rcases b with ⟨b, rfl⟩
-  simp [Array.getElem_append, hi]
-
-theorem getElem_append_left {a : Vector α n} {b : Vector α m} {i : Nat} (hi : i < n) :
-    (a ++ b)[i] = a[i] := by simp [getElem_append, hi]
-
-theorem getElem_append_right {a : Vector α n} {b : Vector α m} {i : Nat} (hi : n ≤ i)
-    (h : i < n + m) : (a ++ b)[i] = b[i - n] := by
-  rw [getElem_append, dif_neg (by omega)]
-
-theorem getElem_eraseIdx (v : Vector α n) (hi : i < n) (hk : k < n - 1) :
-    (v.eraseIdx i)[k] = if h : k < i then v[k] else v[k + 1]'(Nat.succ_lt_of_lt_pred hk) := by
-  unfold eraseIdx
-  simp_rw [getElem_mk, Array.getElem_eraseIdx, getElem_toArray]
 
 theorem getElem_eraseIdx_left (v : Vector α n) (hi : i < n) (hki : k < i) :
     (v.eraseIdx i)[k] = v[k] := by
@@ -159,7 +66,7 @@ theorem getElem_eraseIdx_right (v : Vector α n) (hki : i ≤ k) (hk : k < n - 1
     @getElem (Vector α n) Nat α (fun _ i => i < n) instGetElemNatLt v.tail i hi = v[i + 1] :=
   getElem_tail _ _
 
-@[simp] theorem getElem_singleton (a : α) (hi : i < 1) : (singleton a)[i] = a := by
+@[simp] theorem getElem_singleton' (a : α) (hi : i < 1) : (singleton a)[i] = a := by
   unfold singleton
   simp_rw [getElem_mk, List.getElem_toArray, List.getElem_singleton]
 
@@ -167,7 +74,7 @@ theorem cast_singleton_head_append_tail [NeZero n] (v : Vector α n) :
     (singleton (v.head) ++ v.tail).cast
     (Nat.add_comm _ _ ▸ Nat.sub_add_cancel NeZero.one_le) = v := by
   ext
-  simp_rw [getElem_cast, getElem_append, getElem_singleton, getElem_tail]
+  simp_rw [getElem_cast, getElem_append, getElem_singleton', getElem_tail]
   split_ifs with hi
   · simp_rw [Nat.lt_one_iff] at hi
     simp_rw [hi]
@@ -176,10 +83,10 @@ theorem cast_singleton_head_append_tail [NeZero n] (v : Vector α n) :
 
 @[simp] theorem back_succ (v : Vector α (n + 1)) : v.back = v[n] := by
   cases v with | mk as has => _
-  unfold back back! Array.back!
-  simp_rw [has, add_tsub_cancel_right, getElem_mk, getElem!_def, getElem?_def,
-    has, Nat.lt_succ_self, dite_true]
+  unfold back
+  simp_rw [add_tsub_cancel_right]
 
+/-
 def foldl (f : (i : ℕ) → i < n → β → α → β) (init : β) (v : Vector α n) : β :=
   n.fold (fun i hi => (f i hi · v[i])) init
 
@@ -214,7 +121,8 @@ theorem foldr_succ_last (f : (i : ℕ) → i < n + 1 → α → β → β) (init
     (v.tail.foldr (fun i hi => f (i + 1) (by omega)) init) := by
   unfold foldr
   simp_rw [Nat.foldRev_succ_zero, Vector.getElem_tail, Nat.add_one_sub_one]
-
+-/
+/-
 def flatten {m : ℕ} (a : Vector (Vector α n) m) : Vector α (n * m) := match m with
   | 0 => #v[]
   | (_ + 1) => a.pop.flatten ++ a.back
@@ -277,5 +185,9 @@ theorem toChunks_succ (v : Vector α (n * (m + 1))) :
 @[simp] theorem flatten_toChunks (v : Vector α (n * m)) : v.toChunks.flatten = v := by
   ext i hi
   simp_rw [getElem_flatten, getElem_getElem_toChunks, Nat.div_add_mod]
+-/
+
+@[simp] theorem getElem_take' (xs : Vector α n) (j : Nat) (hi : i < min j n) :
+    (xs.take j)[i] = xs[i] := getElem_take _ _ (hi.trans_eq (min_comm _ _))
 
 end Vector

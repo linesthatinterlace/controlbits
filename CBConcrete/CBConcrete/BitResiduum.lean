@@ -3,6 +3,8 @@ import Mathlib.Algebra.Order.Archimedean.Basic
 import Mathlib.Algebra.Order.Star.Basic
 import Mathlib.Data.Fintype.Order
 import Mathlib.Topology.Algebra.InfiniteSum.Basic
+import Mathlib.Data.Nat.Size
+import Mathlib.Data.Nat.Bitwise
 
 @[simp]
 lemma finTwoEquiv_apply : ∀ j, finTwoEquiv j = decide (j = 1) :=
@@ -377,9 +379,9 @@ theorem card_bitMatchUnder (i : ℕ) (x : Fin (2^n)) :
       · rcases Nat.exists_eq_add_of_le' hti with ⟨_, rfl⟩
         exact hab _ htn
     · rw [Nat.testBit_eq_false_of_lt (ha.1.trans_le
-        (Nat.pow_le_pow_of_le_right zero_lt_two htn)),
+        (Nat.pow_le_pow_right zero_lt_two htn)),
         Nat.testBit_eq_false_of_lt (hb.1.trans_le
-        (Nat.pow_le_pow_of_le_right zero_lt_two htn))]
+        (Nat.pow_le_pow_right zero_lt_two htn))]
   · unfold Function.Surjective
     simp_rw [Equiv.forall_congr_left finFunctionFinEquiv, Subtype.exists, exists_prop,
        mem_bitMatchUnder_iff, funext_iff, Equiv.symm_apply_eq, finTwoEquiv_apply,
@@ -1625,7 +1627,8 @@ def flipBitVals (v : Vector ℕ n) (i : ℕ) : Vector ℕ n := v.map
   (fun k => if k.flipBit i < n then k.flipBit i else k)
 
 theorem getElem_flipBitVals {v : Vector ℕ n} {i k : ℕ} (hk : k < n) :
-    (flipBitVals v i)[k] = if v[k].flipBit i < n then v[k].flipBit i else v[k] := getElem_map _ _ _
+    (flipBitVals v i)[k] = if v[k].flipBit i < n then v[k].flipBit i else v[k] :=
+  getElem_map _ _ _ _
 
 @[simp] theorem flipBitVals_flipBitVals_of_lt {v : Vector ℕ n} (hv : ∀ i (hi : i < n), v[i] < n) :
     (v.flipBitVals i).flipBitVals i = v := by
@@ -1727,7 +1730,7 @@ def condFlipBitVals (v : Vector ℕ n) (i : ℕ) (c : Vector Bool l) : Vector �
 
 theorem getElem_condFlipBitVals {v : Vector ℕ n} {i : ℕ} {c : Vector Bool l} {k : ℕ}
     (hk : k < n) : (condFlipBitVals v i c)[k] =
-    if v[k].condFlipBit i c < n then v[k].condFlipBit i c else v[k] := getElem_map _ _ _
+    if v[k].condFlipBit i c < n then v[k].condFlipBit i c else v[k] := getElem_map _ _ _ _
 
 @[simp] theorem condFlipBitVals_condFlipBitVals_of_lt {v : Vector ℕ n}
     (hv : ∀ i (hi : i < n), v[i] < n) :

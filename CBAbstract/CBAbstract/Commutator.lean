@@ -1,4 +1,5 @@
 import Mathlib.GroupTheory.Commutator.Basic
+import Mathlib.Algebra.Group.Int.Defs
 
 set_option autoImplicit false
 

@@ -386,8 +386,8 @@ def leftLayerIth (a : PermOf (2^(n + 1))) (i : ℕ) : Vector Bool (2^n) :=
 
 theorem leftLayerIth_eq :
     a.leftLayerIth i = (a.middlePermIth i).leftLayer i := by
-  unfold leftLayerIth Vector.back Vector.back! middlePermIth
-  simp_rw [toControlBitsAux_succ, Vector.push, Array.back!_push]
+  unfold leftLayerIth middlePermIth
+  simp_rw [toControlBitsAux_succ, Vector.back_succ, Vector.getElem_push_eq]
 
 @[simp] theorem leftLayerIth_zero :
     a.leftLayerIth 0 = a.leftLayer 0 := by
@@ -417,8 +417,8 @@ def rightLayerIth (a : PermOf (2^(n + 1))) (i : ℕ) : Vector Bool (2^n) :=
 
 theorem rightLayerIth_eq :
     a.rightLayerIth i = (a.middlePermIth i).rightLayer i := by
-  unfold rightLayerIth Vector.back Vector.back! middlePermIth
-  simp_rw [toControlBitsAux_succ, Vector.push, Array.back!_push]
+  unfold rightLayerIth middlePermIth
+  simp_rw [toControlBitsAux_succ, Vector.back_succ, Vector.getElem_push_eq]
 
 @[simp] theorem rightLayerIth_zero :
     a.rightLayerIth 0 = a.rightLayer 0 := by
@@ -528,7 +528,7 @@ end Decomposition
 
 def ofControlBits {α : Type*} {m : ℕ} (v : Vector (Vector Bool (2^n)) (2*n + 1)) (a : Vector α m) :
     Vector α m :=
-  v.foldl (fun i _ a c => a.condFlipBitIndices (min i ((n + 1) - i)) c) a
+  v.zipIdx.foldl (fun a c => a.condFlipBitIndices (min c.2 ((n + 1) - c.2)) c.1) a
 
 #eval ofControlBits (toControlBits (n := 1) (ofVector #v[3, 0, 2, 1])) #v[0, 1, 2, 3]
 

@@ -6,6 +6,7 @@ import CBAbstract.Submonoid
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Algebra.Order.Star.Basic
+import Mathlib.Algebra.Order.Ring.Nat
 
 notation:75  "BV " arg:75   => Fin (2^arg)
 
@@ -69,7 +70,7 @@ lemma getBitRes_apply_two_pow {i : Fin (m + 1)} : getBitRes i ⟨2^(i : ℕ),
     gt_iff_lt, zero_lt_two, pow_pos, Nat.div_self, Nat.one_mod, Fin.mk_one, finTwoEquiv_apply,
     decide_true, Equiv.ofRightInverseOfCardLE_apply]
   · simp only [getBitRes_apply, finFunctionFinEquiv_apply_val, finFunctionFinEquiv_symm_apply_val,
-    Fin.val_zero', Finset.sum_eq_zero_iff, Finset.mem_univ, mul_eq_zero, forall_true_left]
+    Fin.val_zero, Finset.sum_eq_zero_iff, Finset.mem_univ, mul_eq_zero, forall_true_left]
     refine fun x => Or.inl ?_
     rcases (Fin.succAbove_ne i x).lt_or_lt with h | h <;> rw [Fin.lt_iff_val_lt_val] at h
     · rw [Nat.pow_div h.le zero_lt_two, Nat.pow_mod, Nat.mod_self,
@@ -145,7 +146,7 @@ lemma mergeBitRes_zero_modNat : (mergeBitRes 0 b p).modNat = bif b then 1 else 0
 (Prod.ext_iff.mp (mergeBitRes_zero_divNat_modNat (b := b) (p := p))).2
 
 lemma mergeBitRes_zero_apply_true_zero_eq_one : mergeBitRes (0 : Fin (m + 1)) true 0 = 1 := by
-  simp_rw [mergeBitRes_zero, Fin.ext_iff, finProdFinEquiv_apply_val, Fin.val_zero', mul_zero,
+  simp_rw [mergeBitRes_zero, Fin.ext_iff, finProdFinEquiv_apply_val, Fin.val_zero, mul_zero,
   add_zero, Bool.cond_true, Fin.val_one, Fin.val_one', ← Nat.pow_succ,
   Nat.mod_eq_of_lt (Nat.one_lt_pow' _ _ )]
 

@@ -1,5 +1,5 @@
-import Mathlib.Data.Nat.Defs
 import Mathlib.Tactic.SimpRw
+import Mathlib.Data.Nat.Init
 
 namespace Nat
 

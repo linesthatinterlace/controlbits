@@ -1,4 +1,5 @@
 import Mathlib.GroupTheory.Commutator.Basic
+import Mathlib.Algebra.CharZero.Defs
 
 namespace Fin
 
@@ -7,9 +8,9 @@ lemma perm_fin_two (π : Equiv.Perm (Fin 2)) :
   rw [Equiv.ext_iff, forall_fin_two]
   rcases (exists_fin_two.mp ⟨π 0, rfl⟩) with (h0 | h0) <;>
   rcases (exists_fin_two.mp ⟨π 1, rfl⟩) with (h1 | h1) <;>
-  simp only [h0, ite_true, Equiv.swap_apply_left, h1, Equiv.swap_apply_right, Fin.one_eq_zero_iff, id_eq,
-    OfNat.ofNat_ne_one, and_false, zero_eq_one_iff, ite_false, Equiv.Perm.coe_one,  and_self] <;>
-  exact (zero_ne_one ((EmbeddingLike.apply_eq_iff_eq _).mp (h0.trans (h1.symm)))).elim
+  simp only [h0, h1, zero_eq_one_iff, Nat.succ_ne_self, if_false, Equiv.Perm.one_apply,
+    if_true, Equiv.swap_apply_left, Equiv.swap_apply_right, true_and] <;>
+  exact (Fin.zero_ne_one <| π.injective (h0.trans h1.symm)).elim
 
 lemma perm_fin_two_mul_self (π : Equiv.Perm (Fin 2)) : π * π = 1 := by
   rw [perm_fin_two π]
@@ -22,11 +23,11 @@ lemma perm_fin_two_apply_apply {q : Fin 2} (π : Equiv.Perm (Fin 2)) : π (π q)
 
 lemma perm_fin_two_of_fix_zero {π : Equiv.Perm (Fin 2)} (h : π 0 = 0) : π = 1 := by
   rw [perm_fin_two π]
-  simp_rw [h, zero_eq_one_iff, OfNat.ofNat_ne_one, ite_false]
+  simp_rw [h, zero_eq_one_iff, Nat.succ_ne_self, ite_false]
 
 lemma perm_fin_two_of_fix_one {π : Equiv.Perm (Fin 2)} (h : π 1 = 1) : π = 1 := by
   rw [perm_fin_two π, ← h]
-  simp only [EmbeddingLike.apply_eq_iff_eq, zero_eq_one_iff, OfNat.ofNat_ne_one, ite_false]
+  simp only [EmbeddingLike.apply_eq_iff_eq, zero_eq_one_iff, Nat.succ_ne_self, ite_false]
 
 lemma perm_fin_two_of_unfix_zero {π : Equiv.Perm (Fin 2)} (h : π 0 = 1) : π = Equiv.swap 0 1 := by
   rw [perm_fin_two π]

@@ -2,7 +2,7 @@ import CBAbstract.BitResiduum
 import CBAbstract.CommutatorCycles
 import CBAbstract.PermFintwo
 import Mathlib.Tactic.FinCases
-
+import Mathlib.GroupTheory.Perm.Cycle.Factors
 open Fin Equiv
 
 abbrev ControlBitsLayer (m : ℕ) := BV m → Bool
@@ -244,7 +244,7 @@ lemma bitInvar_zero_toPerm_castSucc {n : Fin m} {cb} :
 
 lemma bitInvar_zero_toPerm_of_ne_last {n : Fin (m + 1)} (h : n ≠ last _) {cb} :
     bitInvar 0 ⇑(toPerm n cb) := by
-  rcases (exists_castSucc_eq_of_ne_last h) with ⟨_, rfl⟩
+  rcases (eq_castSucc_of_ne_last h) with ⟨_, rfl⟩
   exact bitInvar_zero_toPerm_castSucc
 
 lemma bitInvar_toPerm {n t : Fin (m + 1)} (htn : t < n.rev) {cb} :
