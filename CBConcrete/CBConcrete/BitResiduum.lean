@@ -185,6 +185,12 @@ theorem testBit_zero_eq_bodd (m : ℕ) : m.testBit 0 = m.bodd := by
 theorem testBit_succ_eq_testBit_div2 (m i : ℕ) : m.testBit (i + 1) = m.div2.testBit i := by
   simp_rw [testBit_succ, div2_val]
 
+theorem testBit_apply (m i : ℕ) : testBit m i = decide (m / 2^i % 2 = 1) := by
+  induction i generalizing m with | zero => _ | succ _ IH => _
+  · simp_rw [testBit_zero_eq_bodd, pow_zero, Nat.div_one,
+      Nat.mod_two_of_bodd, Bool.toNat_eq_one, Bool.decide_eq_true]
+  · simp_rw [testBit_succ_eq_testBit_div2, IH, div2_val, Nat.div_div_eq_div_mul, pow_succ']
+
 theorem testBit_bit (m : ℕ) (b : Bool) (n : ℕ) :
     (Nat.bit b n).testBit m = if m = 0 then b else n.testBit (m - 1) := by
   cases' m
@@ -1108,7 +1114,15 @@ theorem two_pow_testRes_of_gt (hij : j < i) : (2 ^ i).testRes j = 2 ^ (i - 1) :=
   simp_rw [← zero_mergeBitRes_true, testRes_mergeBitRes_of_lt hij, zero_testRes]
 
 theorem testRes_eq_mod_of_lt (hq : q < 2^(i + 1)) : q.testRes i = q % 2^i := by
-  rw [testRes_apply, Nat.div_eq_of_lt hq, mul_zero, zero_add]
+  cases q using Nat.bitCasesOn with | h b q => _
+  simp_rw [Nat.bit_lt_two_pow_succ_iff] at hq
+  simp_rw [testBit_ext_iff, testBit_testRes, testBit_mod_two_pow]
+  intro j
+  rcases lt_or_le j i with (h | h)
+  · simp_rw [h, h.not_le, decide_true, decide_false, Bool.toNat_false, add_zero, Bool.true_and]
+  · simp_rw [h, h.not_lt, decide_true, decide_false, Bool.toNat_true, Bool.false_and,
+      testBit_succ_eq_testBit_div2, div2_bit]
+    exact Nat.testBit_eq_false_of_lt (hq.trans_le (Nat.pow_le_pow_of_le one_lt_two h))
 
 theorem testRes_eq_of_lt (hq : q < 2^i) : q.testRes i = q := by
   rw [testRes_eq_mod_of_lt (hq.trans (Nat.pow_lt_pow_of_lt one_lt_two (Nat.lt_succ_self _))),
