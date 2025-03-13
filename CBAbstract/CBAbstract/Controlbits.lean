@@ -199,9 +199,6 @@ namespace PartialControlBits
 
 variable {m : ℕ}
 
-def PartialControlBitsZero : PartialControlBits m 0 ≃ ControlBitsLayer m :=
-  funUnique (Fin 1) (ControlBitsLayer m)
-
 def toPerm (n : Fin (m + 1)) :
   PartialControlBits m n → Perm (BV (m + 1)) :=
   n.induction (fun cb => condFlipBit (last _) (cb 0))
@@ -325,42 +322,6 @@ lemma toPerm_leftInverse : (toPerm (m := m)).LeftInverse fromPerm := by
     · exact firstMiddleLast_decomposition.symm
 
 lemma fromPerm_rightInverse : (fromPerm (m := m)).RightInverse toPerm := toPerm_leftInverse
-
-def unweave : ControlBits (m + 1) ≃
-(ControlBitsLayer (m + 1) × ControlBitsLayer (m + 1)) × (Bool → ControlBits m) :=
-  calc
-  _ ≃ _ :=    piFinSuccCastSucc.trans ((Equiv.refl _).prodCongr
-    (calc
-    _ ≃ _ :=  (Equiv.refl _).arrowCongr (((getBitRes 0).arrowCongr (Equiv.refl _)).trans
-              (curry _ _ _))
-    _ ≃ _ :=  (piComm _)))
-
-lemma unweave_apply_fst_fst {cb : ControlBits (m + 1)} : (unweave cb).1.1 = cb 0 := rfl
-
-lemma unweave_apply_fst_snd {cb : ControlBits (m + 1)} :
-    (unweave cb).1.2 = cb (last _) := rfl
-
-lemma unweave_apply_snd {cb : ControlBits (m + 1)} : (unweave cb).2 =
-  fun b i k => cb i.castSucc.succ (mergeBitRes 0 b k) := by
-  ext ; exact congr_fun (congr_fun (piFinSuccCastSucc_apply_snd cb) _) _
-
-lemma unweave_symm_apply_zero {fl ll : ControlBitsLayer (m + 1)} {mbs} :
-    unweave.symm ((fl, ll), mbs) 0 = fl := rfl
-
-lemma unweave_symm_apply_last {fl ll : ControlBitsLayer (m + 1)} {mbs} :
-    unweave.symm ((fl, ll), mbs) (last _) = ll := by
-  simp_rw [unweave, instTrans_trans, symm_trans_apply]
-  exact (piFinSuccCastSucc_symm_apply_last _ _ _)
-
-lemma unweave_symm_apply_castSucc_succ {i : Fin (2*m + 1)} {fl ll mbs} :
-    unweave.symm ((fl, ll), mbs) (i.castSucc.succ) = fun p => (mbs (getBit 0 p) i (getRes 0 p)) := by
-  simp_rw [unweave, instTrans_trans, symm_trans_apply]
-  exact (piFinSuccCastSucc_symm_apply_castSucc_succ fl ll _ _)
-
-lemma unweave_symm_apply_succ_castSucc {i : Fin (2*m + 1)} {fl ll mbs} :
-    unweave.symm ((fl, ll), mbs) (i.succ.castSucc) = fun p => (mbs (getBit 0 p) i (getRes 0 p)) := by
-  simp_rw [unweave, instTrans_trans, symm_trans_apply]
-  exact (piFinSuccCastSucc_symm_apply_succ_castSucc fl ll _ _)
 
 end ControlBits
 
