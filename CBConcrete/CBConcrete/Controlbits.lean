@@ -530,6 +530,4 @@ def ofControlBits {α : Type*} {m : ℕ} (v : Vector (Vector Bool (2^n)) (2*n + 
     Vector α m :=
   v.zipIdx.foldl (fun a c => a.condFlipBitIndices (min c.2 ((n + 1) - c.2)) c.1) a
 
-#eval ofControlBits (toControlBits (n := 1) (ofVector #v[3, 0, 2, 1])) #v[0, 1, 2, 3]
-
 end PermOf

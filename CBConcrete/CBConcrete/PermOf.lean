@@ -218,6 +218,11 @@ theorem getElem_fwdVector_injective (a : PermOf n) :
   fun hi _ hj hij => (a.getElem_bwdVector_getElem_fwdVector hi).symm.trans
     (Eq.trans (by simp_rw [hij]) (a.getElem_bwdVector_getElem_fwdVector hj))
 
+theorem fwdVector_toList_Nodup (a : PermOf n) : a.fwdVector.toList.Nodup := by
+  simp_rw [List.nodup_iff_injective_getElem,
+    Array.getElem_toList, Vector.getElem_toArray,  Injective, Fin.ext_iff,
+    Fin.forall_iff, Array.length_toList, Vector.size_toArray]
+  exact fun _ => a.getElem_fwdVector_injective
 
 theorem getElem_fwdVector_surjective (a : PermOf n) :
     ∀ {i : ℕ}, i < n → ∃ (j : ℕ), ∃ (hj : j < n), a.fwdVector[j] = i := by
@@ -242,6 +247,12 @@ theorem getElem_bwdVector_injective (a : PermOf n) :
   ∀ {i : ℕ} (hi : i < n) {j : ℕ} (hj : j < n), a.bwdVector[i] = a.bwdVector[j] → i = j :=
   fun hi _ hj hij => (a.getElem_fwdVector_getElem_bwdVector hi).symm.trans
     (Eq.trans (by simp_rw [hij]) (a.getElem_fwdVector_getElem_bwdVector hj))
+
+theorem bwdVector_toList_Nodup (a : PermOf n) : a.bwdVector.toList.Nodup := by
+  simp_rw [List.nodup_iff_injective_getElem,
+    Array.getElem_toList, Vector.getElem_toArray, Injective, Fin.ext_iff,
+    Fin.forall_iff, Array.length_toList, Vector.size_toArray]
+  exact fun _ => a.getElem_bwdVector_injective
 
 theorem getElem_bwdVector_surjective (a : PermOf n) :
     ∀ {i : ℕ}, i < n → ∃ (j : ℕ), ∃ (hj : j < n), a.bwdVector[j] = i := by
@@ -625,17 +636,6 @@ section OfVector
 @[simp]
 theorem getElem_ofVector {a : Vector ℕ n} {hx : ∀ {x} (hx : x < n), a[x] < n}
     {ha : a.toList.Nodup} {i : ℕ} (hi : i < n) : (ofVector a hx ha)[i] = a[i] := rfl
-
-
-theorem fwdVector_toList_Nodup (a : PermOf n) : a.fwdVector.toList.Nodup := by
-  simp_rw [List.nodup_iff_injective_getElem,
-    Array.getElem_toList, Vector.getElem_toArray, getElem_fwdVector, Injective, Fin.ext_iff,
-    Fin.forall_iff, Array.length_toList, Vector.size_toArray, getElem_inj, imp_self, implies_true]
-
-theorem bwdVector_toList_Nodup (a : PermOf n) : a.bwdVector.toList.Nodup := by
-  simp_rw [List.nodup_iff_injective_getElem,
-    Array.getElem_toList, Vector.getElem_toArray, getElem_bwdVector, Injective, Fin.ext_iff,
-    Fin.forall_iff, Array.length_toList, Vector.size_toArray, getElem_inj, imp_self, implies_true]
 
 @[simp] theorem ofVector_fwdVector (a : PermOf n) :
     ofVector a.fwdVector a.getElem_fwdVector_lt a.fwdVector_toList_Nodup = a :=

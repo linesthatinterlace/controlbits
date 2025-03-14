@@ -550,10 +550,14 @@ section BitResiduum
 
 variable {p q i j k m n : ℕ} {b b' : Bool}
 
+/-- `testRes q i` returns the number that remains if the
+  `(i+1)` least significant bit is erased from `q`.-/
 def testRes (q i : ℕ) := ((q >>> (i + 1)) <<< i) ||| (q &&& (2^i - 1))
 
-def mergeBitRes (b : Bool) (p : ℕ) (i : ℕ) :=
-  ((p >>> i) <<< (i + 1)) ||| (p &&& (2^i - 1)) ||| (b.toNat <<< i)
+/-- `mergeBitRes b p i` returns the number that arises if the bit `b` is
+inserted into `p` such that it is the `(i+1)` least significant bit in the result.-/
+
+def mergeBitRes (b : Bool) (p : ℕ) (i : ℕ) := ((p >>> i) <<< (i + 1)) ||| (p &&& (2^i - 1)) ||| (b.toNat <<< i)
 
 theorem testRes_def : q.testRes i = (q >>> (i + 1)) <<< i ||| q &&& (2^i - 1) := rfl
 
