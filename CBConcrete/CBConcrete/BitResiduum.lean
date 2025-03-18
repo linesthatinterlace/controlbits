@@ -2738,18 +2738,6 @@ theorem cycleOf_subset_bitMatchUnder {x : ℕ} (a : PermOf (2^(n + 1))) (i : ℕ
   intros _ _ hk
   exact ((ha _ hk).zpow _).testBit_getElem_eq_testBit _
 
-theorem flipBitCommutator_cycleMinVector_of_period_bounded (a : PermOf (2^(n + 1)))
-    {hk : k < 2^(n + 1)}
-    (ha : ∀ {x : ℕ}, MulAction.period (a.flipBitCommutator i) x ≤ 2 ^ (n - i)):
-    ((a.flipBitCommutator i).CycleMinVector (n - i))[a[(flipBit i)[k]]] =
-    ((a.flipBitCommutator i).CycleMinVector (n - i))[(flipBit i)[a[k]]]'(getElem_lt _) := by conv =>
-  rhs
-  rw [cycleMinVector_eq_apply_cycleMinVector _ _ ha]
-  congr
-  · rfl
-  · rw [flipBitCommutator_eq_commutatorElement, commutatorElement_def]
-    simp only [getElem_mul, getElem_inv_getElem]
-
 theorem period_le_two_pow_sub_of_bitInvariant_lt {a : PermOf (2^(n + 1))} {i : ℕ}
     (ha : ∀ k < i, a.BitInvariant k) :
     ∀ {k : ℕ}, MulAction.period (a.flipBitCommutator i) k ≤ 2 ^ (n - i) := fun {k} => by
@@ -2768,6 +2756,14 @@ theorem period_le_two_pow_sub_of_bitInvariant_lt {a : PermOf (2^(n + 1))} {i : �
   · rw [forall_lt_bitInvariant_iff_eq_one_of_ge (Nat.pow_le_pow_of_le one_lt_two hi)] at ha
     simp_rw [ha, one_flipBitCommutator, MulAction.period_one, Nat.one_le_iff_ne_zero]
     exact (Nat.two_pow_pos (n - i)).ne'
+
+theorem flipBitCommutator_cycleMinVector_getElem_getElem_flipBit (a : PermOf (2^(n + 1)))
+    {hk : k < 2^(n + 1)}
+    (ha : ∀ {x : ℕ}, MulAction.period (a.flipBitCommutator i) x ≤ 2 ^ (n - i)) :
+    ((a.flipBitCommutator i).CycleMinVector (n - i))[(a.flipBitIndices i)[k]] =
+    ((a.flipBitCommutator i).CycleMinVector (n - i))[(a.flipBitVals i)[k]] := by
+  simp_rw [cycleMinVector_eq_apply_cycleMinVector _ _ ha ((a.flipBitVals i).getElem_lt _),
+    ← getElem_mul, flipBitCommutator_eq_flipBitIndices_mul_flipBitVals_inv, inv_mul_cancel_right]
 
 theorem flipBit_getElem_cycleMinVector_flipBitCommutator_comm (a : PermOf (2^(n + 1)))
     (ha : ∀ k < i, a.BitInvariant k) {k : ℕ}

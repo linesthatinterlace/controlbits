@@ -12,28 +12,26 @@ variable {G : Type u} [Group G] {x y : G}
 lemma cmtr_inv_mul_eq_mul_inv_cmtr : ⁅x, y⁆⁻¹ * y = y * ⁅x, y⁻¹⁆ := by
 simp_rw [commutatorElement_inv, commutatorElement_def, inv_inv, mul_assoc]
 
-lemma cmtr_mul_eq_mul_inv_cmtr_inv : ⁅x, y⁆ * y = y * ⁅x, y⁻¹⁆⁻¹ := by
-simp_rw [commutatorElement_inv, commutatorElement_def, inv_mul_cancel_right,
-  mul_assoc, mul_inv_cancel_left, inv_inv]
-
 lemma cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow {k : ℕ} : ((⁅x, y⁆)^k)⁻¹ * y = y * ((⁅x, y⁻¹⁆)^k) := by
 induction' k with n hn
 · simp_rw [pow_zero, inv_one, mul_one, one_mul]
 · simp_rw [pow_succ ⁅x, y⁻¹⁆, pow_succ' ⁅x, y⁆, ← mul_assoc, hn.symm, mul_inv_rev, mul_assoc,
     cmtr_inv_mul_eq_mul_inv_cmtr]
 
-@[simp]
-lemma pow_mul_eq_mul_inv_cmtr_pow_inv {k : ℕ} : (⁅x, y⁆)^k * y = y * ((⁅x, y⁻¹⁆)^k)⁻¹ := by
-rw [eq_mul_inv_iff_mul_eq, mul_assoc, ← cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow, mul_inv_cancel_left]
-
 lemma cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow {k : ℤ} : ((⁅x, y⁆)^k)⁻¹ * y = y * (⁅x, y⁻¹⁆)^k := by
 cases k
 · simp only [Int.ofNat_eq_coe, zpow_natCast, zpow_neg, cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow]
-· simp only [zpow_negSucc, zpow_neg, inv_inv, pow_mul_eq_mul_inv_cmtr_pow_inv]
+· simp_rw [zpow_negSucc, inv_inv, eq_mul_inv_iff_mul_eq, mul_assoc, ← eq_inv_mul_iff_mul_eq,
+    cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow, inv_mul_cancel_left]
 
 lemma cmtr_zpow_mul_eq_mul_inv_cmtr_zpow_inv {k : ℤ} :
 (⁅x, y⁆)^k * y = y * ((⁅x, y⁻¹⁆)^k)⁻¹ := by
 rw [← zpow_neg, ← cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow, zpow_neg, inv_inv]
+
+lemma cmtr_mul_eq_mul_inv_cmtr_inv : ⁅x, y⁆ * y = y * ⁅x, y⁻¹⁆⁻¹ := by
+  have H := cmtr_zpow_mul_eq_mul_inv_cmtr_zpow_inv (x := x) (y := y) (k := 1)
+  simp_rw [zpow_one] at H
+  exact H
 
 lemma cmtr_inv_eq_cmtr_iff_cmtr_square_id : (⁅x, y⁆ = ⁅x, y⁻¹⁆) ↔ (⁅x, y^2⁆ = 1) := by
   simp_rw [pow_two, commutatorElement_eq_one_iff_mul_comm, eq_comm (a := (x * (y * y))),
@@ -59,22 +57,6 @@ lemma mul_cmtr_unfix_of_unfix (hy : ∀ q : α, y q ≠ q) :
     ← Perm.eq_inv_iff_eq (f := y).not, ← Perm.eq_inv_iff_eq (f := x).not]
   exact fun q => hy (x⁻¹ (y⁻¹ q))
 
-lemma cmtr_mul_unfix_of_unfix (hy : ∀ q : α, y q ≠ q) :
-∀ q : α, (⁅x, y⁆ * y) q ≠ q:= by
-  simp_rw [Perm.mul_apply, cmtr_apply, Perm.inv_apply_self, ← Perm.eq_inv_iff_eq (f := x).not]
-  exact fun q => hy (x⁻¹ q)
-
-lemma mul_inv_cmtr_inv_unfix_of_unfix (hy : ∀ q : α, y q ≠ q) :
-∀ q : α, (y * ⁅x, y⁻¹⁆⁻¹) q ≠ q := by
-  simp_rw [← cmtr_mul_eq_mul_inv_cmtr_inv]
-  exact cmtr_mul_unfix_of_unfix hy
-
-@[simp]
-lemma cmtr_inv_apply_ne_apply_of_unfix (hy : ∀ q : α, y q ≠ q) :
-  ⁅x, y⁆⁻¹ q ≠ y q := by
-  simp_rw [Perm.inv_eq_iff_eq.not]
-  exact Ne.symm (cmtr_mul_unfix_of_unfix (x := x) hy q)
-
 lemma mul_cmtr_pow_unfix {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
 (hy : ∀ q : α, y q ≠ q) : ∀ q : α, (y * ⁅x, y⁆^k) q ≠ q := by
   induction' k using Nat.twoStepInduction with k IH
@@ -92,6 +74,11 @@ lemma cmtr_pow_apply_ne_apply {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
 (hy : ∀ q : α, y q ≠ q) : (⁅x, y⁆^k) q ≠ y q := by
   simp_rw [← Perm.eq_inv_iff_eq.not, ← Perm.mul_apply, cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow, hxy]
   exact Ne.symm (mul_cmtr_pow_unfix hxy hy _)
+
+lemma cmtr_mul_unfix_of_unfix (hy : ∀ q : α, y q ≠ q) :
+∀ q : α, (⁅x, y⁆ * y) q ≠ q:= by
+  simp_rw [Perm.mul_apply, cmtr_apply, Perm.inv_apply_self, ← Perm.eq_inv_iff_eq (f := x).not]
+  exact fun q => hy (x⁻¹ q)
 
 lemma cmtr_pow_mul_unfix {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
 (hy : ∀ q : α, y q ≠ q) :

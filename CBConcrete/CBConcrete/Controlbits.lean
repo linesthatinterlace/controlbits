@@ -197,20 +197,20 @@ theorem testBit_rightPerm {i : ℕ}
   rcases le_or_lt i n with hi | hi
   · have hin :  2 ^ (i + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ (Nat.lt_succ_of_le hi)
     have hk' := (flipBit_lt_two_pow_iff_lt_two_pow (Nat.lt_succ_of_le hi)).mpr hk
-    rw [getElem_rightPerm, getElem_condFlipBit_of_div hin,
+    simp_rw [getElem_rightPerm, getElem_condFlipBit_of_div hin,
       condFlipBit_apply_of_testRes_lt ((testRes_lt_two_pow_iff_lt_two_pow hi).mpr hk),
-      getElem_rightLayer_of_le hi]
-    rcases Bool.eq_false_or_eq_true (k.testBit i) with hkb | hkb
-    · simp_rw [← Bool.not_true, ← hkb, ← flipBit_apply,
-        testBit_leftPerm ha, Bool.apply_cond (fun (k : ℕ) => k.testBit i), testBit_flipBit_of_eq,
-        ← getElem_flipBit_of_div hin (hk := hk), hkb, Bool.cond_true_right, Bool.not_true,
-        Bool.or_false, Bool.not_eq_eq_eq_not, a.flipBitCommutator_cycleMinVector_of_period_bounded
-        (period_le_two_pow_sub_of_bitInvariant_lt ha), getElem_flipBit_of_div hin,
+      getElem_rightLayer_of_le hi, Bool.apply_cond (fun (k : ℕ) => k.testBit i),
+      testBit_flipBit_of_eq]
+    rcases (Bool.eq_false_or_eq_true (k.testBit i)) with hkb | hkb
+    · simp_rw [hkb, testBit_leftPerm ha, Bool.not_true, Bool.cond_true_right, Bool.or_false,
+        Bool.not_eq_eq_eq_not, ← testBit_flipBit_of_eq, ← Bool.not_true, ← hkb, ← flipBit_apply,
+        ← getElem_flipBitIndices_of_div hin (hk := hk),
+        a.flipBitCommutator_cycleMinVector_getElem_getElem_flipBit
+        (period_le_two_pow_sub_of_bitInvariant_lt ha), getElem_flipBitVals_of_div hin,
         a.flipBit_getElem_cycleMinVector_flipBitCommutator_comm ha (a.getElem_lt _)
-          (Nat.lt_succ_of_le hi),
-        testBit_flipBit_of_eq]
-    · simp_rw [← hkb, mergeBitRes_testBit_testRes_of_eq, Bool.apply_cond (fun (k : ℕ) => k.testBit i),
-      testBit_flipBit_of_eq, hkb, Bool.not_false, Bool.cond_false_right, Bool.and_true]
+        (Nat.lt_succ_of_le hi)]
+    · simp_rw [hkb, Bool.not_false, Bool.cond_false_right, Bool.and_true,
+        ← hkb, mergeBitRes_testBit_testRes_of_eq]
   · simp_rw [getElem_leftPerm_of_gt hi, getElem_rightPerm_of_gt hi,
       (bitInvariant_of_ge (Nat.pow_le_pow_of_le one_lt_two hi)).testBit_getElem_eq_testBit]
 

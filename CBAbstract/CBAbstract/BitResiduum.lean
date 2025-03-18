@@ -557,8 +557,8 @@ lemma coe_mem_bitInvarSubmonoid_of_mem_bitInvarSubgroup {i : Fin (m + 1)}
   {π : Equiv.Perm (BV (m + 1))} (h : π ∈ bitInvarSubgroup i) : ⇑π ∈ bitInvarSubmonoid i := h
 
 lemma mem_bitInvarSubgroup_iff_coe_unit_mem {i : Fin (m + 1)}: ∀ π, π ∈ bitInvarSubgroup i ↔
-  (Equiv.Perm.equivUnitsEnd π).val ∈ bitInvarSubmonoid i :=
-  mem_bitInvarSubgroup_iff_coe_mem_bitInvarSubmonoid
+    (Equiv.Perm.equivUnitsEnd π).val ∈ bitInvarSubmonoid i :=
+  fun _ => Iff.rfl
 
 end Subgroup
 
@@ -588,7 +588,7 @@ theorem bitInvarMulEquivEnd_symm_apply_apply (f : bitInvarSubmonoid i) :
   ((bitInvarMulEquivEnd i).symm f) b p = getRes i (f.1 (mergeBitRes i b p)) := rfl
 
 def bitInvarMulEquiv (i : Fin (m + 1)) : (Bool → Equiv.Perm (BV m)) ≃* bitInvarSubgroup i :=
-  ((Equiv.Perm.equivUnitsEnd).arrowCongr (Equiv.refl _)).trans <|
+  (Equiv.Perm.equivUnitsEnd.arrowCongr (Equiv.refl _)).trans <|
   MulEquiv.piUnits.symm.trans <|
   (Units.mapEquiv (bitInvarMulEquivEnd i)).trans <|
   (Equiv.Perm.equivUnitsEnd.subgroupMulEquivUnitsType
