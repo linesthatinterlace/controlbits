@@ -199,7 +199,7 @@ namespace PartialControlBits
 
 variable {m : ℕ}
 
-def toPerm (n : Fin (m + 1)) :
+def toPermPartial (n : Fin (m + 1)) :
   PartialControlBits m n → Perm (BV (m + 1)) :=
   n.induction (fun cb => condFlipBit (last _) (cb 0))
   (fun i re cb =>
@@ -207,50 +207,50 @@ def toPerm (n : Fin (m + 1)) :
     re (fun i => cb i.castSucc.succ) *
     condFlipBit (i.rev.castSucc) (cb (last _)))
 
-lemma toPerm_zero {cb : PartialControlBits m 0} :
-  toPerm 0 cb = condFlipBit (last _) (cb 0) := rfl
+lemma toPermPartial_zero {cb : PartialControlBits m 0} :
+  toPermPartial 0 cb = condFlipBit (last _) (cb 0) := rfl
 
-lemma toPerm_succ {n : Fin m} {cb} : toPerm (n.succ) cb =
-    condFlipBit (n.rev.castSucc) (cb 0) * toPerm (n.castSucc) (fun i ↦ cb i.castSucc.succ) *
+lemma toPermPartial_succ {n : Fin m} {cb} : toPermPartial (n.succ) cb =
+    condFlipBit (n.rev.castSucc) (cb 0) * toPermPartial (n.castSucc) (fun i ↦ cb i.castSucc.succ) *
     condFlipBit (n.rev.castSucc) (cb (last _)) := rfl
 
-lemma toPerm_succ_castSucc {n : Fin (m + 1)} {cb} :
-    toPerm (n.castSucc) cb = (bitInvarMulEquiv 0) (fun b =>
-    toPerm n (fun i p => cb i (mergeBitRes 0 b p))) := by
+lemma toPermPartial_succ_castSucc {n : Fin (m + 1)} {cb} :
+    toPermPartial (n.castSucc) cb = (bitInvarMulEquiv 0) (fun b =>
+    toPermPartial n (fun i p => cb i (mergeBitRes 0 b p))) := by
   induction' n using induction with i IH
-  · simp_rw [castSucc_zero, toPerm_zero,
+  · simp_rw [castSucc_zero, toPermPartial_zero,
     bitInvarMulEquiv_zero_apply_condFlipBits, succ_last]
-  · simp_rw [← succ_castSucc, toPerm_succ,  IH, ← Pi.mul_def,
+  · simp_rw [← succ_castSucc, toPermPartial_succ,  IH, ← Pi.mul_def,
     map_mul, Subgroup.coe_mul, bitInvarMulEquiv_zero_apply_condFlipBits,
     rev_castSucc,  succ_castSucc, coe_castSucc]
 
-lemma toPerm_succ_last {cb : PartialControlBits (m + 1) (m + 1)} :
-    toPerm (last _) cb =
+lemma toPermPartial_succ_last {cb : PartialControlBits (m + 1) (m + 1)} :
+    toPermPartial (last _) cb =
   condFlipBit 0 (cb 0) * ((bitInvarMulEquiv 0) fun b =>
-    toPerm (last _) fun i k => cb i.castSucc.succ (mergeBitRes 0 b k)) *
+    toPermPartial (last _) fun i k => cb i.castSucc.succ (mergeBitRes 0 b k)) *
     condFlipBit 0 (cb (last _)) := by
-  simp_rw [← succ_last, toPerm_succ, rev_last, toPerm_succ_castSucc, castSucc_zero,
+  simp_rw [← succ_last, toPermPartial_succ, rev_last, toPermPartial_succ_castSucc, castSucc_zero,
   succ_last, val_last]
 
-lemma bitInvar_zero_toPerm_castSucc {n : Fin m} {cb} :
-    bitInvar 0 ⇑(toPerm n.castSucc cb) := by
+lemma bitInvar_zero_toPermPartial_castSucc {n : Fin m} {cb} :
+    bitInvar 0 ⇑(toPermPartial n.castSucc cb) := by
   cases m
   · exact n.elim0
-  · rw [toPerm_succ_castSucc]
+  · rw [toPermPartial_succ_castSucc]
     exact Subtype.prop _
 
-lemma bitInvar_zero_toPerm_of_ne_last {n : Fin (m + 1)} (h : n ≠ last _) {cb} :
-    bitInvar 0 ⇑(toPerm n cb) := by
+lemma bitInvar_zero_toPermPartial_of_ne_last {n : Fin (m + 1)} (h : n ≠ last _) {cb} :
+    bitInvar 0 ⇑(toPermPartial n cb) := by
   rcases (eq_castSucc_of_ne_last h) with ⟨_, rfl⟩
-  exact bitInvar_zero_toPerm_castSucc
+  exact bitInvar_zero_toPermPartial_castSucc
 
-lemma bitInvar_toPerm {n t : Fin (m + 1)} (htn : t < n.rev) {cb} :
-    bitInvar t ⇑(toPerm n cb) := by
+lemma bitInvar_toPermPartial {n t : Fin (m + 1)} (htn : t < n.rev) {cb} :
+    bitInvar t ⇑(toPermPartial n cb) := by
   induction' n using inductionOn with n IH
   · exact condFlipBit_bitInvar_of_ne htn.ne
   · rw [rev_succ] at htn
     rw [rev_castSucc] at IH
-    simp_rw [toPerm_succ]
+    simp_rw [toPermPartial_succ]
     have H := fun {c} => (condFlipBit_bitInvar_of_ne (c := c) htn.ne)
     refine bitInvar_mulPerm_of_bitInvar (bitInvar_mulPerm_of_bitInvar H (IH ?_)) H
     exact htn.trans (castSucc_lt_succ _)
@@ -266,14 +266,14 @@ namespace ControlBits
 variable {m : ℕ}
 
 abbrev toPerm : ControlBits m → Perm (BV (m + 1)) :=
-  PartialControlBits.toPerm (last _)
+  PartialControlBits.toPermPartial (last _)
 
 lemma toPerm_zero {cb : ControlBits 0} : toPerm cb = condFlipBit 0 (cb 0) := rfl
 
 lemma toPerm_succ {cb : ControlBits (m + 1)} : toPerm cb = condFlipBit 0 (cb 0) *
     (bitInvarMulEquiv 0) (fun b => toPerm
     (fun i k => cb i.castSucc.succ (mergeBitRes 0 b k))) * condFlipBit 0 (cb (last _)) :=
-  PartialControlBits.toPerm_succ_last
+  PartialControlBits.toPermPartial_succ_last
 
 def fromPerm {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
 match m with
@@ -299,12 +299,6 @@ lemma fromPerm_succ_apply_castSucc_succ {π : Perm (BV (m + 2))} {i} :
     (MiddlePerm π) (getBit 0 p)) i (getRes 0 p) :=
   piFinSuccCastSucc_symm_apply_castSucc_succ _ _ _ _
 
-lemma fromPerm_succ_apply_succ_castSucc {π : Perm (BV (m + 2))} {i} :
-    fromPerm π i.succ.castSucc =
-    fun p => fromPerm ((bitInvarMulEquiv 0).symm
-    (MiddlePerm π) (getBit 0 p)) i (getRes 0 p) :=
-  fromPerm_succ_apply_castSucc_succ
-
 lemma fromPerm_succ_apply_mergeBitRes {π : Perm (BV (m + 2))} {b : Bool} :
     (fun i k => fromPerm π i.castSucc.succ (mergeBitRes 0 b k)) =
     fromPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) b) := by
@@ -314,7 +308,7 @@ lemma toPerm_leftInverse : (toPerm (m := m)).LeftInverse fromPerm := by
   unfold Function.LeftInverse ; induction' m with m IH <;> intro π
   · exact lastLayerPerm_base
   · trans FirstLayerPerm π * MiddlePerm π * LastLayerPerm π
-    · refine toPerm_succ.trans ?_
+    · rw [toPerm_succ]
       refine congrArg₂ _ (congrArg₂ _ ?_ (congrArg _ ?_)) ?_
       · rw [fromPerm_succ_apply_zero, condFlipBit_firstLayer]
       · simp_rw [fromPerm_succ_apply_mergeBitRes, IH, (bitInvarMulEquiv 0).apply_symm_apply]

@@ -2486,7 +2486,7 @@ theorem minLen_succ_of_getElem_ne {a : PermOf (n + 1)} (ha : a[n] ≠ n) :
 @[simp] theorem succ_minLen_le_of_getElem_eq {a : PermOf (n + 1)} (ha : a[n] = n) :
     a.minLen ≤ n := by simp_rw [minLen_succ_of_getElem_eq ha, minLen_le]
 
-@[simp] theorem minLen_one : (1 : PermOf n).minLen = 0 := by
+theorem minLen_one : (1 : PermOf n).minLen = 0 := by
   induction n with | zero => _ | succ n IH => _
   · simp_rw [minLen_zero]
   · rw [minLen_succ_of_getElem_eq (getElem_one _), castPred_one, IH]
