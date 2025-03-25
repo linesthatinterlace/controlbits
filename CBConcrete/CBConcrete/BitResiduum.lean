@@ -1,4 +1,4 @@
-import CBConcrete.PermOf
+import CBConcrete.PermOf.MulAction
 import Mathlib.Algebra.Order.Archimedean.Basic
 import Mathlib.Algebra.Order.Star.Basic
 import Mathlib.Data.Fintype.Order
@@ -20,20 +20,6 @@ def boolInversion : Equiv.Perm Bool where
   invFun := not
   left_inv := Bool.not_not
   right_inv := Bool.not_not
-
-namespace Equiv
-
-/-- A subtype of a `Prod` that depends only on the second component is equivalent to the
-first type times the corresponding subtype of the second type. -/
-@[simps!]
-def prodSubtypeSndEquivSubtypeProd {α β : Type*} {p : β → Prop} :
-    {s : α × β // p s.2} ≃ α × {b // p b} where
-  toFun x := ⟨x.1.1, ⟨x.1.2, x.2⟩⟩
-  invFun x := ⟨⟨x.1, x.2.1⟩, x.2.2⟩
-  left_inv _ := rfl
-  right_inv _ := rfl
-
-end Equiv
 
 namespace Bool
 
@@ -1777,14 +1763,14 @@ section FlipBit
 variable {n : ℕ}
 
 def flipBitIndices (a : PermOf n) (i : ℕ) : PermOf n where
-  fwdVector := a.fwdVector.flipBitIndices i
-  bwdVector := a.bwdVector.flipBitVals i
-  getElem_fwdVector_lt := fun hi => by
-    simp_rw [Vector.getElem_flipBitIndices, getElem_fwdVector]
+  toVector := a.toVector.flipBitIndices i
+  invVector := a.invVector.flipBitVals i
+  getElem_toVector_lt := fun hi => by
+    simp_rw [Vector.getElem_flipBitIndices, getElem_toVector]
     split_ifs <;> exact getElem_lt _ _
-  getElem_bwdVector_getElem_fwdVector := fun {j} hk => by
+  getElem_invVector_getElem_toVector := fun {j} hk => by
     simp_rw [Vector.getElem_flipBitIndices, Vector.getElem_flipBitVals,
-      getElem_fwdVector, getElem_bwdVector]
+      getElem_toVector, getElem_invVector]
     by_cases hj : j.flipBit i < n
     · simp_rw [hj, dite_true, getElem_inv_getElem, Nat.flipBit_flipBit_of_eq, hk, ite_true]
     · simp_rw [hj, dite_false, getElem_inv_getElem, hj, if_false]
@@ -1822,10 +1808,10 @@ theorem getElem_inv_flipBit {hk : k < n} :
   unfold flipBit
   simp_rw [getElem_inv_flipBitIndices, inv_one, getElem_one]
 
-@[simp] theorem actOnIndices_flipBit {α : Type*} (v : Vector α n) :
-    ((flipBit i).actOnIndices v) = v.flipBitIndices i := by
+@[simp] theorem shuffle_flipBit {α : Type*} (v : Vector α n) :
+    ((flipBit i).shuffle v) = v.flipBitIndices i := by
   ext j hj
-  simp_rw [Vector.getElem_flipBitIndices, getElem_actOnIndices, getElem_flipBit]
+  simp_rw [Vector.getElem_flipBitIndices, getElem_shuffle, getElem_flipBit]
   split_ifs <;> rfl
 
 @[simp]
@@ -2054,14 +2040,14 @@ section CondFlipBit
 variable {n l i j : ℕ}
 
 def condFlipBitIndices (a : PermOf n) (i : ℕ) (c : Vector Bool l) : PermOf n where
-  fwdVector := a.fwdVector.condFlipBitIndices i c
-  bwdVector := a.bwdVector.condFlipBitVals i c
-  getElem_fwdVector_lt := fun hi => by
-    simp_rw [Vector.getElem_condFlipBitIndices, getElem_fwdVector]
+  toVector := a.toVector.condFlipBitIndices i c
+  invVector := a.invVector.condFlipBitVals i c
+  getElem_toVector_lt := fun hi => by
+    simp_rw [Vector.getElem_condFlipBitIndices, getElem_toVector]
     split_ifs <;> exact getElem_lt _ _
-  getElem_bwdVector_getElem_fwdVector := fun {j} hk => by
+  getElem_invVector_getElem_toVector := fun {j} hk => by
     simp_rw [Vector.getElem_condFlipBitIndices, Vector.getElem_condFlipBitVals,
-      getElem_fwdVector, getElem_bwdVector]
+      getElem_toVector, getElem_invVector]
     by_cases hj : j.condFlipBit i c < n
     · simp_rw [hj, dite_true, getElem_inv_getElem, Nat.condFlipBit_condFlipBit_of_eq, hk, ite_true]
     · simp_rw [hj, dite_false, getElem_inv_getElem, hj, if_false]
@@ -2627,7 +2613,7 @@ theorem getElem_testBit_of_ge (a : PermOf n) {k : ℕ} (h : n ≤ 2^k) {i : ℕ}
 open Nat
 
 def BitInvariant (i : ℕ) (a : PermOf n) : Prop :=
-  a.fwdVector.map (testBit · i) = (Vector.range n).map (testBit · i)
+  a.toVector.map (testBit · i) = (Vector.range n).map (testBit · i)
 
 variable {a b : PermOf n}
 
@@ -2637,7 +2623,7 @@ theorem bitInvariant_iff_testBit_getElem_eq_testBit : a.BitInvariant i ↔
     ∀ {x} (h : x < n), a[x].testBit i = x.testBit i := by
   unfold BitInvariant
   simp_rw [Vector.ext_iff]
-  simp_rw [Vector.getElem_map, getElem_fwdVector, Vector.getElem_range]
+  simp_rw [Vector.getElem_map, getElem_toVector, Vector.getElem_range]
 
 theorem bitInvariant_of_ge (h : n ≤ 2^i) : a.BitInvariant i := by
   simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit, a.getElem_testBit_of_ge h]
