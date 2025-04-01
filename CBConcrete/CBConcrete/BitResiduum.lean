@@ -2021,18 +2021,6 @@ theorem getElem_flipBitVals_ne_self_of_div {hk : k < n} :
   simp_rw [getElem_flipBitVals_of_div hin]
   exact Nat.flipBit_ne_self
 
-open Equiv.Perm in
-theorem natPerm_flipBit : natPerm (n := n) (flipBit i) =
-    ofSubtype ((Nat.flipBitPerm i).subtypePerm (fun k => (k.flipBit_lt_iff_lt hin).symm)) := by
-  ext k : 1
-  simp_rw [natPerm_apply_apply]
-  rcases lt_or_le k n with hk | hk
-  · rw [Equiv.Perm.ofSubtype_subtypePerm_of_mem (p := fun i => i < n) _ hk]
-    simp_rw [Nat.flipBitPerm_apply, smul_of_lt _ hk, getElem_flipBit, Nat.flipBit_lt_iff_lt hin,
-      if_pos hk]
-  · rw [Equiv.Perm.ofSubtype_subtypePerm_of_not_mem (p := fun i => i < n) _ hk.not_lt,
-      smul_of_ge _ hk]
-
 end FlipBit
 
 section CondFlipBit
@@ -2247,19 +2235,6 @@ theorem getElem_inv_condFlipBitVals_of_div {hk : k < n} :
     (a.condFlipBitVals i c)⁻¹[k] = a⁻¹[k.condFlipBit i c]'
     ((k.condFlipBit_lt_iff_lt hin).mpr hk) := by
   simp_rw [getElem_inv_condFlipBitVals, (k.condFlipBit_lt_iff_lt hin), hk, dite_true]
-
-open Equiv.Perm in
-theorem natPerm_condFlipBit : natPerm (n := n) (condFlipBit i c) =
-    ofSubtype ((Nat.condFlipBitPerm i c).subtypePerm
-    (fun k => (k.condFlipBit_lt_iff_lt hin).symm)) := by
-  ext k : 1
-  simp_rw [natPerm_apply_apply]
-  rcases lt_or_le k n with hk | hk
-  · rw [Equiv.Perm.ofSubtype_subtypePerm_of_mem (p := fun i => i < n) _ hk]
-    simp_rw [Nat.condFlipBitPerm_apply, smul_of_lt _ hk, getElem_condFlipBit,
-      Nat.condFlipBit_lt_iff_lt hin, if_pos hk]
-  · rw [Equiv.Perm.ofSubtype_subtypePerm_of_not_mem (p := fun i => i < n) _ hk.not_lt,
-      smul_of_ge _ hk]
 
 end CondFlipBit
 

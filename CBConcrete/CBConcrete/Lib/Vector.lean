@@ -15,7 +15,6 @@ theorem getD_of_lt (a : Vector α n) (x : α) (i : ℕ) (h : i < n) : a[i]?.getD
 theorem getD_of_ge (a : Vector α n) (x : α) (i : ℕ) (h : n ≤ i) : a[i]?.getD x = x := by
   rw [getElem?_neg a i h.not_lt, Option.getD_none]
 
-
 theorem getElem_swapIfInBounds {as : Vector α n} {i j k : ℕ} (hk : k < n) :
     (as.swapIfInBounds i j)[k] =
     if h : i < n ∧ j < n then (as.swap i j)[k] else as[k] := by
@@ -29,7 +28,6 @@ theorem getElem_swapIfInBounds {as : Vector α n} {i j k : ℕ} (hk : k < n) :
     rcases eq_or_ne k j with rfl | hj
     · simp_rw [ite_true, true_and, hk, and_true]
     · simp_rw [hj, false_and, dite_false, ite_false, dite_eq_ite, ite_self]
-
 
 theorem mem_def {a : α} (v : Vector α n) : a ∈ v ↔ a ∈ v.toArray :=
   ⟨fun | .mk h => h, Vector.Mem.mk⟩
