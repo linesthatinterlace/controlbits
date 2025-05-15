@@ -295,7 +295,7 @@ theorem cast_isCongr_cast {k : ℕ}  {a : PermOf n} {hnm : n = m} {hnk : n = k} 
   simp_rw [cast_isCongr_cast_iff_isCongr, isCongr_iff_eq]
 
 /--
-When `n = m`, `PermOf n` is multiplicatively IsCongralent to `PermOf m`.
+When `n = m`, `PermOf n` is multiplicatively congruent to `PermOf m`.
 -/
 
 @[simps! apply symm_apply]
