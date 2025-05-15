@@ -49,8 +49,8 @@ theorem leftLayer_eq_of_gt (hi : n < i) :
   ext
   simp_rw [getElem_leftLayer_of_gt hi, Vector.getElem_replicate]
 
-theorem getElem_leftLayer_of_lt (ha : ∀ j < i, a.BitInvariant j)
-    (hp : p < 2^i) {hp' : p < 2^n} :
+theorem getElem_leftLayer_of_lt_of_bitInvariant_lt
+    (ha : ∀ j < i, a.BitInvariant j) (hp : p < 2^i) {hp' : p < 2^n} :
     (leftLayer a i)[p] = false := by
   rcases le_or_lt i n with hi | hi
   · simp_rw [getElem_leftLayer_of_le hi, mergeBitRes_apply_false_of_lt_two_pow hp,
@@ -64,10 +64,10 @@ theorem leftLayer_eq_of_bitInvariant_lt {a : PermOf (2^(n + 1))}
     leftLayer a n = Vector.replicate _ false := by
   ext i hi
   simp_rw [Vector.getElem_replicate]
-  exact getElem_leftLayer_of_lt ha hi
+  exact getElem_leftLayer_of_lt_of_bitInvariant_lt ha hi
 
 theorem getElem_zero_leftLayer_zero :
-    (leftLayer a 0)[0] = false := getElem_leftLayer_of_lt
+    (leftLayer a 0)[0] = false := getElem_leftLayer_of_lt_of_bitInvariant_lt
       (by simp only [not_lt_zero', IsEmpty.forall_iff, implies_true]) (Nat.two_pow_pos _)
 
 end LeftLayer
@@ -88,6 +88,11 @@ theorem getElem_leftPerm_of_gt (hi : n < i) (hk : k < 2^(n + 1))  :
 @[simp]
 theorem getElem_leftPerm_leftPerm (hk : k < 2^(n + 1)) :
     (leftPerm a i)[(leftPerm a i)[k]] = k := getElem_condFlipBit_condFlipBit
+
+theorem leftPerm_inv : (leftPerm a i)⁻¹ = (leftPerm a i) := by
+  simp_rw [inv_eq_iff_mul_eq_one]
+  ext
+  simp_rw [getElem_mul, getElem_leftPerm_leftPerm, getElem_one]
 
 theorem leftPerm_bitInvariant_of_ne {i : ℕ} {j : ℕ} (hj : j ≠ i) :
     (leftPerm a i).BitInvariant j := condFlipBit_of_ne hj
@@ -182,6 +187,11 @@ theorem getElem_rightPerm_of_gt (hi : n < i) (hk : k < 2^(n + 1))  :
 @[simp]
 theorem getElem_rightPerm_rightPerm (hk : k < 2^(n + 1)) :
     (rightPerm a i)[(rightPerm a i)[k]] = k := getElem_condFlipBit_condFlipBit
+
+theorem rightPerm_inv : (rightPerm a i)⁻¹ = (rightPerm a i) := by
+  simp_rw [inv_eq_iff_mul_eq_one]
+  ext
+  simp_rw [getElem_mul, getElem_rightPerm_rightPerm, getElem_one]
 
 theorem rightPerm_bitInvariant_of_ne {i : ℕ} {j : ℕ} (hj : j ≠ i) :
     (rightPerm a i).BitInvariant j := condFlipBit_of_ne hj
@@ -330,44 +340,44 @@ theorem condFlipBit_mlrDecomp_snd_fst_mul_mlrDecomp_fst_mul_mlrDecomp_snd_snd {i
 
 end mlrDecomp
 
-def toControlBitsAux (a : PermOf (2^(n + 1))) (i : ℕ) :
+def toCBLayer (a : PermOf (2^(n + 1))) (i : ℕ) :
     PermOf (2^(n + 1)) × Vector (Vector Bool (2^n)) i ×
     Vector (Vector Bool (2^n)) i := i.recOn ((a, #v[], #v[]))
     (fun i ⟨M, LS, RS⟩ =>
       let (M, L, R) := mlrDecomp M i
       (M, LS.push L, RS.push R))
 
-@[simp] theorem toControlBitsAux_zero :
-  a.toControlBitsAux 0 = (a, #v[], #v[]) := rfl
+@[simp] theorem toCBLayer_zero :
+  a.toCBLayer 0 = (a, #v[], #v[]) := rfl
 
-theorem toControlBitsAux_succ :
-  a.toControlBitsAux (i + 1) =
-    ((a.toControlBitsAux i).1.middlePerm i,
-    (a.toControlBitsAux i).2.1.push ((a.toControlBitsAux i).1.leftLayer i),
-    (a.toControlBitsAux i).2.2.push ((a.toControlBitsAux i).1.rightLayer i)) := by
-  trans (((mlrDecomp (a.toControlBitsAux i).1 i).1,
-    (a.toControlBitsAux i).2.1.push (mlrDecomp (a.toControlBitsAux i).1 i).2.1,
-    (a.toControlBitsAux i).2.2.push (mlrDecomp (a.toControlBitsAux i).1 i).2.2))
+theorem toCBLayer_succ :
+  a.toCBLayer (i + 1) =
+    ((a.toCBLayer i).1.middlePerm i,
+    (a.toCBLayer i).2.1.push ((a.toCBLayer i).1.leftLayer i),
+    (a.toCBLayer i).2.2.push ((a.toCBLayer i).1.rightLayer i)) := by
+  trans (((mlrDecomp (a.toCBLayer i).1 i).1,
+    (a.toCBLayer i).2.1.push (mlrDecomp (a.toCBLayer i).1 i).2.1,
+    (a.toCBLayer i).2.2.push (mlrDecomp (a.toCBLayer i).1 i).2.2))
   · rfl
   · simp_rw [mlrDecomp_eq_left_middle_right]
 
-@[simp] theorem toControlBitsAux_one :
-  a.toControlBitsAux 1 =
+@[simp] theorem toCBLayer_one :
+  a.toCBLayer 1 =
     ((middlePerm a 0), #v[leftLayer a 0], #v[rightLayer a 0]) := by
-  simp_rw [toControlBitsAux_succ, toControlBitsAux_zero, Vector.push_mk,
+  simp_rw [toCBLayer_succ, toCBLayer_zero, Vector.push_mk,
     List.push_toArray, List.nil_append]
 
 def middlePermIth (a : PermOf (2^(n + 1))) (i : ℕ) : PermOf (2^(n + 1)) :=
-  (toControlBitsAux a i).1
+  (toCBLayer a i).1
 
 @[simp] theorem middlePermIth_zero :
-    a.middlePermIth 0 = a := congrArg _ toControlBitsAux_zero
+    a.middlePermIth 0 = a := congrArg _ toCBLayer_zero
 
 @[simp] theorem middlePermIth_succ :
-    a.middlePermIth (i + 1) = (a.middlePermIth i).middlePerm i := congrArg _ toControlBitsAux_succ
+    a.middlePermIth (i + 1) = (a.middlePermIth i).middlePerm i := congrArg _ toCBLayer_succ
 
 @[simp] theorem middlePermIth_one :
-    a.middlePermIth 1 = a.middlePerm 0 := congrArg _ toControlBitsAux_succ
+    a.middlePermIth 1 = a.middlePerm 0 := congrArg _ toCBLayer_succ
 
 @[simp] theorem middlePermIth_bitInvariant :
     ∀ j < i, (a.middlePermIth i).BitInvariant j := by
@@ -382,12 +392,12 @@ theorem middlePermIth_eq_of_gt (hi : n < i):
   exact fun _ hk => a.middlePermIth_bitInvariant _ (hk.trans_le (Nat.succ_le_of_lt hi))
 
 def leftLayerIth (a : PermOf (2^(n + 1))) (i : ℕ) : Vector Bool (2^n) :=
-  (toControlBitsAux a (i + 1)).2.1.back
+  (toCBLayer a (i + 1)).2.1.back
 
 theorem leftLayerIth_eq :
     a.leftLayerIth i = (a.middlePermIth i).leftLayer i := by
   unfold leftLayerIth middlePermIth
-  simp_rw [toControlBitsAux_succ, Vector.back_succ, Vector.getElem_push_eq]
+  simp_rw [toCBLayer_succ, Vector.back_succ, Vector.getElem_push_eq]
 
 @[simp] theorem leftLayerIth_zero :
     a.leftLayerIth 0 = a.leftLayer 0 := by
@@ -396,7 +406,7 @@ theorem leftLayerIth_eq :
 theorem getElem_leftLayerIth_of_lt (hp : p < 2^i) (hp' : p < 2^n) :
     (a.leftLayerIth i)[p] = false := by
   rw [leftLayerIth_eq]
-  exact getElem_leftLayer_of_lt middlePermIth_bitInvariant hp
+  exact getElem_leftLayer_of_lt_of_bitInvariant_lt middlePermIth_bitInvariant hp
 
 theorem getElem_leftLayerIth :
     (a.leftLayerIth 0)[0] = false := by
@@ -413,12 +423,12 @@ theorem leftLayerIth_eq_of_ge (hi : n ≤ i) :
   hi.eq_or_lt.elim (fun h => h ▸ leftLayerNth_eq) (leftLayerIth_eq ▸ leftLayer_eq_of_gt)
 
 def rightLayerIth (a : PermOf (2^(n + 1))) (i : ℕ) : Vector Bool (2^n) :=
-  (toControlBitsAux a (i + 1)).2.2.back
+  (toCBLayer a (i + 1)).2.2.back
 
 theorem rightLayerIth_eq :
     a.rightLayerIth i = (a.middlePermIth i).rightLayer i := by
   unfold rightLayerIth middlePermIth
-  simp_rw [toControlBitsAux_succ, Vector.back_succ, Vector.getElem_push_eq]
+  simp_rw [toCBLayer_succ, Vector.back_succ, Vector.getElem_push_eq]
 
 @[simp] theorem rightLayerIth_zero :
     a.rightLayerIth 0 = a.rightLayer 0 := by
@@ -428,15 +438,15 @@ theorem rightLayerIth_eq_of_gt (hi : n < i) :
     a.rightLayerIth i = Vector.replicate _ false :=
   rightLayerIth_eq ▸ (rightLayer_eq_of_gt hi)
 
-theorem toControlBitsAux_eq :
-    a.toControlBitsAux i =
+theorem toCBLayer_eq :
+    a.toCBLayer i =
     (a.middlePermIth i, Vector.ofFn (fun i => a.leftLayerIth i),
     Vector.ofFn (fun i => a.rightLayerIth i)) := by
   induction i with | zero => _ | succ i IH => _
-  · simp_rw [toControlBitsAux_zero, middlePermIth_zero, Prod.mk.injEq, true_and]
+  · simp_rw [toCBLayer_zero, middlePermIth_zero, Prod.mk.injEq, true_and]
     exact ⟨Vector.ext (fun _ h => (Nat.not_lt_zero _ h).elim),
     Vector.ext (fun _ h => (Nat.not_lt_zero _ h).elim)⟩
-  · simp_rw [toControlBitsAux_succ, IH, middlePermIth_succ, Prod.mk.injEq, true_and,
+  · simp_rw [toCBLayer_succ, IH, middlePermIth_succ, Prod.mk.injEq, true_and,
       leftLayerIth_eq, rightLayerIth_eq]
     refine ⟨Vector.ext fun _ => ?_, Vector.ext fun _ => ?_⟩ <;>
     simp_rw [Vector.push, Vector.toArray_ofFn, Vector.getElem_mk, Vector.getElem_ofFn,
@@ -451,6 +461,9 @@ theorem leftPermIth_eq :
     a.leftPermIth i = (a.middlePermIth i).leftPerm i := by
   unfold leftPermIth leftPerm
   simp_rw [leftLayerIth_eq]
+
+theorem leftPermIth_inv : (leftPermIth a i)⁻¹ = (leftPermIth a i) := by
+  simp_rw [leftPermIth_eq, leftPerm_inv]
 
 theorem leftPermIth_eq_of_ge (hi : n ≤ i) :
     a.leftPermIth i = 1 := by
@@ -468,6 +481,9 @@ theorem rightPermIth_eq :
   unfold rightPermIth rightPerm
   simp_rw [rightLayerIth_eq]
 
+theorem rightPermIth_inv : (rightPermIth a i)⁻¹ = (rightPermIth a i) := by
+  simp_rw [rightPermIth_eq, rightPerm_inv]
+
 theorem rightPermIth_eq_of_gt (hi : n < i) :
     a.rightPermIth i = 1 := by
   simp_rw [rightPermIth, rightLayerIth_eq_of_gt hi, condFlipBit_of_mkVector_false]
@@ -480,6 +496,11 @@ theorem leftPermIth_mul_middlePermISuccTh_mul_rightPermIth :
     a.leftPermIth i * a.middlePermIth (i + 1) * a.rightPermIth i = a.middlePermIth i := by
   simp_rw [leftPermIth_eq, middlePermIth_succ, rightPermIth_eq,
     leftPerm_mul_middlePerm_mul_rightPerm]
+
+theorem middlePermISuccTh_eq_leftPermIth_mul_middlePermIth_mul_rightPermIth :
+    a.middlePermIth (i + 1) = a.leftPermIth i * a.middlePermIth i * a.rightPermIth i := by
+  rw [← mul_inv_eq_iff_eq_mul, ← inv_mul_eq_iff_eq_mul, leftPermIth_inv, rightPermIth_inv,
+    ← mul_assoc, leftPermIth_mul_middlePermISuccTh_mul_rightPermIth]
 
 theorem eq_fold_mul_middlePermIth_mul_fold (i : ℕ) :
     a = (Nat.fold i (fun k _ l => l * a.leftPermIth k) 1) * a.middlePermIth i *
@@ -501,20 +522,20 @@ theorem eq_foldl_mul_foldl_succ :
 
 def toControlBits (a : PermOf (2^(n + 1))) :
     Vector (Vector Bool (2^n)) (2*n + 1) :=
-  let (_, L, R) := toControlBitsAux a (n + 1)
+  let (_, L, R) := toCBLayer a (n + 1)
   (L.pop ++ R.reverse).cast (by simp_rw [add_tsub_cancel_right, two_mul, add_assoc])
 
 theorem getElem_toControlBits_of_lt (hi : i < n) :
     a.toControlBits[i] = a.leftLayerIth i := by
   unfold toControlBits
-  simp_rw [toControlBitsAux_eq, Vector.getElem_cast,
+  simp_rw [toCBLayer_eq, Vector.getElem_cast,
     Vector.getElem_append, Vector.getElem_pop, Vector.getElem_ofFn,
     Nat.add_one_sub_one, dif_pos hi]
 
 theorem getElem_toControlBits_of_ge (hi : n ≤ i) {hi' : i < (2*n + 1)} :
     a.toControlBits[i] = a.rightLayerIth (n - (i - n)) := by
   unfold toControlBits
-  simp_rw [toControlBitsAux_eq, Vector.getElem_cast,
+  simp_rw [toCBLayer_eq, Vector.getElem_cast,
     Vector.getElem_append, Vector.getElem_reverse, Vector.getElem_ofFn,
     Nat.add_one_sub_one, dif_neg hi.not_lt]
 
