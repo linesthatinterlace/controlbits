@@ -342,8 +342,7 @@ theorem fwdVector_eq_iff_forall_getElem_eq (a b : PermOf n) :
   simp_rw [Vector.ext_iff, getElem_fwdVector]
 
 @[simp]
-theorem getElem_one {i : ℕ} (hi : i < n) : (1 : PermOf n)[i] = i := Vector.getElem_range _ _
-
+theorem getElem_one {i : ℕ} (hi : i < n) : (1 : PermOf n)[i] = i := Vector.getElem_range _
 section GetElemBijective
 
 theorem getElem_injective (a : PermOf n) {i : ℕ} (hi : i < n) {j : ℕ} (hj : j < n)
@@ -437,7 +436,7 @@ instance : Mul (PermOf n) where
 
 @[simp]
 theorem getElem_mul (a b : PermOf n) {i : ℕ} (hi : i < n) :
-    (a * b)[i] = a[b[i]] := Vector.getElem_ofFn _ _ _
+    (a * b)[i] = a[b[i]] := Vector.getElem_ofFn _
 
 instance : Subsingleton (PermOf 0) where
   allEq a b := by simp_rw [PermOf.ext_iff, not_lt_zero', IsEmpty.forall_iff, implies_true]
@@ -972,7 +971,7 @@ theorem getElem_swap (a : PermOf n) (hk : k < n) :
 
 @[simp]
 theorem getElem_inv_swap (a : PermOf n) (hk : k < n) :
-    (a.swap i j hi hj)⁻¹[k] = Equiv.swap i j a⁻¹[k] := a.bwdVector.getElem_map _ _ _
+    (a.swap i j hi hj)⁻¹[k] = Equiv.swap i j a⁻¹[k] := a.bwdVector.getElem_map _ _
 
 theorem swap_smul_eq_smul_swap (a : PermOf n) :
     (a.swap i j hi hj) • k = a • (Equiv.swap i j k) := by
@@ -1078,7 +1077,7 @@ section ActOnIndices
 variable {α : Type*}
 
 @[simp] theorem getElem_actOnIndices (a : PermOf n) (v : Vector α n) {i : ℕ} (hi : i < n) :
-    (a.actOnIndices v)[i] = v[a[i]] := Vector.getElem_mapFinIdx _ _ _ _
+    (a.actOnIndices v)[i] = v[a[i]] := Vector.getElem_mapFinIdx _
 
 @[simp] theorem one_actOnIndices (v : Vector α n) :
     (1 : (PermOf n)).actOnIndices v = v := by
@@ -1285,14 +1284,14 @@ theorem cycleMinAux_snd_val (a : PermOf n) {i : ℕ} :
     (a.CycleMinVectorAux i).2 = CycleMinVector a i := rfl
 
 @[simp] theorem getElem_cycleMinVector_zero (a : PermOf n) {x : ℕ} (hx : x < n):
-  (a.CycleMinVector 0)[x] = x := Vector.getElem_range _ _
+  (a.CycleMinVector 0)[x] = x := Vector.getElem_range _
 
 theorem getElem_cycleMinVector_succ (a : PermOf n) {i x : ℕ}
     (hx : x < n) :
     (a.CycleMinVector (i + 1))[x] = min ((a.CycleMinVector i)[x])
     ((a.CycleMinVector i)[(a^2^i)[x]]) := by
   rcases i with (_ | i) <;>
-  refine (Vector.getElem_zipWith _ _ _ _ _).trans ?_
+  refine (Vector.getElem_zipWith _).trans ?_
   · simp_rw [Vector.getElem_range, getElem_fwdVector, pow_zero, pow_one,
       getElem_cycleMinVector_zero]
   · simp_rw [getElem_actOnIndices, cycleMinAux_snd_val,
@@ -1799,9 +1798,9 @@ def castLE {m n : ℕ} (hmn : m ≤ n) (a : PermOf n) (ham : a.SetAt m) : PermOf
   fwdVector := (a.fwdVector.take m).cast (min_eq_left hmn)
   bwdVector := (a.bwdVector.take m).cast (min_eq_left hmn)
   getElem_fwdVector_lt := fun him => by
-    simp_rw [Vector.getElem_cast, Vector.getElem_take', getElem_fwdVector, ham.getElem_lt_of_lt him]
+    simp_rw [Vector.getElem_cast, Vector.getElem_take, getElem_fwdVector, ham.getElem_lt_of_lt him]
   getElem_bwdVector_getElem_fwdVector := fun _ => by
-    simp_rw [Vector.getElem_cast, Vector.getElem_take', getElem_bwdVector_getElem_fwdVector]
+    simp_rw [Vector.getElem_cast, Vector.getElem_take, getElem_bwdVector_getElem_fwdVector]
 
 section CastLE
 
@@ -1810,7 +1809,7 @@ variable {m i k : ℕ} (a : PermOf n) (ham : a.SetAt m) {hmn : m ≤ n}
 @[simp] theorem getElem_castLE (him : i < m) :
     (a.castLE hmn ham)[i] = a[i] := by
   unfold castLE
-  simp_rw [getElem_mk, Vector.getElem_cast, Vector.getElem_take', getElem_fwdVector]
+  simp_rw [getElem_mk, Vector.getElem_cast, Vector.getElem_take, getElem_fwdVector]
 
 theorem inv_castLE : (a.castLE hmn ham)⁻¹ = a⁻¹.castLE hmn ham.inv := rfl
 
@@ -2057,7 +2056,7 @@ def castOfSetAt {m n : ℕ} (a : PermOf n) (ham : a.SetAt m) :
     (Nat.add_comm _ _ ▸ Nat.sub_add_min_cancel m n)
   getElem_fwdVector_lt := fun {i} him => by
     simp_rw [Vector.getElem_cast]
-    simp only [Vector.getElem_append, lt_inf_iff, Vector.getElem_take', getElem_fwdVector,
+    simp only [Vector.getElem_append, lt_inf_iff, Vector.getElem_take, getElem_fwdVector,
       Vector.getElem_map, Vector.getElem_range, getElem_bwdVector, him, true_and]
     rcases lt_or_le m n with hmn | hmn
     · simp_rw [him.trans hmn, dite_true]
@@ -2068,7 +2067,7 @@ def castOfSetAt {m n : ℕ} (a : PermOf n) (ham : a.SetAt m) :
       · simp_rw [hin.not_lt, dite_false, min_eq_right hmn, Nat.sub_add_cancel hin, him]
   getElem_bwdVector_getElem_fwdVector := fun {i} him => by
     simp_rw [Vector.getElem_cast]
-    simp only [Vector.getElem_append, lt_inf_iff, Vector.getElem_take', getElem_fwdVector,
+    simp only [Vector.getElem_append, lt_inf_iff, Vector.getElem_take, getElem_fwdVector,
       Vector.getElem_map, Vector.getElem_range, getElem_bwdVector, him, true_and]
     rcases lt_or_le m n with hmn | hmn
     · simp_rw [him.trans hmn, dite_true, getElem_lt, and_true, getElem_inv_getElem,
@@ -2087,7 +2086,7 @@ variable {m i : ℕ} (a : PermOf n) (ham : a.SetAt m)
     (a.castOfSetAt ham)[i] = if hin : i < n then a[i] else i := by
   unfold castOfSetAt
   simp_rw [getElem_mk, Vector.getElem_cast]
-  simp only [Vector.getElem_append, lt_inf_iff, Vector.getElem_take', getElem_fwdVector,
+  simp only [Vector.getElem_append, lt_inf_iff, Vector.getElem_take, getElem_fwdVector,
       Vector.getElem_map, Vector.getElem_range, getElem_bwdVector, him, true_and]
   rcases lt_or_le m n with hmn | hmn
   · simp_rw [him.trans hmn, dite_true]
@@ -2283,7 +2282,7 @@ def finPerm (n : ℕ) : PermOf n ≃* Perm (Fin n) where
   toFun a := ⟨(⟨a • ·, a.smul_fin_lt⟩), (⟨a⁻¹ • ·, a⁻¹.smul_fin_lt⟩),
     fun i => Fin.ext (inv_smul_smul _ _), fun i => Fin.ext (smul_inv_smul _ _)⟩
   invFun π := ⟨Vector.ofFn (Fin.val ∘ π), Vector.ofFn (Fin.val ∘ π.symm),
-    fun _ => (Array.getElem_ofFn _ _ _).trans_lt (Fin.is_lt _),
+    fun _ => (Array.getElem_ofFn _).trans_lt (Fin.is_lt _),
     fun _ => by simp_rw [Vector.getElem_ofFn, comp_apply, Fin.eta, symm_apply_apply]⟩
   left_inv a := PermOf.ext <| fun hi => by simp_rw [coe_fn_mk, coe_fn_symm_mk, getElem_mk,
     Vector.getElem_ofFn, comp_apply, a.smul_of_lt hi]

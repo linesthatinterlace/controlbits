@@ -1,10 +1,9 @@
 import CBConcrete.PermOf
+import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Algebra.Order.Archimedean.Basic
-import Mathlib.Algebra.Order.Star.Basic
-import Mathlib.Data.Fintype.Order
-import Mathlib.Topology.Algebra.InfiniteSum.Basic
-import Mathlib.Data.Nat.Size
 import Mathlib.Data.Nat.Bitwise
+import Mathlib.Data.Nat.Size
+import Mathlib.Topology.Algebra.InfiniteSum.Basic
 
 @[simp]
 lemma finTwoEquiv_apply : ∀ j, finTwoEquiv j = decide (j = 1) :=
@@ -257,7 +256,7 @@ theorem testBit_true_iff_two_pow_le_mod_two_pow_succ {i k : ℕ} :
     testBit k i = true ↔ 2^i ≤ k % 2^(i + 1) := by
   rw [Nat.mod_pow_succ, ← Nat.one_le_div_iff (Nat.two_pow_pos i),
   Nat.add_mul_div_left _ _ (Nat.two_pow_pos _), mod_div_self, zero_add,
-  testBit_to_div_mod, decide_eq_true_eq]
+  testBit_eq_decide_div_mod_eq, decide_eq_true_eq]
   rcases Nat.mod_two_eq_zero_or_one (k / 2 ^ i) with h | h
   · simp_rw [h, zero_lt_one.not_le, Nat.zero_ne_one]
   · simp_rw [h, le_rfl]
@@ -277,7 +276,7 @@ theorem testBit_add_two_pow_eq (x : Nat) (i : Nat) :
 theorem testBit_add_mul_two_pow (a : Nat) {b : Nat} {i : Nat} (b_lt : b < 2 ^ i) (j : Nat) :
     (b + 2 ^ i * a).testBit j = if j < i then b.testBit j else a.testBit (j - i) := by
   rw [add_comm]
-  exact testBit_mul_pow_two_add a b_lt j
+  exact testBit_two_pow_mul_add a b_lt j
 
 theorem testBit_add_mul_two_pow_eq (a : Nat) (b : Nat) (i : Nat) :
     (b + 2 ^ i * a).testBit i = (decide (a % 2 = 1)).xor (b.testBit i) := by
@@ -287,9 +286,9 @@ theorem testBit_add_mul_two_pow_eq (a : Nat) (b : Nat) (i : Nat) :
 theorem testBit_two_pow_add_ne_of_testBit_false {i : Nat} {j : Nat} (hij : i ≠ j) {x : Nat}
     (hx : x.testBit i = false) : (2 ^ i + x).testBit j = x.testBit j := by
   rcases hij.lt_or_lt with hij | hij
-  · rw [testBit_to_div_mod, decide_eq_false_iff_not, ← ne_eq, mod_two_ne_one] at hx
+  · rw [testBit_eq_decide_div_mod_eq, decide_eq_false_iff_not, ← ne_eq, mod_two_ne_one] at hx
     rcases Nat.exists_eq_add_of_lt hij with ⟨k, rfl⟩
-    simp_rw [testBit_to_div_mod, decide_eq_decide,
+    simp_rw [testBit_eq_decide_div_mod_eq, decide_eq_decide,
     add_assoc, pow_add _ i,  pow_succ', ← Nat.div_div_eq_div_mul,
     Nat.add_div_left _ (Nat.two_pow_pos _)]
     rw [← div_add_mod (x / 2^i) 2]
@@ -303,13 +302,13 @@ theorem testBit_add_two_pow_ne_of_testBit_false {i : Nat} {j : Nat} (hij : i ≠
 
 theorem testBit_sub_two_pow_ne_of_testBit_true {i : Nat} {j : Nat} (hij : i ≠ j) {x : Nat}
     (hx : x.testBit i = true) : (x - 2^i).testBit j = x.testBit j := by
-  rcases Nat.exists_eq_add_of_le' (Nat.testBit_implies_ge hx) with ⟨x, rfl⟩
+  rcases Nat.exists_eq_add_of_le' (Nat.ge_two_pow_of_testBit hx) with ⟨x, rfl⟩
   rw [testBit_add_two_pow_eq, Bool.not_eq_true'] at hx
   exact Nat.add_sub_cancel _ _ ▸ (testBit_add_two_pow_ne_of_testBit_false hij hx).symm
 
 theorem testBit_sub_two_pow_eq_of_testBit_true {i : Nat} {x : Nat}
     (hx : x.testBit i = true) : (x - 2^i).testBit i = !x.testBit i := by
-  rcases Nat.exists_eq_add_of_le' (Nat.testBit_implies_ge hx) with ⟨x, rfl⟩
+  rcases Nat.exists_eq_add_of_le' (Nat.ge_two_pow_of_testBit hx) with ⟨x, rfl⟩
   rw [testBit_add_two_pow_eq, Bool.not_eq_true'] at hx
   rw [Nat.add_sub_cancel, testBit_add_two_pow_eq, Bool.not_not]
 
@@ -319,7 +318,7 @@ theorem exists_pow_two_mul_of_testBit {k : ℕ} (b : ℕ) (hb : ∀ i < k, b.tes
   · exact ⟨b, by rw [pow_zero, one_mul]⟩
   · rcases IH _ (fun i hi => hb i  (hi.trans (Nat.lt_succ_self _))) with ⟨b, rfl⟩
     have h := hb k (Nat.lt_succ_self _)
-    simp_rw [testBit_mul_pow_two, le_refl, decide_true, Bool.true_and, Nat.sub_self,
+    simp_rw [testBit_two_pow_mul, le_refl, decide_true, Bool.true_and, Nat.sub_self,
       testBit_zero, decide_eq_false_iff_not, mod_two_ne_one, ← Nat.dvd_iff_mod_eq_zero] at h
     rcases h with ⟨b, rfl⟩
     exact ⟨b, by rw [← mul_assoc, pow_succ]⟩
@@ -399,7 +398,7 @@ theorem card_bitMatchUnder (i : ℕ) (x : Fin (2^n)) :
       add_lt_iff_neg_right, Nat.not_lt_zero, if_false, Nat.add_sub_cancel, implies_true,
       and_true]
     refine ⟨?_, fun _ h => (if_pos h).trans
-        (Bool.and_iff_right_iff_imp.mpr (fun _ => decide_eq_true h))⟩
+        (Bool.and_eq_right_iff_imp.mpr (fun _ => decide_eq_true h))⟩
     rcases le_or_lt i n with hi | hi
     · refine Nat.lt_of_div_lt_div (c := 2^(i : ℕ)) ?_
       rwa [Nat.add_mul_div_left _ _ (Nat.two_pow_pos _),
@@ -422,7 +421,7 @@ theorem or_one {a : ℕ} : a ||| 1 = bit true a.div2 := by
     Bool.or_false, add_tsub_cancel_right, if_false]
 
 theorem or_eq_add_two_pow_mul_of_lt_right {a b i : ℕ} (ha : a < 2^i) :
-    2^i * b ||| a = 2^i * b + a := (mul_add_lt_is_or ha _).symm
+    2^i * b ||| a = 2^i * b + a := (two_pow_add_eq_or_of_lt ha _).symm
 
 theorem or_eq_add_two_pow_mul_of_lt_left {a b i : ℕ} (ha : a < 2^i) :
     a ||| 2^i * b = a + 2^i * b := by rw [lor_comm, add_comm, or_eq_add_two_pow_mul_of_lt_right ha]
@@ -499,13 +498,13 @@ theorem testBit_shiftLeft' {b : Bool} {m i j : ℕ}  :
   · simp_rw [shiftLeft'_succ, Nat.lt_succ_iff]
     cases b
     · simp_rw [bit_false]
-      rw [← pow_one 2, testBit_mul_pow_two, IH]
+      rw [← pow_one 2, testBit_two_pow_mul, IH]
       cases' j
       · simp_rw [zero_lt_one.not_le, decide_false, Bool.false_and, zero_le, decide_true, cond_true]
       · simp_rw [Nat.add_sub_cancel, Nat.add_sub_add_right, Nat.succ_le_iff, zero_lt_succ,
           decide_true, Bool.true_and]
     · simp_rw [bit_true, Bool.cond_true_left]
-      rw [← pow_one 2, testBit_mul_pow_two_add _ (one_lt_two), IH]
+      rw [← pow_one 2, testBit_two_pow_mul_add _ (one_lt_two), IH]
       simp only [pow_one, Bool.cond_true_left]
       cases' j
       · simp_rw [zero_lt_one, if_true, zero_le, decide_true, Bool.true_or,
@@ -577,7 +576,7 @@ theorem mergeBitRes_zero : q.mergeBitRes b 0 = q.bit b := by
   · simp_rw [Bool.toNat_true, or_one, div2_bit0]
 
 theorem testRes_succ {q : ℕ} : q.testRes (i + 1) = (q.div2.testRes i).bit q.bodd := by
-  simp_rw [testRes_def, and_pow_two_sub_one_eq_mod, testBit_ext_iff, testBit_bit, testBit_or,
+  simp_rw [testRes_def, and_two_pow_sub_one_eq_mod, testBit_ext_iff, testBit_bit, testBit_or,
     testBit_shiftLeft, testBit_shiftRight, testBit_mod_two_pow]
   rintro (_ | _)
   · simp_rw [le_zero_iff, succ_ne_zero, if_true, zero_lt_succ, decide_true, decide_false,
@@ -588,7 +587,7 @@ theorem testRes_succ {q : ℕ} : q.testRes (i + 1) = (q.div2.testRes i).bit q.bo
 
 theorem mergeBitRes_succ {q : ℕ} :
     q.mergeBitRes b (i + 1) = (q.div2.mergeBitRes b i).bit q.bodd := by
-  simp_rw [mergeBitRes_def, and_pow_two_sub_one_eq_mod, testBit_ext_iff, testBit_bit, testBit_or,
+  simp_rw [mergeBitRes_def, and_two_pow_sub_one_eq_mod, testBit_ext_iff, testBit_bit, testBit_or,
     testBit_shiftLeft, testBit_shiftRight, testBit_mod_two_pow]
   rintro (_ | _)
   · simp_rw [le_zero_iff, succ_ne_zero, if_true, zero_lt_succ, decide_true, decide_false,
@@ -756,14 +755,14 @@ theorem testRes_lt_two_pow_iff_lt_two_pow (h : i ≤ m) : q.testRes i < 2^m ↔ 
 
 theorem testBit_mergeBitRes_of_lt {i j p : ℕ} (hij : i < j) :
     (p.mergeBitRes b j).testBit i = p.testBit i := by
-  simp only [mergeBitRes_def, and_pow_two_sub_one_eq_mod, testBit_or, testBit_shiftLeft, ge_iff_le,
+  simp only [mergeBitRes_def, and_two_pow_sub_one_eq_mod, testBit_or, testBit_shiftLeft, ge_iff_le,
     (lt_succ_of_lt hij).not_le, decide_false, testBit_shiftRight, Bool.false_and,
     testBit_mod_two_pow, hij, decide_true, Bool.true_and, Bool.false_or, hij.not_le, Bool.or_false]
 
 theorem testBit_mergeBitRes_of_gt {i j p : ℕ} (hij : j < i) :
     (p.mergeBitRes b j).testBit i = p.testBit (i - 1) := by
   rcases Nat.exists_eq_add_of_lt hij with ⟨k, rfl⟩
-  simp_rw [mergeBitRes_def, and_pow_two_sub_one_eq_mod, testBit_or, testBit_shiftLeft,
+  simp_rw [mergeBitRes_def, and_two_pow_sub_one_eq_mod, testBit_or, testBit_shiftLeft,
     testBit_shiftRight,
     testBit_mod_two_pow, ← Nat.add_sub_assoc (succ_le_of_lt hij), succ_eq_add_one,
     Nat.add_sub_add_left, succ_le_of_lt hij, add_comm j, Nat.add_right_comm _ j,
@@ -885,7 +884,7 @@ theorem testRes_mergeBitRes_of_gt {p : ℕ} (hij : j < i) :
       Nat.sub_add_comm (one_le_of_lt H), cond_false, H.ne', H,
       Nat.sub_one_add_one_eq_of_pos (zero_lt_of_lt H)]
   · simp only [decide_true, lt_self_iff_false, decide_false, Bool.toNat_false,
-      tsub_zero, cond_true, self_eq_add_right, Bool.toNat_eq_zero, decide_eq_false_iff_not,
+      tsub_zero, cond_true, left_eq_add, Bool.toNat_eq_zero, decide_eq_false_iff_not,
       not_le, (le_self_add).trans_lt hij, add_lt_iff_neg_left, not_lt_zero']
   · have hkj : k < j := le_self_add.trans_lt hjk
     have hik : ¬ i ≤ k + 1 := ((succ_le_of_lt hkj).trans_lt hij).not_le
@@ -1394,12 +1393,12 @@ theorem testBit_eq_false_true_of_lt_of_flipBit_ge {r : ℕ} (hrq : r < q)
   · simp_rw [and_self]
   · simp_rw [Bool.cond_true, Bool.cond_false] at hf
     exact ((Nat.sub_le _ _).not_lt ((hrq.trans_le (Nat.le_add_right _ _)).trans_le hf)).elim
-  · simp_rw [Bool.cond_true, tsub_le_iff_right, Nat.sub_add_cancel (testBit_implies_ge hr)] at hf
+  · simp_rw [Bool.cond_true, tsub_le_iff_right, Nat.sub_add_cancel (ge_two_pow_of_testBit hr)] at hf
     exact (hf.not_lt hrq).elim
 
 theorem testBit_eq_of_le_of_flipBit_lt_ge {r : ℕ} (hrq : r ≤ q)
     (hf : q.flipBit i ≤ r.flipBit i) (hik : i < k) : r.testBit k = q.testBit k := by
-  simp_rw [testBit_to_div_mod, decide_eq_decide]
+  simp_rw [testBit_eq_decide_div_mod_eq, decide_eq_decide]
   suffices hs : r / 2^k = q / 2 ^ k by rw [hs]
   refine le_antisymm (Nat.div_le_div_right hrq) ?_
   rw [← flipBit_div_two_pow_eq hik, ← flipBit_div_two_pow_eq (q := r) hik]
@@ -1546,8 +1545,8 @@ theorem condFlipBit_of_all_of_lt_l (hq : q.testRes i < l)
   simp_rw [condFlipBit_eq_dite, hq, dite_true, hc _ hq, cond_true]
 
 theorem condFlipBit_of_mkVector_true :
-    q.condFlipBit i (Vector.mkVector n true) = if q.testRes i < n then q.flipBit i else q := by
-  simp_rw [condFlipBit_eq_dite, Vector.getElem_mkVector, cond_true, dite_eq_ite]
+    q.condFlipBit i (Vector.replicate n true) = if q.testRes i < n then q.flipBit i else q := by
+  simp_rw [condFlipBit_eq_dite, Vector.getElem_replicate, cond_true, dite_eq_ite]
 
 theorem condFlipBit_of_all_not (hc : c.all (fun x => !x)) :
     q.condFlipBit i c = q := by
@@ -1560,8 +1559,8 @@ theorem condFlipBit_of_all_not (hc : c.all (fun x => !x)) :
   · rfl
 
 theorem condFlipBit_of_mkVector_false :
-    q.condFlipBit i (Vector.mkVector n false) = q := by
-  simp_rw [condFlipBit_eq_dite, Vector.getElem_mkVector, cond_false, dite_eq_ite, ite_self]
+    q.condFlipBit i (Vector.replicate n false) = q := by
+  simp_rw [condFlipBit_eq_dite, Vector.getElem_replicate, cond_false, dite_eq_ite, ite_self]
 
 @[simp]
 theorem condFlipBit_lt_iff_lt (hin : 2^(i + 1) ∣ n) :
@@ -1650,7 +1649,7 @@ def flipBitVals (v : Vector ℕ n) (i : ℕ) : Vector ℕ n := v.map
 
 theorem getElem_flipBitVals {v : Vector ℕ n} {i k : ℕ} (hk : k < n) :
     (flipBitVals v i)[k] = if v[k].flipBit i < n then v[k].flipBit i else v[k] :=
-  getElem_map _ _ _ _
+  getElem_map _ _
 
 @[simp] theorem flipBitVals_flipBitVals_of_lt {v : Vector ℕ n} (hv : ∀ i (hi : i < n), v[i] < n) :
     (v.flipBitVals i).flipBitVals i = v := by
@@ -1753,7 +1752,7 @@ def condFlipBitVals (v : Vector ℕ n) (i : ℕ) (c : Vector Bool l) : Vector �
 
 theorem getElem_condFlipBitVals {v : Vector ℕ n} {i : ℕ} {c : Vector Bool l} {k : ℕ}
     (hk : k < n) : (condFlipBitVals v i c)[k] =
-    if v[k].condFlipBit i c < n then v[k].condFlipBit i c else v[k] := getElem_map _ _ _ _
+    if v[k].condFlipBit i c < n then v[k].condFlipBit i c else v[k] := getElem_map _ _
 
 @[simp] theorem condFlipBitVals_condFlipBitVals_of_lt {v : Vector ℕ n}
     (hv : ∀ i (hi : i < n), v[i] < n) :
@@ -2092,13 +2091,13 @@ theorem getElem_inv_condFlipBitVals {hk : k < n} :
 Vector.getElem_condFlipBitIndices _
 
 @[simp] theorem condFlipBitIndices_of_mkVector_false :
-    (a.condFlipBitIndices i (Vector.mkVector l false)) = a := by
+    (a.condFlipBitIndices i (Vector.replicate l false)) = a := by
   ext
   simp_rw [getElem_condFlipBitIndices, Nat.condFlipBit_of_mkVector_false,
     dite_eq_right_iff, implies_true]
 
 @[simp] theorem condFlipBitVals_of_mkVector_false :
-    (a.condFlipBitVals i (Vector.mkVector l false)) = a := by
+    (a.condFlipBitVals i (Vector.replicate l false)) = a := by
   ext
   simp_rw [getElem_condFlipBitVals, Nat.condFlipBit_of_mkVector_false, ite_self]
 
@@ -2112,7 +2111,7 @@ theorem getElem_condFlipBit {hk : k < n} :
   simp_rw [getElem_condFlipBitIndices, getElem_one, dite_eq_ite]
 
 @[simp] theorem condFlipBit_of_mkVector_false :
-    (condFlipBit i (Vector.mkVector l false)) = (1 : PermOf n) := by
+    (condFlipBit i (Vector.replicate l false)) = (1 : PermOf n) := by
   ext
   simp_rw [getElem_condFlipBit, Nat.condFlipBit_of_mkVector_false, ite_self, getElem_one]
 
@@ -2821,3 +2820,4 @@ theorem flipBitCommutator_cycleMin_flipBit_comm (a : PermOf (2^(n + 1))) {i : �
 end PermOf
 
 end BitInvariant
+#min_imports

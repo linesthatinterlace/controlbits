@@ -15,7 +15,7 @@ def leftLayer (a : PermOf (2^(n + 1))) (i : ℕ) : Vector Bool (2^n) :=
       ((mergeBitRes_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
       (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi))).mpr
       (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
-  else Vector.mkVector _ false
+  else Vector.replicate _ false
 
 section LeftLayer
 
@@ -30,7 +30,7 @@ theorem getElem_leftLayer (hp : p < 2^n) :
   unfold leftLayer
   split_ifs
   · simp_rw [Vector.getElem_map, Vector.getElem_finRange]
-  · simp_rw [Vector.getElem_mkVector]
+  · simp_rw [Vector.getElem_replicate]
 
 theorem getElem_leftLayer_of_le (hi : i ≤ n) (hp : p < 2^n) :
     (leftLayer a i)[p] =
@@ -45,9 +45,9 @@ theorem getElem_leftLayer_of_gt (hi : n < i) (hp : p < 2^n) :
   rw [getElem_leftLayer, dif_neg (hi.not_le)]
 
 theorem leftLayer_eq_of_gt (hi : n < i) :
-    leftLayer a i = Vector.mkVector _ false := by
+    leftLayer a i = Vector.replicate _ false := by
   ext
-  simp_rw [getElem_leftLayer_of_gt hi, Vector.getElem_mkVector]
+  simp_rw [getElem_leftLayer_of_gt hi, Vector.getElem_replicate]
 
 theorem getElem_leftLayer_of_lt (ha : ∀ j < i, a.BitInvariant j)
     (hp : p < 2^i) {hp' : p < 2^n} :
@@ -61,9 +61,9 @@ theorem getElem_leftLayer_of_lt (ha : ∀ j < i, a.BitInvariant j)
 
 theorem leftLayer_eq_of_bitInvariant_lt {a : PermOf (2^(n + 1))}
     (ha : ∀ j < n, a.BitInvariant j) :
-    leftLayer a n = Vector.mkVector _ false := by
+    leftLayer a n = Vector.replicate _ false := by
   ext i hi
-  simp_rw [Vector.getElem_mkVector]
+  simp_rw [Vector.getElem_replicate]
   exact getElem_leftLayer_of_lt ha hi
 
 theorem getElem_zero_leftLayer_zero :
@@ -129,7 +129,7 @@ def rightLayer (a : PermOf (2^(n + 1))) (i : ℕ) : Vector Bool (2^n) :=
       ((mergeBitRes_lt_iff_lt_div_two (n := 2^(n + 1)) (i := i)
       (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi))).mpr
       (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
-  else Vector.mkVector _ false
+  else Vector.replicate _ false
 
 section RightLayer
 
@@ -145,7 +145,7 @@ theorem getElem_rightLayer {i : ℕ} (hp : p < 2^n) :
   split_ifs
   · simp_rw [Vector.getElem_map, Vector.getElem_finRange,
       condFlipBitVals_eq_condFlipBit_mul, getElem_mul]
-  · simp_rw [Vector.getElem_mkVector]
+  · simp_rw [Vector.getElem_replicate]
 
 theorem getElem_rightLayer_of_le {i : ℕ} (hi : i ≤ n) (hp : p < 2^n) :
     (rightLayer a i)[p] =
@@ -160,9 +160,9 @@ theorem getElem_rightLayer_of_gt {i : ℕ} (hi : n < i) (hp : p < 2^n) :
   rw [getElem_rightLayer, dif_neg (hi.not_le)]
 
 theorem rightLayer_eq_of_gt {i : ℕ} (hi : n < i) :
-    rightLayer a i = Vector.mkVector _ false := by
+    rightLayer a i = Vector.replicate _ false := by
   ext
-  simp_rw [getElem_rightLayer_of_gt hi, Vector.getElem_mkVector]
+  simp_rw [getElem_rightLayer_of_gt hi, Vector.getElem_replicate]
 
 end RightLayer
 
@@ -299,7 +299,7 @@ def mlrDecomp (a : PermOf (2^(n + 1))) (i : ℕ) :
       (p.isLt.trans_eq (by simp_rw [pow_succ, Nat.mul_div_cancel _ zero_lt_two])))).testBit i
     let M := (a.condFlipBitVals i L).condFlipBitIndices i R;
     (M, L, R)
-  else (a, Vector.mkVector _ false, Vector.mkVector _ false)
+  else (a, Vector.replicate _ false, Vector.replicate _ false)
 
 section mlrDecomp
 
@@ -404,12 +404,12 @@ theorem getElem_leftLayerIth :
   exact getElem_zero_leftLayer_zero
 
 theorem leftLayerNth_eq :
-    a.leftLayerIth n = Vector.mkVector _ false := by
+    a.leftLayerIth n = Vector.replicate _ false := by
   rw [leftLayerIth_eq]
   exact leftLayer_eq_of_bitInvariant_lt middlePermIth_bitInvariant
 
 theorem leftLayerIth_eq_of_ge (hi : n ≤ i) :
-    a.leftLayerIth i = Vector.mkVector _ false :=
+    a.leftLayerIth i = Vector.replicate _ false :=
   hi.eq_or_lt.elim (fun h => h ▸ leftLayerNth_eq) (leftLayerIth_eq ▸ leftLayer_eq_of_gt)
 
 def rightLayerIth (a : PermOf (2^(n + 1))) (i : ℕ) : Vector Bool (2^n) :=
@@ -425,7 +425,7 @@ theorem rightLayerIth_eq :
   rw [rightLayerIth_eq, middlePermIth_zero]
 
 theorem rightLayerIth_eq_of_gt (hi : n < i) :
-    a.rightLayerIth i = Vector.mkVector _ false :=
+    a.rightLayerIth i = Vector.replicate _ false :=
   rightLayerIth_eq ▸ (rightLayer_eq_of_gt hi)
 
 theorem toControlBitsAux_eq :

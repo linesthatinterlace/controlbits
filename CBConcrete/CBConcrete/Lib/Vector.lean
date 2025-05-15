@@ -17,7 +17,7 @@ theorem getD_of_ge (a : Vector α n) (x : α) (i : ℕ) (h : n ≤ i) : a[i]?.ge
   rw [getElem?_neg a i h.not_lt, Option.getD_none]
 
 theorem getElem_range_lt {n i : ℕ} (hi : i < n) : (range n)[i] < n :=
-  (getElem_range i hi).trans_lt hi
+  (getElem_range hi).trans_lt hi
 
 theorem getElem_swap_eq_getElem_swap_apply (as : Vector α n) (i j : ℕ) (hi : i < n)
     (hj : j < n)
@@ -186,8 +186,5 @@ theorem toChunks_succ (v : Vector α (n * (m + 1))) :
   ext i hi
   simp_rw [getElem_flatten, getElem_getElem_toChunks, Nat.div_add_mod]
 -/
-
-@[simp] theorem getElem_take' (xs : Vector α n) (j : Nat) (hi : i < min j n) :
-    (xs.take j)[i] = xs[i] := getElem_take _ _ (hi.trans_eq (min_comm _ _))
 
 end Vector
