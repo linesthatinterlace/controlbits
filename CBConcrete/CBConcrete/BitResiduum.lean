@@ -1764,9 +1764,9 @@ variable {n : ℕ}
 def flipBitIndices (a : PermOf n) (i : ℕ) : PermOf n where
   toVector := a.toVector.flipBitIndices i
   invVector := a.invVector.flipBitVals i
-  getElem_toVector_lt := fun hi => by
+  getElem_toVector_lt := fun i hi => by
     simp_rw [Vector.getElem_flipBitIndices, getElem_toVector]
-    split_ifs <;> exact getElem_lt _ _
+    split_ifs <;> exact getElem_lt _
   getElem_invVector_getElem_toVector := fun {j} hk => by
     simp_rw [Vector.getElem_flipBitIndices, Vector.getElem_flipBitVals,
       getElem_toVector, getElem_invVector]
@@ -1808,9 +1808,9 @@ theorem getElem_inv_flipBit {hk : k < n} :
   simp_rw [getElem_inv_flipBitIndices, inv_one, getElem_one]
 
 @[simp] theorem shuffle_flipBit {α : Type*} (v : Vector α n) :
-    ((flipBit i).shuffle v) = v.flipBitIndices i := by
+    (v.shuffle (flipBit i)) = v.flipBitIndices i := by
   ext j hj
-  simp_rw [Vector.getElem_flipBitIndices, getElem_shuffle, getElem_flipBit]
+  simp_rw [Vector.getElem_flipBitIndices, Vector.getElem_shuffle, getElem_flipBit]
   split_ifs <;> rfl
 
 @[simp]
@@ -1928,7 +1928,7 @@ theorem movedBy_flipBit {x : ℕ} :
 
 theorem getElem_flipBit_ne_self_of_flipBit_lt {hk : k < n} (hk' : k.flipBit i < n) :
     (flipBit i)[k] ≠ k := by
-  simp_rw [← smul_of_lt _ hk, flipBit_smul_ne_self]
+  simp_rw [← smul_of_lt hk, flipBit_smul_ne_self]
   exact ⟨hk, hk'⟩
 
 theorem getElem_flipBitIndices_of_flipBit_lt {hk : k < n} (hk' : k.flipBit i < n) :
@@ -1949,7 +1949,7 @@ theorem flipBitIndices_smul_ne_smul {x : ℕ} :
 
 theorem getElem_flipBitIndices_ne_self_of_flipBit_lt {hk : k < n} (hk' : k.flipBit i < n) :
     (a.flipBitIndices i)[k] ≠ a[k] := by
-  simp_rw [← smul_of_lt _ hk, flipBitIndices_smul_ne_smul]
+  simp_rw [← smul_of_lt hk, flipBitIndices_smul_ne_smul]
   exact ⟨hk, hk'⟩
 
 theorem getElem_flipBitVals_of_flipBit_lt {hk : k < n} (hk' : a[k].flipBit i < n) :
@@ -1970,7 +1970,7 @@ theorem flipBitVals_smul_ne_smul {x : ℕ} :
 
 theorem getElem_flipBitVals_ne_self_of_flipBit_lt {hk : k < n} (hk' : a[k].flipBit i < n) :
     (a.flipBitVals i)[k] ≠ a[k] := by
-  simp_rw [← smul_of_lt _ hk, flipBitVals_smul_ne_smul, smul_of_lt _ hk]
+  simp_rw [← smul_of_lt hk, flipBitVals_smul_ne_smul, smul_of_lt hk]
   exact ⟨hk, hk'⟩
 
 
@@ -2029,10 +2029,10 @@ variable {n l i j : ℕ}
 def condFlipBitIndices (a : PermOf n) (i : ℕ) (c : Vector Bool l) : PermOf n where
   toVector := a.toVector.condFlipBitIndices i c
   invVector := a.invVector.condFlipBitVals i c
-  getElem_toVector_lt := fun hi => by
+  getElem_toVector_lt := fun i hi => by
     simp_rw [Vector.getElem_condFlipBitIndices, getElem_toVector]
-    split_ifs <;> exact getElem_lt _ _
-  getElem_invVector_getElem_toVector := fun {j} hk => by
+    split_ifs <;> exact getElem_lt _
+  getElem_invVector_getElem_toVector := fun j hk => by
     simp_rw [Vector.getElem_condFlipBitIndices, Vector.getElem_condFlipBitVals,
       getElem_toVector, getElem_invVector]
     by_cases hj : j.condFlipBit i c < n
@@ -2408,7 +2408,7 @@ theorem flipBitCommutator_smul_ne_flipBit :
 theorem getElem_flipBitCommutator_ne_flipBit {hk : k < n}
     (hk' : (a⁻¹ • (flipBit i : PermOf n) • k).flipBit i < n) :
     (a.flipBitCommutator i)[k] ≠ (flipBit i : PermOf n)[k] := by
-  simp_rw [← smul_of_lt _ hk, flipBitCommutator_smul_ne_flipBit]
+  simp_rw [← smul_of_lt hk, flipBitCommutator_smul_ne_flipBit]
   exact ⟨hk, hk'⟩
 
 theorem flipBitCommutator_flipBitIndices_smul_eq_self :
@@ -2423,7 +2423,7 @@ theorem flipBitCommutator_flipBitIndices_smul_ne_self :
 
 theorem getElem_flipBitCommutator_flipBitIndices_ne_self {hk : k < n}
     (hk' : (a⁻¹ • k).flipBit i < n) : ((a.flipBitCommutator i).flipBitIndices i)[k] ≠ k := by
-  simp_rw [← smul_of_lt _ hk, flipBitCommutator_flipBitIndices_smul_ne_self]
+  simp_rw [← smul_of_lt hk, flipBitCommutator_flipBitIndices_smul_ne_self]
   exact ⟨hk, hk'⟩
 
 theorem flipBitCommutator_flipBitVals_smul_eq_self :
@@ -2441,7 +2441,7 @@ theorem flipBitCommutator_flipBitVals_smul_ne_self :
 theorem getElem_flipBitCommutator_flipBitVals_ne_self {hk : k < n}
     (hk' : (a⁻¹ • (flipBit i : PermOf n) • k).flipBit i < n) :
     ((a.flipBitCommutator i).flipBitVals i)[k] ≠ k := by
-  simp_rw [← smul_of_lt _ hk, flipBitCommutator_flipBitVals_smul_ne_self]
+  simp_rw [← smul_of_lt hk, flipBitCommutator_flipBitVals_smul_ne_self]
   exact ⟨hk, hk'⟩
 
 variable (hin : 2^(i + 1) ∣ n)
@@ -2452,7 +2452,7 @@ include hin
 theorem getElem_flipBitCommutator_of_div {hk : k < n} :
     (a.flipBitCommutator i)[k] =
       a[(a⁻¹[k.flipBit i]'((k.flipBit_lt_iff_lt hin).mpr hk)).flipBit i]'
-      ((Nat.flipBit_lt_iff_lt hin).mpr (getElem_lt _ _)) := by
+      ((Nat.flipBit_lt_iff_lt hin).mpr (getElem_lt _)) := by
   simp_rw [getElem_flipBitCommutator, Nat.flipBit_lt_iff_lt hin, getElem_lt, hk, dite_true]
 
 @[simp]
@@ -2494,12 +2494,12 @@ theorem getElem_flipBit_flipBitCommutator_zpow {p : ℤ} {hk : k < n} :
 
 theorem getElem_flipBitCommutator_ne_flipBit_of_div {hk : k < n} :
     (a.flipBitCommutator i)[k] ≠ k.flipBit i := by
-  simp_rw [← getElem_flipBit_of_div hin (hk := hk), ← smul_of_lt _ hk,
+  simp_rw [← getElem_flipBit_of_div hin (hk := hk), ← smul_of_lt hk,
   flipBitCommutator_smul_ne_flipBit, Nat.flipBit_lt_iff_lt hin, smul_lt_iff_lt, and_self, hk]
 
 theorem getElem_flipBitCommutator_flipBit_ne {hk : k < n} :
     (a.flipBitCommutator i)[k].flipBit i ≠ k := by
-  simp_rw [← getElem_flipBitVals_of_div hin, ← smul_of_lt _ hk,
+  simp_rw [← getElem_flipBitVals_of_div hin, ← smul_of_lt hk,
     flipBitCommutator_flipBitVals_smul_ne_self, Nat.flipBit_lt_iff_lt hin, smul_lt_iff_lt,
     and_self, hk]
 
@@ -2512,7 +2512,7 @@ theorem getElem_pow_flipBitCommutator_ne_flipBit {hk : k < n} {p : ℕ} :
     exact a.getElem_flipBitCommutator_ne_flipBit_of_div hin
   · have hk' : k.flipBit i < n := by rwa [Nat.flipBit_lt_iff_lt hin]
     simp_rw [pow_succ (n := p.succ), pow_succ' (n := p), getElem_mul,
-    ← (ne_getElem_inv_iff _ _ hk'),
+    ← (ne_getElem_inv_iff _ hk'),
     getElem_inv_flipBitCommutator_of_div hin, getElem_flipBitCommutator_of_div hin]
     exact IH
 
@@ -2529,7 +2529,7 @@ theorem getElem_zpow_flipBitCommutator_ne_flipBit {hk : k < n} {p : ℤ} :
   · simp only [Int.ofNat_eq_coe, zpow_natCast]
     exact getElem_pow_flipBitCommutator_ne_flipBit hin
   · have hk' : k.flipBit i < n := by rwa [Nat.flipBit_lt_iff_lt hin]
-    simp_rw [zpow_negSucc, getElem_inv_ne_iff _ _ hk']
+    simp_rw [zpow_negSucc, getElem_inv_ne_iff _ hk']
     exact (Nat.flipBit_flipBit_of_eq (i := i)).symm.trans_ne
       (getElem_pow_flipBitCommutator_ne_flipBit hin).symm
 
@@ -2553,9 +2553,9 @@ theorem disjoint_flipBitCommutator_cycleOf_map_self_flipBitPerm (k : ℕ) :
     mem_cycleOf_iff_exists_zpow_smul, forall_exists_index, and_imp, forall_exists_index,
     forall_apply_eq_imp_iff]
   rcases lt_or_le k n with hk | hk
-  · simp_rw [smul_of_lt _ hk]
+  · simp_rw [smul_of_lt hk]
     exact fun _ _ => getElem_flipBitCommutator_zpow_ne_flipBit_getElem_flipBitCommutator_zpow hin
-  · simp_rw [smul_of_ge _ hk]
+  · simp_rw [smul_of_ge hk]
     exact fun _ _ => Nat.flipBit_ne_self.symm
 
 theorem two_mul_filter_sameCycle_card_le_card (s : Finset ℕ)
@@ -2781,4 +2781,3 @@ theorem flipBitCommutator_cycleMin_flipBit_comm (a : PermOf (2^(n + 1))) {i : �
 end PermOf
 
 end BitInvariant
-#min_imports
