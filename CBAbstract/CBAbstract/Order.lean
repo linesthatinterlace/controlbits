@@ -14,11 +14,11 @@ lemma eq_false_true_of_cond_succ_lt_of_cond_succ_lt {α : Type*} [LinearOrder α
 (hnm : (bif bn then id else succ) n < (bif bm then id else succ) m) :
 bm = false ∧ bn = true ∧ (m = n) := by
   cases bm <;> cases bn <;>
-  simp only [false_and, and_false, true_and, and_self, cond_true, cond_false, id_eq,
-  succ_le_iff, succ_lt_succ_iff, lt_succ_iff] at *
-  · exact (hmn.not_le hnm.le).elim
+  simp only [true_and, cond_true, cond_false, id_eq,
+  succ_le_iff, lt_succ_iff] at *
+  · exact (hmn.not_ge hnm.le).elim
   · exact le_antisymm hmn hnm
   · exact (lt_irrefl _ (((hnm.trans (lt_succ _)).trans hmn).trans (lt_succ _))).elim
-  · exact (hmn.not_lt hnm).elim
+  · exact (hmn.not_gt hnm).elim
 
 end Order

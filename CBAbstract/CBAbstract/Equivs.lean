@@ -15,7 +15,7 @@ lemma piFinSuccCastSucc_apply (v : (Fin (n + 2) → α)) : piFinSuccCastSucc v =
   simp_rw [Prod.ext_iff, funext_iff]
   refine ⟨⟨rfl, rfl⟩, fun _ => ?_⟩
   unfold piFinSuccCastSucc
-  simp_rw [insertNthEquiv_last, Equiv.instTrans_trans, Equiv.trans_apply, consEquiv_symm_apply,
+  simp only [insertNthEquiv_last, Equiv.trans_def, Equiv.trans_apply, consEquiv_symm_apply,
     Equiv.prodCongr_apply, Equiv.coe_refl, Prod.map_apply, id_eq, snocEquiv_symm_apply,
     Equiv.prodAssoc_symm_apply, Function.comp_apply]
   rfl
@@ -36,10 +36,10 @@ lemma piFinSuccCastSucc_apply_snd (v : (Fin (n + 2) → α)) : (piFinSuccCastSuc
 lemma piFinSuccCastSucc_symm_apply_castSucc_succ (a b : α) (v : (Fin n → α)) (i : Fin n) :
       piFinSuccCastSucc.symm ((a, b), v) (i.castSucc.succ) = v i := by
   unfold piFinSuccCastSucc
-  simp_rw [insertNthEquiv_last, Equiv.instTrans_trans, Equiv.symm_trans_apply, Equiv.symm_symm,
+  simp only [insertNthEquiv_last, Equiv.trans_def, Equiv.symm_trans_apply, Equiv.symm_symm,
     Equiv.prodAssoc_apply, Equiv.prodCongr_symm, Equiv.refl_symm, Equiv.prodCongr_apply,
-    Equiv.coe_refl, Prod.map_apply, id_eq, consEquiv_apply, cons_succ, Equiv.symm_symm,
-      snocEquiv_apply, snoc_castSucc]
+    Equiv.coe_refl, Prod.map_apply, id_eq, consEquiv_apply, cons_succ, snocEquiv_apply,
+    snoc_castSucc]
 
 @[simp]
 lemma piFinSuccCastSucc_symm_apply_succ_castSucc (a b : α) (v : (Fin n → α)) (i : Fin n) :
@@ -54,10 +54,10 @@ lemma piFinSuccCastSucc_symm_apply_zero (a b : α) (v : (Fin n → α)) :
 lemma piFinSuccCastSucc_symm_apply_last (a b : α) (v : (Fin n → α)) :
       piFinSuccCastSucc.symm ((a, b), v) (last _) = b := by
   unfold piFinSuccCastSucc
-  simp_rw [insertNthEquiv_last, Equiv.instTrans_trans, Equiv.symm_trans_apply, Equiv.symm_symm,
-    Equiv.prodAssoc_apply, Equiv.prodCongr_symm, Equiv.refl_symm, Equiv.prodCongr_apply,
-    Equiv.coe_refl, Prod.map_apply, id_eq, consEquiv_apply, Equiv.symm_symm,
-    ← Fin.succ_last, Fin.cons_succ, snocEquiv_apply, snoc_last]
+  simp only [insertNthEquiv_last, Equiv.trans_def, ← succ_last, Equiv.symm_trans_apply,
+    Equiv.symm_symm, Equiv.prodAssoc_apply, Equiv.prodCongr_symm, Equiv.refl_symm,
+    Equiv.prodCongr_apply, Equiv.coe_refl, Prod.map_apply, id_eq, consEquiv_apply, cons_succ,
+    snocEquiv_apply, snoc_last]
 
 @[simp]
 lemma finTwoEquiv_apply : ∀ j, finTwoEquiv j = decide (j = 1) := (Fin.forall_fin_two).mpr ⟨rfl, rfl⟩

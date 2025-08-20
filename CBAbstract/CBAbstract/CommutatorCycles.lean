@@ -48,6 +48,6 @@ CycleMin ⁅x, y⁆ (y q) = y (CycleMin ⁅x, y⁆ q) := by
     rw [←hkq₂, ← hjq₂, ← Perm.mul_apply, cmtr_zpow_mul_eq_mul_inv_cmtr_zpow_inv, Perm.mul_apply,
       hxy, ← zpow_neg] at h
     rcases lt_trichotomy ((⁅x, y⁆ ^ (-k)) q) ((⁅x, y⁆ ^ j) q) with H | H | H
-    · exact ((⁅x, y⁆).cycleMin_le ⟨-k, rfl⟩).not_lt (hjq₂.symm ▸ H)
+    · exact ((⁅x, y⁆).cycleMin_le ⟨-k, rfl⟩).not_gt (hjq₂.symm ▸ H)
     · exact False.elim (lt_irrefl _ (H ▸ h))
     · exact cmtr_zpow_apply_ne_apply_cmtr_pow_apply hxy hy (hy₂ H h)

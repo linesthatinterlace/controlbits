@@ -13,7 +13,7 @@ theorem SameCycle.exists_pow_lt_finset_card_of_apply_zpow_mem {f : Perm α} (s :
       (Finset.card_range _ ▸ Nat.lt_succ_self _) (fun i _ => hf i)
   obtain ⟨i, hi, j, hj, hij', hijf⟩ := H
   wlog hij : i < j
-  · exact this _ hf _ hj _ hi hij'.symm hijf.symm (hij'.symm.lt_of_le (le_of_not_lt hij))
+  · exact this _ hf _ hj _ hi hij'.symm hijf.symm (hij'.symm.lt_of_le (le_of_not_gt hij))
   rw [← inv_eq_iff_eq, ← mul_apply, ← inv_pow_sub _ hij.le,
     inv_pow, inv_eq_iff_eq, eq_comm, ← zpow_natCast, Int.natCast_sub hij.le] at hijf
   have hij : (0 : ℤ) < ↑j - ↑i := by rwa [sub_pos, Nat.cast_lt]
@@ -60,7 +60,7 @@ lemma fastCycleMin_le : ∀ k < 2^i, FastCycleMin i π x ≤ (π ^ k) x := by
   · simp_rw [pow_zero, Nat.lt_one_iff, fastCycleMin_zero, forall_eq, pow_zero, one_apply, le_rfl]
   · simp_rw [pow_succ', two_mul, fastCycleMin_succ, min_le_iff]
     intro k hk'
-    rcases lt_or_le k (2^i) with hk | hk
+    rcases lt_or_ge k (2^i) with hk | hk
     · exact Or.inl (IH _ hk)
     · rw [← Nat.sub_lt_iff_lt_add hk] at hk'
       convert Or.inr (IH _ hk') using 2
@@ -104,7 +104,7 @@ lemma exists_lt_fastCycleMin_eq_pow_apply (x : α) (i : ℕ) :
     rcases (IH (x := (π ^ (2 ^ i)) x)) with ⟨k', hk', hπk'⟩
     simp_rw [fastCycleMin_succ, min_eq_iff, hπk, hπk', ← Equiv.Perm.mul_apply, ← pow_add,
     pow_succ', two_mul]
-    rcases lt_or_le ((π ^ k) x) ((π ^ (k' + 2 ^ i)) x) with hkk' | hkk'
+    rcases lt_or_ge ((π ^ k) x) ((π ^ (k' + 2 ^ i)) x) with hkk' | hkk'
     · exact ⟨k, hk.trans (Nat.lt_add_of_pos_right (Nat.two_pow_pos _)),
         Or.inl ⟨rfl, hkk'.le⟩⟩
     · exact ⟨k' + 2^i, Nat.add_lt_add_right hk' _, Or.inr ⟨rfl, hkk'⟩⟩
@@ -318,7 +318,7 @@ le_antisymm cycleMin_le_self (zero_le _)
 
 @[simp]
 lemma _root_.Fin.cycleMin_zero {m : ℕ} [NeZero m] {τ : Equiv.Perm (Fin m)} :
-  CycleMin τ 0 = 0 := le_antisymm cycleMin_le_self (Fin.zero_le' _)
+  CycleMin τ 0 = 0 := le_antisymm cycleMin_le_self (Fin.zero_le _)
 
 end CycleMin
 

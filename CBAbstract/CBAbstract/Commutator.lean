@@ -20,7 +20,7 @@ induction' k with n hn
 
 lemma cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow {k : ℤ} : ((⁅x, y⁆)^k)⁻¹ * y = y * (⁅x, y⁻¹⁆)^k := by
 cases k
-· simp only [Int.ofNat_eq_coe, zpow_natCast, zpow_neg, cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow]
+· simp only [Int.ofNat_eq_coe, zpow_natCast, cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow]
 · simp_rw [zpow_negSucc, inv_inv, eq_mul_inv_iff_mul_eq, mul_assoc, ← eq_inv_mul_iff_mul_eq,
     cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow, inv_mul_cancel_left]
 
@@ -105,7 +105,7 @@ lemma cmtr_zpow_apply_ne_apply {k : ℤ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
   · simp only [Int.ofNat_eq_coe, zpow_natCast, ne_eq]
     exact cmtr_pow_apply_ne_apply hxy hy
   · simp only [zpow_negSucc, ne_eq]
-    simp only [zpow_negSucc, ne_eq, hxy, hy, not_false_eq_true, implies_true,
+    simp only [ne_eq, hxy, hy, not_false_eq_true, implies_true,
       cmtr_pow_inv_apply_ne_apply]
 
 lemma cmtr_zpow_apply_ne_apply_cmtr_pow_apply {j k : ℤ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)

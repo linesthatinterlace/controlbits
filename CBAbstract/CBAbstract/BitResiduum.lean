@@ -65,12 +65,12 @@ lemma getBitRes_apply_two_pow {i : Fin (m + 1)} : getBitRes i ⟨2^(i : ℕ),
   pow_lt_pow_right₀ one_lt_two i.isLt⟩ = (true, 0) := by
   ext
   · simp only [getBitRes_apply, finFunctionFinEquiv, Equiv.ofRightInverseOfCardLE_symm_apply,
-    gt_iff_lt, zero_lt_two, pow_pos, Nat.div_self, Nat.one_mod, Fin.mk_one, finTwoEquiv_apply,
+    zero_lt_two, pow_pos, Nat.div_self, Nat.one_mod, Fin.mk_one, finTwoEquiv_apply,
     decide_true, Equiv.ofRightInverseOfCardLE_apply]
   · simp only [getBitRes_apply, finFunctionFinEquiv_apply_val, finFunctionFinEquiv_symm_apply_val,
     Fin.val_zero, Finset.sum_eq_zero_iff, Finset.mem_univ, mul_eq_zero, forall_true_left]
     refine fun x => Or.inl ?_
-    rcases (Fin.succAbove_ne i x).lt_or_lt with h | h <;> rw [Fin.lt_iff_val_lt_val] at h
+    rcases (Fin.succAbove_ne i x).lt_or_gt with h | h <;> rw [Fin.lt_iff_val_lt_val] at h
     · rw [Nat.pow_div h.le zero_lt_two, Nat.pow_mod, Nat.mod_self,
         Nat.zero_pow (Nat.sub_pos_of_lt h), Nat.zero_mod]
     · rw [Nat.div_eq_of_lt (pow_lt_pow_right₀ one_lt_two h), Nat.zero_mod]

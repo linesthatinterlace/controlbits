@@ -46,19 +46,6 @@ theorem castSucc_succAbove_last {n : ℕ} (i : Fin (n + 1)) :
     succAbove i.castSucc (last _) = last _ :=
   Fin.succAbove_castSucc_of_le i (last _) (le_last _)
 
-
-lemma succAbove_succAbove_predAbove {i : Fin (m + 1)} {j : Fin (m + 2)} :
-(j.succAbove i).succAbove (i.predAbove j) = j := by
-  rcases lt_or_le (castSucc i) j with (h | h)
-  · rw [succAbove_of_castSucc_lt _ _ h, predAbove_of_castSucc_lt _ _ h,
-    succAbove_castSucc_of_le, succ_pred]
-    rw [le_pred_iff, ← castSucc_lt_iff_succ_le]
-    exact h
-  · rw [succAbove_of_le_castSucc _ _ h, predAbove_of_le_castSucc _ _ h,
-    succAbove_succ_of_le, castSucc_castPred]
-    rw [castPred_le_iff]
-    exact h
-
 theorem succAbove_eq_castSucc_or_succ (p : Fin (n + 1)) (i : Fin n) :
     p.succAbove i = i.castSucc ∨ p.succAbove i = i.succ := ite_eq_or_eq _ _ _
 
@@ -72,9 +59,9 @@ theorem succAbove_le_succ (p : Fin (n + 1)) (i : Fin n) : p.succAbove i ≤ succ
 
 lemma succAbove_succAbove_predAbove_succAbove {k : Fin m} {i : Fin (m + 1)} {j : Fin (m + 2)} :
 (j.succAbove i).succAbove ((i.predAbove j).succAbove k) = j.succAbove (i.succAbove k) := by
-  rcases lt_or_le (castSucc i) j with (hij | hij)
+  rcases lt_or_ge (castSucc i) j with (hij | hij)
   · rw [succAbove_of_castSucc_lt _ _ hij, predAbove_of_castSucc_lt _ _ hij]
-    rcases lt_or_le (castSucc k) i with (hik | hik)
+    rcases lt_or_ge (castSucc k) i with (hik | hik)
     · have H := (castSucc_lt_iff_succ_le.mp
       (castSucc_lt_castSucc_iff.mpr hik)).trans_lt hij
       rw [succAbove_of_castSucc_lt _ _ hik, succAbove_of_succ_le _ _ H.le,
@@ -83,7 +70,7 @@ lemma succAbove_succAbove_predAbove_succAbove {k : Fin m} {i : Fin (m + 1)} {j :
       succAbove_castSucc_of_le, ← succ_succAbove_succ, succ_pred]
       exact hik.trans (castSucc_le_succAbove _ _)
   · rw [succAbove_of_le_castSucc _ _ hij, predAbove_of_le_castSucc _ _ hij]
-    rcases lt_or_le i (succ k) with (hik | hik)
+    rcases lt_or_ge i (succ k) with (hik | hik)
     · have H := ((hij.trans_lt (castSucc_lt_castSucc_iff.mpr hik)))
       rw [succAbove_of_lt_succ _ _ hik, succAbove_of_le_castSucc _ _ H.le,
       succAbove_of_lt_succ _ k ((castPred_lt_iff _).mpr H), succAbove_succ_of_lt _ _ hik]
