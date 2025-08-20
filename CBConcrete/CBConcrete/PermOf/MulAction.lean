@@ -37,9 +37,9 @@ theorem period_eq_one_of_ge (a : PermOf n) {i : ℕ} (hi : n ≤ i) : MulAction.
 theorem period_eq_one_iff (a : PermOf n) {i : ℕ} :
     MulAction.period a i = 1 ↔ ∀ (hi : i < n), a[i] = i := by
   simp_rw [MulAction.period_eq_one_iff]
-  rcases lt_or_le i n with hi | hi
+  rcases lt_or_ge i n with hi | hi
   · simp_rw [hi, forall_true_left, a.smul_of_lt hi]
-  · simp_rw [hi.not_lt, forall_false, iff_true, a.smul_of_ge hi]
+  · simp_rw [hi.not_gt, forall_false, iff_true, a.smul_of_ge hi]
 
 @[simp]
 theorem getElem_pow_period (a : PermOf n) {i : ℕ} (hi : i < n) :
@@ -79,7 +79,7 @@ theorem period_le_of_lt (a : PermOf n) {i : ℕ} (hi : i < n) : MulAction.period
   simp_rw [Finset.card_range, Finset.mem_range, getElem_lt, implies_true]
 
 theorem period_le_of_ne_zero [NeZero n] (a : PermOf n) {i : ℕ} : MulAction.period a i ≤ n := by
-  rcases lt_or_le i n with hi | hi
+  rcases lt_or_ge i n with hi | hi
   · exact a.period_le_of_lt hi
   · rw [a.period_eq_one_of_ge hi]
     exact NeZero.pos n
@@ -102,10 +102,10 @@ theorem cycleOf_lt (a : PermOf n) {x : ℕ} (hx : x < n) :
     ⟨_, (hlt.trans_le <| a.period_le_of_lt hx), h⟩⟩
 
 theorem cycleOf_ge (a : PermOf n) {x : ℕ} (hx : n ≤ x) :
-    a.cycleOf x = {x} := dif_neg (not_lt_of_le hx)
+    a.cycleOf x = {x} := dif_neg (not_lt_of_ge hx)
 
 theorem card_cycleOf (a : PermOf n) (x : ℕ) : (a.cycleOf x).card = MulAction.period a x := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · refine Eq.trans ?_ (Finset.card_range (MulAction.period a x))
     rw [a.cycleOf_lt hx, Finset.card_image_iff]
     exact getElem_injOn_range_period _ _
@@ -113,7 +113,7 @@ theorem card_cycleOf (a : PermOf n) (x : ℕ) : (a.cycleOf x).card = MulAction.p
 
 theorem cycleOf_eq_map_smul_range_period (a : PermOf n) (x : ℕ) :
     a.cycleOf x = (Finset.range (MulAction.period a x)).image (fun k => (a ^ k) • x) := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [a.cycleOf_lt hx, smul_of_lt hx]
   · simp_rw [a.cycleOf_ge hx, smul_of_ge hx, Finset.ext_iff, Finset.mem_singleton,
       Finset.mem_image, Finset.mem_range, exists_and_right]
@@ -287,7 +287,7 @@ theorem getElem_cycleMinVector_eq_min'_getElem_pow_image_range (a : PermOf n)
   · simp_rw [getElem_cycleMinVector_succ, IH, le_antisymm_iff, getElem_pow_add,
       le_inf_iff, Finset.le_min'_iff, inf_le_iff, Finset.mem_image, Finset.mem_range,
       forall_exists_index, and_imp, forall_apply_eq_imp_iff₂]
-    refine ⟨fun k hk => (lt_or_le k (2^i)).imp
+    refine ⟨fun k hk => (lt_or_ge k (2^i)).imp
       (fun hk' => Finset.min'_le _ _ ?_) (fun hk' => Finset.min'_le _ _ ?_),
       fun k hk => Finset.min'_le _ _ ?_, fun k hk => Finset.min'_le _ _ ?_⟩ <;>
     simp_rw [Finset.mem_image, Finset.mem_range]
@@ -385,39 +385,39 @@ theorem cycleMin_of_ge (a : PermOf n) {i x : ℕ} (hx : n ≤ x) :
     a.CycleMin i x = x := Vector.getD_of_ge _ _ _ hx
 
 @[simp] theorem one_cycleMin {k x : ℕ} : (1 : PermOf n).CycleMin k x = x := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · rw [cycleMin_of_lt _ hx, one_cycleMinVector, Vector.getElem_range]
   · rwa [cycleMin_of_ge]
 
 @[simp]
 theorem cycleMin_zero (a : PermOf n) {x : ℕ} :
   a.CycleMin 0 x = x := if hx : x < n then
-    (a.cycleMin_of_lt hx).trans <| Array.getElem_range _ else a.cycleMin_of_ge (le_of_not_lt hx)
+    (a.cycleMin_of_lt hx).trans <| Array.getElem_range _ else a.cycleMin_of_ge (le_of_not_gt hx)
 
 @[simp]
 theorem cycleMin_succ (a : PermOf n) {i x : ℕ} :
     a.CycleMin (i + 1) x = min (a.CycleMin i x) (a.CycleMin i (a^2^i • x)) := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [smul_of_lt hx, a.cycleMin_of_lt hx, cycleMin_of_getElem, getElem_cycleMinVector_succ]
   · simp_rw [smul_of_ge hx, a.cycleMin_of_ge hx, min_self]
 
 @[simp]
 theorem cycleMin_lt_iff_lt (a : PermOf n) {i : ℕ} {x : ℕ} :
     a.CycleMin i x < n ↔ x < n := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [a.cycleMin_of_lt hx, hx, getElem_cycleMinVector_lt]
   · simp_rw [a.cycleMin_of_ge hx]
 
 lemma cycleMin_le_smul_pow_lt_two_pow (a : PermOf n) {i : ℕ} (x : ℕ) {k : ℕ} (hk : k < 2^i) :
     a.CycleMin i x ≤ (a ^ k) • x := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [a.cycleMin_of_lt hx, smul_of_lt hx]
     exact getElem_cycleMinVector_le_getElem_pow_lt _ hk _
   · simp_rw [a.cycleMin_of_ge hx, smul_of_ge hx, le_rfl]
 
 lemma cycleMin_le_pow_smul_of_period_le_two_pow (a : PermOf n) (i : ℕ) {x : ℕ}
     (hai : MulAction.period a x ≤ 2^i) : ∀ k, a.CycleMin i x ≤ (a ^ k) • x := fun k => by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [a.cycleMin_of_lt hx, smul_of_lt hx]
     exact getElem_cycleMinVector_le_getElem_pow_of_period_le_two_pow _ _ hai _
   · simp_rw [a.cycleMin_of_ge hx, smul_of_ge hx, le_rfl]
@@ -425,21 +425,21 @@ lemma cycleMin_le_pow_smul_of_period_le_two_pow (a : PermOf n) (i : ℕ) {x : �
 lemma cycleMin_le_zpow_smul_of_period_le_two_pow  (a : PermOf n) (i : ℕ) {x : ℕ}
     (hai : MulAction.period a x ≤ 2^i) :
     ∀ k : ℤ, a.CycleMin i x ≤ (a ^ k) • x := fun k => by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [a.cycleMin_of_lt hx, smul_of_lt hx]
     exact getElem_cycleMinVector_le_getElem_zpow_of_period_le_two_pow _ _ hai _
   · simp_rw [a.cycleMin_of_ge hx, smul_of_ge hx, le_rfl]
 
 lemma cycleMin_le_self (a : PermOf n) (i : ℕ) {x : ℕ} :
     a.CycleMin i x ≤ x := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [a.cycleMin_of_lt hx]
     exact getElem_cycleMinVector_le_self
   · simp_rw [a.cycleMin_of_ge hx, le_rfl]
 
 lemma exists_lt_cycleMin_eq_smul_pow (a : PermOf n) (i : ℕ) {x : ℕ} :
     ∃ k < 2^i, a.CycleMin i x = (a ^ k) • x := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [a.cycleMin_of_lt hx, smul_of_lt hx]
     exact exists_lt_getElem_cycleMin_eq_getElem_pow _ _ _
   · simp_rw [a.cycleMin_of_ge hx, smul_of_ge hx]
@@ -448,7 +448,7 @@ lemma exists_lt_cycleMin_eq_smul_pow (a : PermOf n) (i : ℕ) {x : ℕ} :
 lemma cycleMin_eq_min'_cycleOf (a : PermOf n) (i : ℕ) {x : ℕ}
     (hai : MulAction.period a x ≤ 2^i) :
     a.CycleMin i x = (a.cycleOf x).min' a.nonempty_cycleOf := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [a.cycleMin_of_lt hx]
     exact getElem_cycleMinVector_eq_min'_cycleOf _  hai _
   · simp_rw [a.cycleMin_of_ge hx, a.cycleOf_ge hx]
@@ -457,7 +457,7 @@ lemma cycleMin_eq_min'_cycleOf (a : PermOf n) (i : ℕ) {x : ℕ}
 lemma cycleMin_eq_apply_cycleMin (a : PermOf n) (i : ℕ) {x : ℕ}
     (hai : ∀ {x : ℕ}, MulAction.period a x ≤ 2^i) :
     a.CycleMin i x = a.CycleMin i (a • x) := by
-  rcases lt_or_le x n with hx | hx
+  rcases lt_or_ge x n with hx | hx
   · simp_rw [cycleMin_eq_min'_cycleOf _ _ hai, le_antisymm_iff, Finset.le_min'_iff]
     refine ⟨fun y hy => Finset.min'_le _ _ ?_, fun y hy => Finset.min'_le _ _ ?_⟩ <;>
     simp_rw [mem_cycleOf_iff_exists_getElem_zpow _ hx,
@@ -466,6 +466,6 @@ lemma cycleMin_eq_apply_cycleMin (a : PermOf n) (i : ℕ) {x : ℕ}
       ⟨hy.choose - 1, zpow_sub_one a _ ▸ getElem_mul _ ▸
       inv_mul_cancel_right _ a ▸ hy.choose_spec⟩]
   · simp_rw [a.cycleMin_of_ge hx]
-    rw [a.cycleMin_of_ge (le_of_not_lt (a.lt_of_smul_lt.mt hx.not_lt)), a.smul_of_ge hx]
+    rw [a.cycleMin_of_ge (le_of_not_gt (a.lt_of_smul_lt.mt hx.not_gt)), a.smul_of_ge hx]
 
 end PermOf

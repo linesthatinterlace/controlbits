@@ -13,21 +13,14 @@ theorem getD_of_lt (a : Vector α n) (x : α) (i : ℕ) (h : i < n) : a[i]?.getD
 
 @[simp]
 theorem getD_of_ge (a : Vector α n) (x : α) (i : ℕ) (h : n ≤ i) : a[i]?.getD x = x := by
-  rw [getElem?_neg a i h.not_lt, Option.getD_none]
+  rw [getElem?_neg a i h.not_gt, Option.getD_none]
 
 theorem getElem_swapIfInBounds {as : Vector α n} {i j k : ℕ} (hk : k < n) :
     (as.swapIfInBounds i j)[k] =
     if h : i < n ∧ j < n then (as.swap i j)[k] else as[k] := by
-  unfold swapIfInBounds
-  simp_rw [getElem_mk, Array.getElem_swapIfInBounds, Vector.size_toArray, getElem_swap,
+  unfold swapIfInBounds swap
+  simp_rw [getElem_mk, Array.getElem_swapIfInBounds, Vector.size_toArray,
     Vector.getElem_toArray]
-  rcases eq_or_ne k i with rfl | hi
-  · simp_rw [hk, true_and, and_true, ite_true]
-    exact dite_congr rfl (fun _ => rfl) (fun _ => by simp_rw [dite_eq_right_iff, implies_true])
-  · simp_rw [hi, false_and, dite_false, ite_false]
-    rcases eq_or_ne k j with rfl | hj
-    · simp_rw [ite_true, true_and, hk, and_true]
-    · simp_rw [hj, false_and, dite_false, ite_false, dite_eq_ite, ite_self]
 
 theorem mem_def {a : α} (v : Vector α n) : a ∈ v ↔ a ∈ v.toArray :=
   ⟨fun | .mk h => h, Vector.Mem.mk⟩
@@ -38,20 +31,14 @@ theorem getElem_eraseIdx_left (v : Vector α n) (hi : i < n) (hki : k < i) :
 
 theorem getElem_eraseIdx_right (v : Vector α n) (hki : i ≤ k) (hk : k < n - 1) :
     (v.eraseIdx i)[k] = v[k + 1] := by
-  simp_rw [getElem_eraseIdx, dif_neg hki.not_lt]
+  simp_rw [getElem_eraseIdx, dif_neg hki.not_gt]
 
 @[simp] theorem getElem_eraseIdx_zero (v : Vector α n) (hk : k < n - 1) :
     (v.eraseIdx 0)[k] = v[k + 1] := getElem_eraseIdx_right _ (zero_le _) _
 
-@[simp] theorem getElem_tail (v : Vector α n) (hi : i < n - 1) : (v.tail)[i] = v[i + 1] := by
-  cases n
-  · simp_rw [Nat.zero_sub, not_lt_zero'] at hi
-  · unfold tail
-    simp_rw [Nat.zero_lt_succ, dite_true, getElem_eraseIdx_zero]
-
 @[simp] theorem getElem_tail' (v : Vector α (n + 1)) (hi : i < (n + 1) - 1) :
     @getElem (Vector α n) Nat α (fun _ i => i < n) instGetElemNatLt v.tail i hi = v[i + 1] :=
-  getElem_tail _ _
+  getElem_tail _
 
 @[simp] theorem getElem_singleton' (a : α) (hi : i < 1) : (singleton a)[i] = a := by
   unfold singleton
@@ -66,7 +53,7 @@ theorem cast_singleton_head_append_tail [NeZero n] (v : Vector α n) :
   · simp_rw [Nat.lt_one_iff] at hi
     simp_rw [hi]
     rfl
-  · simp_rw [Nat.sub_add_cancel (le_of_not_lt hi)]
+  · simp_rw [Nat.sub_add_cancel (le_of_not_gt hi)]
 
 @[simp] theorem back_succ (v : Vector α (n + 1)) : v.back = v[n] := by
   cases v with | mk as has => _

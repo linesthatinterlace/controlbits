@@ -31,16 +31,12 @@ open Function
 
 variable {α β γ : Type*} {n m k i j : ℕ} {v : Vector α n}
 
-theorem getElem_swap_eq_getElem_swap_apply (hi : i < n)
-    (hj : j < n)
-    (k : ℕ) (hk : k < n) :
-    (v.swap i j hi hj)[k] =
+theorem getElem_swap_eq_getElem_swap_apply
+    (hi : i < n) (hj : j < n) (k : ℕ) (hk : k < n) :
+    (v.swap i j)[k] =
     v[Equiv.swap i j k]'(Equiv.swap_prop_const (· < n) hk hi hj) := by
   simp_rw [getElem_swap, Equiv.swap_apply_def]
   split_ifs <;> rfl
-
-@[simp]
-theorem get_eq_getElem {i : Fin n} : v.get i = v[(i: ℕ)] := rfl
 
 def Nodup (v : Vector α n) : Prop := ∀ {i} (hi : i < n) {j} (hj : j < n), v[i] = v[j] → i = j
 
@@ -56,7 +52,7 @@ theorem nodup_iff_getElem?_ne_getElem? :
     v.Nodup ↔ ∀ {i j}, (hij : i < j) → (hj : j < n) → v[i] ≠ v[j] := by
   refine ⟨fun hv => by simp_rw [hv.getElem_ne_iff] ; exact fun hij _ => hij.ne,
     fun hv i hi j hj => Function.mtr fun hij => ?_⟩
-  rcases Ne.lt_or_lt hij with (hij | hij)
+  rcases Ne.lt_or_gt hij with (hij | hij)
   exacts [hv hij _, (hv hij _).symm]
 
 theorem nodup_iff_injective_getElem : v.Nodup ↔ Injective (fun (i : Fin n) => v[(i : ℕ)]) := by
@@ -311,7 +307,7 @@ theorem smul_of_lt {i : ℕ} (h : i < n) : a • i = a[i] := by
   simp_rw [smul_eq_dite, dif_pos h]
 
 theorem smul_of_ge {i : ℕ} (h : n ≤ i) : a • i = i := by
-  simp_rw [smul_eq_dite, dif_neg h.not_lt]
+  simp_rw [smul_eq_dite, dif_neg h.not_gt]
 
 @[simp] theorem smul_fin {i : Fin n} : a • i = a[i.1] := a.smul_of_lt i.isLt
 
@@ -321,9 +317,9 @@ theorem smul_getElem {i : ℕ} (h : i < n) : a • b[i] = a[b[i]] :=
 
 theorem smul_eq_iff {i j : ℕ} :
     a • i = j ↔ (∀ (hi : i < n), a[i] = j) ∧ (n ≤ i → i = j) := by
-  rcases lt_or_le i n with hi | hi
-  · simp_rw [a.smul_of_lt hi, hi, hi.not_le, false_implies, forall_true_left, and_true]
-  · simp_rw [a.smul_of_ge hi, hi, hi.not_lt, IsEmpty.forall_iff, forall_true_left, true_and]
+  rcases lt_or_ge i n with hi | hi
+  · simp_rw [a.smul_of_lt hi, hi, hi.not_ge, false_implies, forall_true_left, and_true]
+  · simp_rw [a.smul_of_ge hi, hi, hi.not_gt, IsEmpty.forall_iff, forall_true_left, true_and]
 
 theorem eq_smul_iff {i j : ℕ} :
     i = a • j ↔ (∀ (hj : j < n), i = a[j]) ∧ (n ≤ j → i = j) := by
@@ -339,9 +335,9 @@ theorem self_eq_smul_iff {i : ℕ} :
 
 @[simp]
 theorem smul_lt_iff_lt {i : ℕ} : a • i < n ↔ i < n := by
-  rcases lt_or_le i n with h | h
+  rcases lt_or_ge i n with h | h
   · simp_rw [h, iff_true, a.smul_of_lt h, getElem_lt]
-  · simp_rw [h.not_lt, iff_false, not_lt, a.smul_of_ge h, h]
+  · simp_rw [h.not_gt, iff_false, not_lt, a.smul_of_ge h, h]
 
 theorem smul_lt_of_lt {i : ℕ} (h : i < n) : a • i < n := a.smul_lt_iff_lt.mpr h
 
@@ -351,13 +347,13 @@ theorem smul_fin_lt {i : Fin n} : a • i < n := a.smul_lt_of_lt i.isLt
 
 theorem smul_eq_smul_same_iff {i : ℕ} :
   a • i = b • i ↔ {hi : i < n} → a[i] = b[i] := by
-  rcases lt_or_le i n with hi | hi
+  rcases lt_or_ge i n with hi | hi
   · simp_rw [smul_of_lt hi, hi, forall_true_left]
-  · simp_rw [smul_of_ge hi, hi.not_lt, IsEmpty.forall_iff]
+  · simp_rw [smul_of_ge hi, hi.not_gt, IsEmpty.forall_iff]
 
 theorem smul_right_inj {i j : ℕ} : a • i = a • j ↔ i = j := by
-  rcases lt_or_le i n with hi | hi <;>
-  rcases lt_or_le j n with hj | hj
+  rcases lt_or_ge i n with hi | hi <;>
+  rcases lt_or_ge j n with hj | hj
   · simp_rw [a.smul_of_lt hi, a.smul_of_lt hj, a.getElem_inj]
   · simp_rw [a.smul_of_lt hi, a.smul_of_ge hj, (hi.trans_le hj).ne, iff_false]
     exact ne_of_lt (hj.trans_lt' a.getElem_lt)
@@ -366,7 +362,7 @@ theorem smul_right_inj {i j : ℕ} : a • i = a • j ↔ i = j := by
   · simp_rw [a.smul_of_ge hi, a.smul_of_ge hj]
 
 theorem smul_right_surj {i : ℕ} : ∃ j, a • j = i := by
-  rcases lt_or_le i n with hi | hi
+  rcases lt_or_ge i n with hi | hi
   · rcases a.getElem_surjective hi with ⟨j, hj, rfl⟩
     exact ⟨j, smul_of_lt _⟩
   · exact ⟨i, smul_of_ge hi⟩
@@ -384,11 +380,11 @@ instance : FaithfulSMul (PermOf n) ℕ where
 
 instance : MulAction (PermOf n) ℕ where
   one_smul k := by
-    rcases lt_or_le k n with hkn | hkn
+    rcases lt_or_ge k n with hkn | hkn
     · simp_rw [smul_of_lt hkn, getElem_one]
     · simp_rw [smul_of_ge hkn]
   mul_smul a b k := by
-    rcases lt_or_le k n with hkn | hkn
+    rcases lt_or_ge k n with hkn | hkn
     · simp_rw [smul_of_lt hkn, smul_of_lt (getElem_lt _), getElem_mul]
     · simp_rw [smul_of_ge hkn]
 
@@ -651,11 +647,11 @@ theorem inv_shuffle_range :
 
 @[simp] theorem mul_shuffle {α : Type*} (v : Vector α n) :
     v.shuffle (a * b) = (v.shuffle a).shuffle b := by
-  simp_rw [Vector.ext_iff, getElem_shuffle, getElem_mul, implies_true]
+  simp_rw [Vector.ext_iff, getElem_shuffle, a.getElem_mul, implies_true]
 
 theorem shuffle_toVector :
     a.toVector.shuffle b = (a * b).toVector := by
-  simp_rw [Vector.ext_iff, getElem_shuffle, getElem_toVector, getElem_mul, implies_true]
+  simp_rw [Vector.ext_iff, getElem_shuffle, getElem_toVector, a.getElem_mul, implies_true]
 
 instance {α : Type*} : SMul (PermOf n)ᵐᵒᵖ (Vector α n) where
   smul a v := v.shuffle a.unop

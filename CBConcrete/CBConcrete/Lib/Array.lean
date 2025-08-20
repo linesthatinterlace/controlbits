@@ -26,13 +26,13 @@ theorem getElem_swapIfInBounds_of_ge_left {as : Array α} {i j k : ℕ} (h : as.
     (hk : k < (as.swapIfInBounds i j).size) :
     (as.swapIfInBounds i j)[k] = as[k]'(hk.trans_eq as.size_swapIfInBounds) := by
   unfold swapIfInBounds
-  simp_rw [h.not_lt, dite_false]
+  simp_rw [h.not_gt, dite_false]
 
 theorem getElem_swapIfInBounds_of_ge_right {as : Array α} {i j k : ℕ} (h : as.size ≤ j)
     (hk : k < (as.swapIfInBounds i j).size) :
     (as.swapIfInBounds i j)[k] = as[k]'(hk.trans_eq as.size_swapIfInBounds) := by
   unfold swapIfInBounds
-  simp_rw [h.not_lt, dite_false, dite_eq_ite, ite_self]
+  simp_rw [h.not_gt, dite_false, dite_eq_ite, ite_self]
 
 @[simp]
 theorem getElem_swapIfInBounds_left {as : Array α} {i j : ℕ} (hj : j < as.size)
@@ -62,20 +62,13 @@ theorem getElem_swapIfInBounds_of_ne_ne {as : Array α} {i j k : ℕ} (hi : k �
 
 theorem getElem_swapIfInBounds {as : Array α} {i j k : ℕ} (hk : k < (as.swapIfInBounds i j).size) :
     (as.swapIfInBounds i j)[k] =
-    if h : k = i ∧ j < as.size then as[j]'h.2 else if h₂ : k = j ∧ i < as.size then as[i]'h₂.2
+    if h : i < as.size ∧ j < as.size then (as.swap i j)[k]'
+      (hk.trans_eq ((as.size_swapIfInBounds).trans (as.size_swap).symm))
     else as[k]'(hk.trans_eq as.size_swapIfInBounds) := by
-  rcases eq_or_ne k i with rfl | hi
-  · simp_rw [true_and]
-    rcases lt_or_le j as.size with hj | hj
-    · simp_rw [hj, dite_true, getElem_swapIfInBounds_left hj]
-    · simp_rw [hj.not_lt, dite_false, getElem_swapIfInBounds_of_ge_right hj]
-      split_ifs <;> rfl
-  · rcases eq_or_ne k j with rfl | hj
-    · simp_rw [hi, false_and, dite_false, true_and]
-      rcases lt_or_le i as.size with hi | hi
-      · simp_rw [hi, dite_true, getElem_swapIfInBounds_right hi]
-      · simp_rw [hi.not_lt, dite_false, getElem_swapIfInBounds_of_ge_left hi]
-    · simp_rw [hi, hj, false_and, dite_false, getElem_swapIfInBounds_of_ne_ne hi hj]
+  unfold swapIfInBounds
+  split
+  · split <;> simp_all
+  · simp_all
 
 theorem eraseIdx_eq_take_append_drop_succ {as : Array α} (hi : i < as.size) :
     as.eraseIdx i = as.take i ++ as.extract (i + 1) as.size := by
@@ -93,7 +86,7 @@ theorem getElem_eraseIdx_right {as : Array α} (hi : i < as.size) (hki : i ≤ k
     (hk : k < (as.eraseIdx i).size) :
     (as.eraseIdx i)[k] = as[k + 1]'
     (Nat.succ_lt_of_lt_pred (hk.trans_eq (as.size_eraseIdx _ _))) := by
-  simp_rw [getElem_eraseIdx, dif_neg hki.not_lt]
+  simp_rw [getElem_eraseIdx, dif_neg hki.not_gt]
 
 @[simp] theorem getElem_eraseIdx_zero {as : Array α} (has : 0 < as.size)
     (hk : k < (as.eraseIdx 0).size) :

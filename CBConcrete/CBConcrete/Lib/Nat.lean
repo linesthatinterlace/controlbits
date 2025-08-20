@@ -59,4 +59,32 @@ theorem fold_eq_foldRev {α : Type u} (n : Nat)
     congr
     rw [Nat.eq_sub_of_add_eq' hij]
 
+def foldRecOn {α : Type u} {motive : α → Sort*} : (n : Nat) → (f : (i : Nat) → i < n → α → α) →
+  {a : α} → motive a → (∀ a, motive a → (i : Nat) → (hi : i < n) → motive (f i hi a)) →
+    motive (n.fold f a)
+  | 0, _, _, zro, _ => zro
+  | _ + 1, _, _, zro, scc => scc _ (foldRecOn _ _ zro (fun _ H _ _ => scc _ H _ _)) _ _
+
+section FoldRecOn
+
+variable {α : Type u} {n : Nat} {motive : α → Sort*} {init : α} (zro : motive init)
+
+@[simp]
+theorem foldRecOn_zero (f : (i : Nat) → i < 0 → α → α)
+    (scc : ∀ a, motive a → (i : Nat) → (hi : i < 0) → motive (f i hi a)) :
+    foldRecOn 0 f zro scc = zro := rfl
+
+@[simp]
+theorem foldRecOn_succ (f : (i : Nat) → i < n + 1 → α → α)
+    (scc : ∀ a, motive a → (i : Nat) → (hi : i < n + 1) → motive (f i hi a)) :
+    foldRecOn (n + 1) f zro scc = scc _ (foldRecOn _ _ zro (fun _ H _ _ => scc _ H _ _)) _ _ := rfl
+
+end FoldRecOn
+
+  /-induction n generalizing init with | zero | succ n IH
+  · exact zero
+  · refine succ _ ?_ _ _
+    refine IH _ _ zero ?_
+    exact fun _ H _ hi => succ _ H _ _-/
+
 end Nat

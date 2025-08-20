@@ -42,7 +42,7 @@ theorem getElem_leftLayer_of_le (hi : i ≤ n) (hp : p < 2^n) :
 
 theorem getElem_leftLayer_of_gt (hi : n < i) (hp : p < 2^n) :
     (leftLayer a i)[p] = false := by
-  rw [getElem_leftLayer, dif_neg (hi.not_le)]
+  rw [getElem_leftLayer, dif_neg (hi.not_ge)]
 
 theorem leftLayer_eq_of_gt (hi : n < i) :
     leftLayer a i = Vector.replicate _ false := by
@@ -52,7 +52,7 @@ theorem leftLayer_eq_of_gt (hi : n < i) :
 theorem getElem_leftLayer_of_lt_of_bitInvariant_lt
     (ha : ∀ j < i, a.BitInvariant j) (hp : p < 2^i) {hp' : p < 2^n} :
     (leftLayer a i)[p] = false := by
-  rcases le_or_lt i n with hi | hi
+  rcases le_or_gt i n with hi | hi
   · simp_rw [getElem_leftLayer_of_le hi, mergeBitRes_apply_false_of_lt_two_pow hp,
     getElem_cycleMinVector_of_self_le_getElem (getElem_eq_self_of_forall_bitInvariant_lt_of_lt
     (fun _ hk => (ha _ hk).flipBitCommutator_of_ne hk.ne) hp
@@ -105,7 +105,7 @@ theorem testBit_leftPerm {i : ℕ}
     (ha : ∀ j < i, a.BitInvariant j) {hk : k < 2^(n + 1)} :
     (leftPerm a i)[k].testBit i =
     ((a.flipBitCommutator i).CycleMinVector (n - i))[k].testBit i := by
-  rcases le_or_lt i n with hi | hi
+  rcases le_or_gt i n with hi | hi
   · have hin :  2 ^ (i + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ (Nat.succ_le_succ hi)
     rw [getElem_leftPerm, getElem_condFlipBit_of_div hin,
       condFlipBit_apply_of_testRes_lt ((testRes_lt_two_pow_iff_lt_two_pow hi).mpr hk),
@@ -162,7 +162,7 @@ theorem getElem_rightLayer_of_le {i : ℕ} (hi : i ≤ n) (hp : p < 2^n) :
 
 theorem getElem_rightLayer_of_gt {i : ℕ} (hi : n < i) (hp : p < 2^n) :
     (rightLayer a i)[p] = false := by
-  rw [getElem_rightLayer, dif_neg (hi.not_le)]
+  rw [getElem_rightLayer, dif_neg (hi.not_ge)]
 
 theorem rightLayer_eq_of_gt {i : ℕ} (hi : n < i) :
     rightLayer a i = Vector.replicate _ false := by
@@ -204,7 +204,7 @@ theorem testBit_rightPerm {i : ℕ}
     (ha : ∀ j < i, a.BitInvariant j) {hk : k < 2^(n + 1)}:
     (rightPerm a i)[k].testBit i =
     (leftPerm a i)[a[k]].testBit i := by
-  rcases le_or_lt i n with hi | hi
+  rcases le_or_gt i n with hi | hi
   · have hin :  2 ^ (i + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ (Nat.lt_succ_of_le hi)
     have hk' := (flipBit_lt_two_pow_iff_lt_two_pow (Nat.lt_succ_of_le hi)).mpr hk
     simp_rw [getElem_rightPerm, getElem_condFlipBit_of_div hin,
@@ -249,9 +249,9 @@ section MiddlePerm
     (middlePerm a i)[k] = (leftPerm a i)[a[(rightPerm a i)[k]]] := by
   unfold middlePerm leftPerm rightPerm leftLayer rightLayer
   simp_rw [condFlipBitVals_eq_condFlipBit_mul, condFlipBitIndices_eq_mul_condFlipBit]
-  rcases le_or_lt i n with hi | hi
+  rcases le_or_gt i n with hi | hi
   · simp_rw [dif_pos hi, getElem_mul]
-  · simp_rw [dif_neg hi.not_le,  condFlipBit_of_mkVector_false, getElem_one]
+  · simp_rw [dif_neg hi.not_ge,  condFlipBit_of_mkVector_false, getElem_one]
 
 theorem middlePerm_eq_condFlipBitVals_condFlipBitIndices :
     a.middlePerm i =
@@ -316,9 +316,9 @@ section mlrDecomp
 theorem mlrDecomp_eq_left_middle_right :
     mlrDecomp a i = (middlePerm a i, leftLayer a i, rightLayer a i) := by
   unfold mlrDecomp middlePerm rightLayer leftLayer
-  rcases le_or_lt i n with hi | hi
+  rcases le_or_gt i n with hi | hi
   · simp_rw [dif_pos hi]
-  · simp_rw [dif_neg hi.not_le]
+  · simp_rw [dif_neg hi.not_ge]
 
 @[simp] theorem condFlipBit_mlrDecomp_snd_fst {i : ℕ} :
     (condFlipBit i (mlrDecomp a i).snd.fst :
@@ -537,13 +537,13 @@ theorem getElem_toControlBits_of_ge (hi : n ≤ i) {hi' : i < (2*n + 1)} :
   unfold toControlBits
   simp_rw [toCBLayer_eq, Vector.getElem_cast,
     Vector.getElem_append, Vector.getElem_reverse, Vector.getElem_ofFn,
-    Nat.add_one_sub_one, dif_neg hi.not_lt]
+    Nat.add_one_sub_one, dif_neg hi.not_gt]
 
 theorem getElem_toControlBits (hi' : i < (2*n + 1)) :
     a.toControlBits[i] = if i < n then a.leftLayerIth i else a.rightLayerIth (n - (i - n)) := by
   split_ifs with hi
   · exact getElem_toControlBits_of_lt hi
-  · exact getElem_toControlBits_of_ge (le_of_not_lt hi)
+  · exact getElem_toControlBits_of_ge (le_of_not_gt hi)
 
 end Decomposition
 

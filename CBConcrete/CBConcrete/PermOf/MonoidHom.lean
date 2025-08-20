@@ -1,6 +1,6 @@
 import CBConcrete.PermOf.Basic
 import Mathlib.Algebra.Group.Action.End
-
+import Mathlib
 namespace Equiv
 
 variable {α β : Type*}
@@ -215,10 +215,10 @@ variable {m n o : ℕ}
 @[inline] protected def cast (hnm : n = m) (a : PermOf n) : PermOf m where
   toVector := a.toVector.cast hnm
   invVector := a.invVector.cast hnm
-  getElem_toVector_lt := fun _ => by
+  getElem_toVector_lt := fun _ _ => by
     simp_rw [Vector.getElem_cast, hnm.symm, getElem_toVector, getElem_lt]
   getElem_invVector_getElem_toVector :=
-    fun hi => a.getElem_inv_getElem (hi.trans_eq hnm.symm)
+    fun i hi => a.getElem_inv_getElem (hi.trans_eq hnm.symm)
 
 @[simp]
 theorem getElem_cast (hnm : n = m) (a : PermOf n) {i : ℕ} (hi : i < m):
@@ -251,7 +251,7 @@ theorem cast_inv (hnm : n = m) (a : PermOf n) :
 
 @[simp]
 theorem cast_mul (hnm : n = m) (a b : PermOf n) :
-    a.cast hnm * b.cast hnm = (a * b).cast hnm := ext <| fun hi => by
+    a.cast hnm * b.cast hnm = (a * b).cast hnm := ext <| fun _ hi => by
   simp only [getElem_cast, getElem_mul]
 
 theorem cast_eq_cast (hnm : n = m) (a : PermOf n) :
@@ -268,7 +268,7 @@ theorem cast_inj {a b : PermOf n} {hnm : n = m} : a.cast hnm = b.cast hnm ↔ a 
   refine ⟨?_, fun H => H ▸ rfl⟩
   simp_rw [PermOf.ext_iff, getElem_cast]
   refine fun H _ hi => ?_
-  exact H (hnm ▸ hi)
+  exact H _ (hnm ▸ hi)
 
 theorem cast_injective (h : n = m) : Function.Injective (PermOf.cast h) := fun _ _ => cast_inj.mp
 
@@ -684,9 +684,9 @@ def ofFixGENat {n : ℕ} : FixGENat n →* PermOf n where
   toFun := fun ⟨e, he⟩ => ofFn (fun i => e i) (fun i => e⁻¹ i)
     (fun _ => apply_lt_of_lt_of_mem_fixGENat he (Fin.isLt _))
     (fun _ => inv_apply_self _ _)
-  map_one' := PermOf.ext <| fun _ => by
+  map_one' := PermOf.ext <| fun _ _ => by
     simp_rw [getElem_ofFn, getElem_one, one_apply]
-  map_mul' := fun _ _ => PermOf.ext <| fun _ => by
+  map_mul' := fun _ _ => PermOf.ext <| fun _ _ => by
     simp_rw [getElem_mul, getElem_ofFn, mul_apply]
 
 section OfFixGENat
@@ -874,7 +874,7 @@ theorem eq_one_of_minLen_eq_zero {a : PermOf n} (ha : a.minLen = 0) : a = 1 := b
       have ha := IH ha
       simp_rw [PermOf.ext_iff, getElem_one, getElem_castPred] at ha
       simp_rw [PermOf.ext_iff, getElem_one, Nat.lt_succ_iff, le_iff_lt_or_eq]
-      exact fun _ hi => hi.elim ha (fun hi => hi ▸ ha')
+      exact fun _ hi => hi.elim (ha _) (fun hi => hi ▸ ha')
     · simp_rw [minLen_succ_of_getElem_ne ha', Nat.succ_ne_zero] at ha
 
 @[simp] theorem minLen_eq_zero_iff_eq_one {a : PermOf n} : a.minLen = 0 ↔ a = 1 :=
@@ -885,9 +885,9 @@ theorem eq_one_of_minLen_eq_zero {a : PermOf n} (ha : a.minLen = 0) : a = 1 := b
   · simp_rw [minLen_zero]
   · by_cases ha : a[n] = n
     · simp_rw [minLen_succ_of_getElem_eq ha,
-        minLen_succ_of_getElem_eq (getElem_inv_eq_self_of_getElem_eq_self ha), castPred_inv, IH]
+        minLen_succ_of_getElem_eq (getElem_inv_eq_self_of_getElem_eq_self _ ha), castPred_inv, IH]
     · simp_rw [minLen_succ_of_getElem_ne ha,
-        minLen_succ_of_getElem_ne (getElem_inv_ne_self_of_getElem_ne_self ha)]
+        minLen_succ_of_getElem_ne (getElem_inv_ne_self_of_getElem_ne_self _ ha)]
 
 @[simp] theorem minLen_cast {m : ℕ} {a : PermOf n} {hnm : n = m} :
     (a.cast hnm).minLen = a.minLen := by
@@ -1064,7 +1064,7 @@ theorem eq_one_of_minPerm_eq_one {a : PermOf n} (ha : a.minPerm = 1) : a = 1 := 
       have ha := IH ha
       simp_rw [PermOf.ext_iff, getElem_one, getElem_castPred] at ha
       simp_rw [PermOf.ext_iff, getElem_one, Nat.lt_succ_iff, le_iff_lt_or_eq]
-      exact fun _ hi => hi.elim ha (fun hi => hi ▸ ha')
+      exact fun _ hi => hi.elim (ha _) (fun hi => hi ▸ ha')
     · simp_rw [minPerm_succ_of_getElem_ne ha', cast_eq_one_iff] at ha
       exact ha
 
@@ -1313,24 +1313,24 @@ theorem mulEquivFinitePermNat_symm_apply_smul (e : FinitePermNat) {i : ℕ} :
   simp_rw [H, Subtype.coe_eta, MulEquiv.symm_apply_apply, smul_ofPermOf,
     natPermEquiv_symm_apply_smul]
 
-def ofArray (a : Array ℕ) (hx : ∀ {x} (hx : x < a.size), a[x] < a.size := by decide)
+def ofArray (a : Array ℕ) (hx : ∀ x (hx : x < a.size), a[x] < a.size := by decide)
   (ha : a.toList.Nodup := by decide) : FinitePerm := (ofVector ⟨a, rfl⟩ hx ha).ofPermOf
 
 @[simp]
-theorem toPermOf_ofArray {a : Array ℕ} {hx : ∀ {x}
+theorem toPermOf_ofArray {a : Array ℕ} {hx : ∀ x
     (hx : x < a.size), a[x] < a.size} {ha : a.toList.Nodup} :
     (ofArray a hx ha).toPermOf = (ofVector ⟨a, rfl⟩ hx ha).minPerm := rfl
 
 @[simp]
-theorem len_ofArray {a : Array ℕ} {hx : ∀ {x}
+theorem len_ofArray {a : Array ℕ} {hx : ∀ x
     (hx : x < a.size), a[x] < a.size} {ha : a.toList.Nodup} :
     (ofArray a hx ha).len = (ofVector ⟨a, rfl⟩ hx ha).minLen := rfl
 
-theorem len_ofArray_le_size {a : Array ℕ} {hx : ∀ {x}
+theorem len_ofArray_le_size {a : Array ℕ} {hx : ∀ x
     (hx : x < a.size), a[x] < a.size} {ha : a.toList.Nodup} :
     (ofArray a hx ha).len ≤ a.size := minLen_le
 
-theorem smul_ofArray (a : Array ℕ) (hx : ∀ {x}
+theorem smul_ofArray (a : Array ℕ) (hx : ∀ x
     (hx : x < a.size), a[x] < a.size) (ha : a.toList.Nodup) {i : ℕ} :
     (ofArray a hx ha) • i = if hi : i < a.size then a[i] else i := by
   rcases lt_or_le i (ofArray a hx ha).len with (hi | hi)
