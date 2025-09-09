@@ -283,19 +283,34 @@ match m with
 | (_ + 1) => fun π => piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π),
   (fun k p => fromPerm' ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) k (getRes 0 p)))
 
-def fromPerm {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
+def fromPerm'' {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
 match m with
 | 0 => fun π _ => LastLayer π
 | (_ + 1) => fun π =>
   let middlePerms := (bitInvarMulEquiv 0).symm (MiddlePerm π);
   piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π),
-  fun k p => fromPerm (middlePerms (getBit 0 p)) k (getRes 0 p))
+  fun k p => fromPerm'' (middlePerms (getBit 0 p)) k (getRes 0 p))
+
+def fromPerm {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
+match m with
+| 0 => fun π _ => LastLayer π
+| (_ + 1) => fun π =>
+  let middlePerms := (bitInvarMulEquiv 0).symm (MiddlePerm π);
+  let lowerBits := fromPerm (middlePerms false)
+  let upperBits := fromPerm (middlePerms true)
+  piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π),
+  fun k p => if getBit 0 p then upperBits k (getRes 0 p) else lowerBits k (getRes 0 p))
+
 
 lemma fromPerm_zero : fromPerm (m := 0) = fun π _ => LastLayer π := rfl
 
 lemma fromPerm_succ {π : Perm (BV (m + 2))} : fromPerm π =
   piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π), (fun p =>
-  fromPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) · (getRes 0 p))) := rfl
+    fromPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) · (getRes 0 p))) := by
+  simp [fromPerm]
+  congr
+  ext k p
+  rcases (getBit 0 p) <;> rfl
 
 lemma fromPerm_succ_apply_zero {π : Perm (BV (m + 2))} :
   fromPerm π 0 = FirstLayer π := piFinSuccCastSucc_symm_apply_zero _ _ _
@@ -306,8 +321,8 @@ lemma fromPerm_succ_apply_last {π : Perm (BV (m + 2))} :
 lemma fromPerm_succ_apply_castSucc_succ {π : Perm (BV (m + 2))} {i} :
     fromPerm π i.castSucc.succ =
     fun p => fromPerm ((bitInvarMulEquiv 0).symm
-    (MiddlePerm π) (getBit 0 p)) i (getRes 0 p) :=
-  piFinSuccCastSucc_symm_apply_castSucc_succ _ _ _ _
+    (MiddlePerm π) (getBit 0 p)) i (getRes 0 p) := by
+  rw [fromPerm_succ, piFinSuccCastSucc_symm_apply_castSucc_succ]
 
 lemma fromPerm_succ_apply_mergeBitRes {π : Perm (BV (m + 2))} {b : Bool} :
     (fun i k => fromPerm π i.castSucc.succ (mergeBitRes 0 b k)) =
@@ -406,20 +421,46 @@ def controlBits3_normal : ControlBits 3 :=
   ![true, false, false, true, false, true, false, true]]
 
 
-set_option profiler true
+set_option trace.profiler true
 
+#eval FirstLayer <| (1 : Perm (BV 8))
 def pi := controlBits3_perm
-def middlePerms := (bitInvarMulEquiv 0).symm (MiddlePerm pi)
-def falsePerm := middlePerms false
-def truePerm := middlePerms true
+#eval (XBackXForth pi).FastCycleMin 3
 #eval FirstLayer pi
 #eval LastLayer pi
-#eval fun p =>
-  let K := ControlBits.fromPerm (middlePerms (getBit 0 p))
-  K 1 (getRes 0 p)
+#eval (((bitInvarMulEquiv 0).symm (MiddlePerm pi)) true).toFun
+/-
+def middlePerm := MiddlePerm pi
+def middlePerms := (bitInvarMulEquiv 0).symm middlePerm
+def falsePerm := middlePerms false
+def truePerm := middlePerms true
+#eval FirstLayer falsePerm
+#eval LastLayer falsePerm
+def middlePermF := MiddlePerm falsePerm
+def middlePermsF := (bitInvarMulEquiv 0).symm middlePermF
+def falsePermF := middlePermsF false
+def truePermF := middlePermsF true
+#eval FirstLayer falsePermF
+#eval LastLayer falsePermF
+def middlePermFF := MiddlePerm falsePermF
+def middlePermsFF := (bitInvarMulEquiv 0).symm middlePermFF
+def falsePermFF := middlePermsFF false
+def truePermFF := middlePermsFF true
+#eval FirstLayer falsePermFF
+#eval LastLayer falsePermFF
+#eval ControlBits.fromPerm controlBits3_perm
+#eval ControlBits.fromPerm'' controlBits3_perm
 #eval (List.finRange _).map <| ControlBits.toPerm controlBits3
-#eval (List.finRange _).map <| middlePerms true
+#eval (List.finRange _).map <| middlePerms true-/
 
+
+/-
+def lowerBits := fromPerm (middlePerms false)
+def upperBits := fromPerm (middlePerms true)
+let middlePerms := (bitInvarMulEquiv 0).symm (MiddlePerm pi);
+let lowerBits := fromPerm (middlePerms false)
+let upperBits := fromPerm (middlePerms true)
+-/
 /-
 def fromPerm {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
 match m with

@@ -551,4 +551,11 @@ def ofControlBits {α : Type*} {m : ℕ} (v : Vector (Vector Bool (2^n)) (2*n + 
     Vector α m :=
   v.zipIdx.foldl (fun a c => a.condFlipBitIndices (min c.2 ((n + 1) - c.2)) c.1) a
 
+set_option trace.profiler true
+
+--#eval (1 : PermOf (2^11)).toControlBits (n := 10)
+
+--#eval (1 : PermOf (2^12)).toControlBits (n := 11)
+--#eval (1 : PermOf (2^13)).toControlBits (n := 12)
+
 end PermOf

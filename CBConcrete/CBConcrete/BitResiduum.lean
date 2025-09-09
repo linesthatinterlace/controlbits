@@ -1103,7 +1103,7 @@ theorem two_pow_testRes_of_gt (hij : j < i) : (2 ^ i).testRes j = 2 ^ (i - 1) :=
   simp_rw [← zero_mergeBitRes_true, testRes_mergeBitRes_of_lt hij, zero_testRes]
 
 theorem testRes_eq_mod_of_lt (hq : q < 2^(i + 1)) : q.testRes i = q % 2^i := by
-  cases q using Nat.bitCasesOn with | h b q => _
+  cases q using Nat.bitCasesOn with | bit b q => _
   simp_rw [Nat.bit_lt_two_pow_succ_iff] at hq
   simp_rw [testBit_ext_iff, testBit_testRes, testBit_mod_two_pow]
   intro j
@@ -1133,13 +1133,13 @@ theorem flipBit_def : ∀ (i q : ℕ), q.flipBit i = q ^^^ 1 <<< i := fun _ _ =>
 -- inductive theorems
 
 theorem flipBit_zero : q.flipBit 0 = bit (!q.bodd) q.div2 := by
-  cases q using bitCasesOn with | h b q => _
+  cases q using bitCasesOn with | bit b q => _
   simp_rw [flipBit_def, shiftLeft_zero, div2_bit, bodd_bit]
   refine (xor_bit b q true 0).trans ?_
   simp_rw [Bool.bne_true, xor_zero]
 
 theorem flipBit_succ : q.flipBit i.succ = bit q.bodd (q.div2.flipBit i) := by
-  cases q using bitCasesOn with | h b q => _
+  cases q using bitCasesOn with | bit b q => _
   simp_rw [flipBit_def, shiftLeft_succ, div2_bit, bodd_bit]
   refine (xor_bit b q false (1 <<< i)).trans ?_
   simp_rw [Bool.bne_false]
