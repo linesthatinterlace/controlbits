@@ -778,7 +778,7 @@ lemma eq_flipBit_of_lt_of_flipBit_gt {r : BV (m + 1)} (h : r < q)
     Bool.apply_cond (Fin.val), Fin.val_one, Fin.val_zero, Fin.ext_iff] at hf h ⊢
   cases bq <;> cases br <;>
   simp only [Bool.cond_false, Bool.cond_true, add_zero, Nat.lt_succ_iff, add_lt_add_iff_right,
-    mul_le_mul_left zero_lt_two, mul_lt_mul_left zero_lt_two] at hf h
+    mul_le_mul_iff_right₀ zero_lt_two, mul_lt_mul_left zero_lt_two] at hf h
   · exact (lt_asymm hf h).elim
   · have hf := (Nat.lt_succ_self _).trans hf
     have h := (Nat.lt_succ_self _).trans h

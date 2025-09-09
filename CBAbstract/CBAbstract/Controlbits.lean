@@ -3,6 +3,7 @@ import CBAbstract.CommutatorCycles
 import CBAbstract.PermFintwo
 import Mathlib.Tactic.FinCases
 import Mathlib.GroupTheory.Perm.Cycle.Factors
+import Mathlib.Data.Fin.Tuple.Sort
 open Fin Equiv
 
 abbrev ControlBitsLayer (m : ℕ) := BV m → Bool
@@ -275,11 +276,20 @@ lemma toPerm_succ {cb : ControlBits (m + 1)} : toPerm cb = condFlipBit 0 (cb 0) 
     (fun i k => cb i.castSucc.succ (mergeBitRes 0 b k))) * condFlipBit 0 (cb (last _)) :=
   PartialControlBits.toPermPartial_succ_last
 
+
+def fromPerm' {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
+match m with
+| 0 => fun π _ => LastLayer π
+| (_ + 1) => fun π => piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π),
+  (fun k p => fromPerm' ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) k (getRes 0 p)))
+
 def fromPerm {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
 match m with
 | 0 => fun π _ => LastLayer π
-| (_ + 1) => fun π => piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π), (fun p =>
-    fromPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) · (getRes 0 p)))
+| (_ + 1) => fun π =>
+  let middlePerms := (bitInvarMulEquiv 0).symm (MiddlePerm π);
+  piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π),
+  fun k p => fromPerm (middlePerms (getBit 0 p)) k (getRes 0 p))
 
 lemma fromPerm_zero : fromPerm (m := 0) = fun π _ => LastLayer π := rfl
 
@@ -341,37 +351,91 @@ lemma fromPerm_rightInverse : (fromPerm (m := m)).RightInverse (toPerm) := toPer
 
 end SerialControlBits
 
-def serialControlBits1 : SerialControlBits 1 := ![true, false, true, false, false, false]
 def controlBits1 : ControlBits 1 := ![![true, false], ![true, false], ![false, false]]
-def controlBits1_normal  : ControlBits 1 := ![![false, true], ![false, true], ![true, true]]
 def controlBits1_perm : Perm (BV 2) where
   toFun := ![2, 0, 1, 3]
   invFun := ![1, 2, 0, 3]
   left_inv s := by
     fin_cases s <;> rfl
   right_inv s := by fin_cases s <;> rfl
+def controlBits1_normal  : ControlBits 1 := ![![false, true], ![false, true], ![true, true]]
+#eval (List.finRange _).map <| ControlBits.toPerm controlBits1
+#eval ControlBits.fromPerm controlBits1_perm
+#eval (List.finRange _).map <| ControlBits.toPerm controlBits1_normal
 
-def serialControlBits2 : SerialControlBits 2 :=
-  (![true, false, true, false, true, false, false, false, false, false,
-  false, false, false, false, false, true, false, false, false, false] )
 def controlBits2 : ControlBits 2 :=
   (![![true, false, true, false], ![true, false, false, false], ![false, false,
   false, false], ![false, false, false, true], ![false, false, false, false]] )
+def controlBits2_perm : Perm (BV 3) where
+  toFun := ![2, 0, 1, 3, 5, 7, 6, 4]
+  invFun := ![1, 2, 0, 3, 7, 4, 6, 5]
+  left_inv s := by
+    fin_cases s <;> rfl
+  right_inv s := by fin_cases s <;> rfl
 def controlBits2_normal : ControlBits 2 :=
   ![![false, true, false, true],
   ![false, false, false, false],
   ![false, false, false, false],
   ![false, true, true, false],
   ![true, true, true, true]]
+#eval (List.finRange _).map <| ControlBits.toPerm controlBits2
+#eval ControlBits.fromPerm controlBits2_perm
+#eval (List.finRange _).map <| ControlBits.toPerm controlBits2_normal
 
-def controlBits3_normal : ControlBits 3 :=
-![![false, false, false, false, false, false, false, false],
-  ![false, false, false, false, false, false, false, false],
+def controlBits3 : ControlBits 3 :=
+![![true, false, false, false, false, false, false, false],
+  ![false, false, false, true, false, false, false, false],
   ![false, false, false, false, false, false, false, false],
   ![false, false, false, false, true, true, true, true],
   ![false, false, true, true, true, true, false, false],
   ![false, true, true, false, false, true, true, false],
   ![false, true, false, true, false, true, false, true]]
+def controlBits3_perm : Perm (BV 4) where
+  toFun := ![1, 15, 0, 14, 2, 13, 3, 12, 4, 11, 7, 10, 6, 9, 5, 8]
+  invFun := ![2, 0, 4, 6, 8, 14, 12, 10, 15, 13, 11, 9, 7, 5, 3, 1]
+  left_inv s := by
+    fin_cases s <;> rfl
+  right_inv s := by fin_cases s <;> rfl
+def controlBits3_normal : ControlBits 3 :=
+![![false, false, false, false, false, false, false, true],
+  ![false, false, false, false, false, true, false, false],
+  ![false, false, false, false, false, false, false, false],
+  ![false, false, false, false, true, true, true, true],
+  ![false, false, true, true, true, false, false, true],
+  ![true, false, true, false, false, false, true, true],
+  ![true, false, false, true, false, true, false, true]]
+
+
+set_option profiler true
+
+def pi := controlBits3_perm
+def middlePerms := (bitInvarMulEquiv 0).symm (MiddlePerm pi)
+def falsePerm := middlePerms false
+def truePerm := middlePerms true
+#eval FirstLayer pi
+#eval LastLayer pi
+#eval fun p =>
+  let K := ControlBits.fromPerm (middlePerms (getBit 0 p))
+  K 1 (getRes 0 p)
+#eval (List.finRange _).map <| ControlBits.toPerm controlBits3
+#eval (List.finRange _).map <| middlePerms true
+
+/-
+def fromPerm {m : ℕ} : Perm (BV (m + 1)) → ControlBits m :=
+match m with
+| 0 => fun π _ => LastLayer π
+| (_ + 1) => fun π =>
+  let middlePerms := (bitInvarMulEquiv 0).symm (MiddlePerm π);
+  piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π),
+  fun k p => fromPerm (middlePerms (getBit 0 p)) k (getRes 0 p))
+-/
+
+
+
+--#eval ControlBits.fromPerm controlBits3_perm
+#eval (List.finRange _).map <| ControlBits.toPerm controlBits3_normal
+
+--#eval ControlBits.fromPerm (m := 2) controlBits2_perm
 
 /-
 
@@ -395,21 +459,21 @@ instance repr_bool {α : Type u} [Repr α] : Repr (Bool → α) :=
 #eval controlBits1.toPerm
 #eval controlBits1_normal.toPerm
 #eval controlBits1_perm
-#eval (CBAbstract.fromPerm (m := 1) controlBits1_perm)
---#eval (CBAbstract.fromPerm <| serialControlBits2.toPerm)
+#eval (ControlBits.fromPerm (m := 1) controlBits1_perm)
+--#eval (ControlBits.fromPerm <| serialControlBits2.toPerm)
 
 #eval serialControlBits2.toPerm
 #eval controlBits2.toPerm
 #eval controlBits2_normal.toPerm
 #eval controlBits2_perm
-#eval (CBAbstract.fromPerm (m := 2) controlBits2_perm)
---#eval (CBAbstract.fromPerm <| serialControlBits2.toPerm)
+#eval (ControlBits.fromPerm (m := 2) controlBits2_perm)
+--#eval (ControlBits.fromPerm <| serialControlBits2.toPerm)
 
 -- #eval MiddlePerm controlBits3_perm
 #eval Perm.FastCycleMin 1 controlBits4_perm 12
 #eval MiddlePerm (m := 4) controlBits4_perm
 set_option profiler true
-#eval CBAbstract.fromPerm (m := 2) controlBits2_perm
-#eval CBAbstract.fromPerm (m := 3) controlBits3_perm
+#eval ControlBits.fromPerm (m := 2) controlBits2_perm
+#eval ControlBits.fromPerm (m := 3) controlBits3_perm
 #eval controlBits3_normal.toPerm
 -/
