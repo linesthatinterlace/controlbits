@@ -254,11 +254,6 @@ theorem testBit_false_iff_mod_two_pow_succ_lt_two_pow {i k : ℕ} :
     testBit k i = false ↔ k % 2^(i + 1) < 2^i := by
   rw [lt_iff_not_ge, ← testBit_true_iff_two_pow_le_mod_two_pow_succ, Bool.not_eq_true]
 
-theorem testBit_two_pow' (n : ℕ) (m : ℕ) : (2 ^ n).testBit m = decide (n = m) := by
-  rcases eq_or_ne n m with rfl | h
-  · simp_rw [testBit_two_pow_self, decide_true]
-  · simp_rw [testBit_two_pow_of_ne h, h, decide_false]
-
 theorem testBit_add_two_pow_eq (x : Nat) (i : Nat) :
     (x + 2^i).testBit i = !x.testBit i := by rw [add_comm, testBit_two_pow_add_eq]
 
