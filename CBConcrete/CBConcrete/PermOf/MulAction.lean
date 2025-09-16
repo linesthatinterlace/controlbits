@@ -218,7 +218,7 @@ theorem cycleMinAux_zero_fst (a : PermOf n) : (a.CycleMinVectorAux 0).1 = 1 := r
 @[simp]
 theorem cycleMinAux_succ_fst (a : PermOf n) (i : ℕ) :
     (a.CycleMinVectorAux (i + 1)).1 = a ^ (2 ^ i) := by
-  induction' i with i IH
+  induction i with | zero => _ | succ i IH => _
   · rw [pow_zero, pow_one]
     rfl
   · rw [pow_succ, pow_mul]
@@ -263,7 +263,7 @@ theorem one_cycleMinVector {k : ℕ} : (1 : PermOf n).CycleMinVector k = Vector.
 @[simp]
 theorem getElem_cycleMinVector_lt (a : PermOf n) {i : ℕ} {x : ℕ}
     (hx : x < n) : (a.CycleMinVector i)[x] < n := by
-  induction' i with i IH generalizing x
+  induction i with | zero => _ | succ i IH => _
   · simp_rw [getElem_cycleMinVector_zero]
     exact hx
   · simp_rw [getElem_cycleMinVector_succ, min_lt_iff, IH, true_or]

@@ -5,11 +5,6 @@ namespace Equiv
 
 variable {α β : Type*}
 
-@[simps!]
-def permCongrHom (e : α ≃ β) : Perm α ≃* Perm β :=
-  MulEquiv.mk' e.permCongr (fun _ _ => Equiv.ext <| fun _ => by
-    simp only [Perm.mul_apply, permCongr_apply, symm_apply_apply])
-
 end Equiv
 
 namespace Equiv.Perm
@@ -21,7 +16,7 @@ def FixGENat (n : ℕ) : Subgroup (Perm ℕ) where
   carrier e := ∀ i, n ≤ i → e i = i
   mul_mem' {a} {b} ha hb i hi := (ha (b i) ((hb i hi).symm ▸ hi)).trans (hb i hi)
   one_mem' i hi := by simp_rw [Perm.coe_one, id_eq]
-  inv_mem' {a} ha i hi := EquivLike.inv_apply_eq_iff_eq_apply.mpr (ha i hi).symm
+  inv_mem' {a} ha i hi := EquivLike.inv_apply_eq.mpr (ha i hi).symm
 
 section FixGENat
 
@@ -110,7 +105,7 @@ instance {a : PermOf n} {b : PermOf m} : Decidable (a.IsCongr b) :=
   decidable_of_decidable_of_iff isCongr_iff_smul_eq_of_lt.symm
 
 theorem isCongr_iff_smul_eq : a.IsCongr b ↔ ∀ {i : ℕ}, a • i = b • i :=
-  ⟨fun h i => (lt_or_le i (max m n)).elim (isCongr_iff_smul_eq_of_lt.mp h)
+  ⟨fun h i => (lt_or_ge i (max m n)).elim (isCongr_iff_smul_eq_of_lt.mp h)
     (fun hmn => (a.smul_of_ge (le_of_max_le_right hmn)).trans
     (b.smul_of_ge (le_of_max_le_left hmn)).symm),
     fun h => isCongr_iff_smul_eq_of_lt.mpr (fun _ => h)⟩
@@ -124,13 +119,13 @@ theorem isCongr_iff_getElem_eq_getElem_and_getElem_eq_of_le (hnm : n ≤ m) :
     have H :=  dif_pos hi ▸ dif_pos (hi.trans_le hnm) ▸ h (hi.trans_le hnm)
     exact H
   · intro i hi hi'
-    have H := dif_neg hi.not_lt ▸ dif_pos hi' ▸ h hi'
+    have H := dif_neg hi.not_gt ▸ dif_pos hi' ▸ h hi'
     exact H.symm
   · intro i hi'
     simp_rw [hi', dite_true]
     split_ifs with hi
     · exact h.1 _
-    · exact (h.2 (le_of_not_lt hi) _).symm
+    · exact (h.2 (le_of_not_gt hi) _).symm
 
 theorem IsCongr.smul_eq (hab : a.IsCongr b) : ∀ {i : ℕ}, a • i = b • i :=
   isCongr_iff_smul_eq.mp hab
@@ -333,7 +328,7 @@ theorem getElem_castSucc {i : ℕ} {hi : i < n + 1} :
   unfold castSucc
   simp_rw [getElem_mk, Vector.getElem_push, getElem_toVector, smul_eq_dite]
   exact dite_congr rfl (fun _ => rfl)
-    (fun hi' => (eq_of_ge_of_not_gt (Nat.le_of_lt_succ hi) hi'))
+    (fun hi' => (eq_of_le_of_not_lt' (Nat.le_of_lt_succ hi) hi'))
 
 @[simp]
 theorem getElem_castSucc_of_lt {i : ℕ} (hi : i < n) :
@@ -925,7 +920,7 @@ theorem minLen_castSucc {a : PermOf n} :
       · exact ((a.getElem_castPred ha hi').symm).trans (IH hi)
       · exact ha
     · simp_rw [minLen_succ_of_getElem_ne ha] at hi
-      exact (hi'.not_le hi).elim
+      exact (hi'.not_ge hi).elim
 
 @[simp] theorem smul_of_ge_minLen {a : PermOf n} {i : ℕ} (hi : a.minLen ≤ i) : a • i = i := by
   simp_rw [smul_eq_dite, dite_eq_right_iff]
@@ -1333,7 +1328,7 @@ theorem len_ofArray_le_size {a : Array ℕ} {hx : ∀ x
 theorem smul_ofArray (a : Array ℕ) (hx : ∀ x
     (hx : x < a.size), a[x] < a.size) (ha : a.toList.Nodup) {i : ℕ} :
     (ofArray a hx ha) • i = if hi : i < a.size then a[i] else i := by
-  rcases lt_or_le i (ofArray a hx ha).len with (hi | hi)
+  rcases lt_or_ge i (ofArray a hx ha).len with (hi | hi)
   · simp_rw [smul_of_lt hi, dif_pos (hi.trans_le len_ofArray_le_size),
       toPermOf_ofArray]
     exact getElem_minPerm (hi.trans_eq len_ofArray)
