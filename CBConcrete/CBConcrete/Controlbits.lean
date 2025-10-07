@@ -54,7 +54,7 @@ theorem getElem_leftLayer_of_lt_of_bitInvariant_lt
     (leftLayer a i)[p] = false := by
   rcases le_or_gt i n with hi | hi
   · simp_rw [getElem_leftLayer_of_le hi, mergeBitRes_apply_false_of_lt_two_pow hp,
-    getElem_cycleMinVector_of_self_le_getElem (getElem_eq_self_of_forall_bitInvariant_lt_of_lt
+    getElem_cycleMinVector_of_self_le_getElem (self_le_getElem_of_forall_bitInvariant_lt_of_lt
     (fun _ hk => (ha _ hk).flipBitCommutator_of_ne hk.ne) hp
     (Nat.pow_le_pow_of_le one_lt_two (hi.trans (Nat.le_succ _)))), testBit_lt_two_pow hp]
   · simp_rw [getElem_leftLayer_of_gt hi]

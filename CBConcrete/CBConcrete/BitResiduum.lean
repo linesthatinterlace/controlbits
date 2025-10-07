@@ -24,6 +24,11 @@ namespace Bool
 
 variable {a b b' : Bool} {p : ℕ} {α β : Type*}
 
+theorem and_inj_left : ∀ {a b b'}, (a && b) = (a && b') ↔ (a = false) ∨ (b = b') := by decide
+theorem and_inj_right : ∀ {a b b'}, (b && a) = (b' && a) ↔ (a = false) ∨ (b = b') := by decide
+theorem or_inj_left : ∀ {a b b'}, (a || b) = (a || b') ↔ (a = true) ∨ (b = b') := by decide
+theorem or_inj_right : ∀ {a b b'}, (b || a) = (b' || a) ↔ (a = true) ∨ (b = b') := by decide
+
 theorem toNat_decide {P : Prop} [Decidable P] : toNat P = if P then 1 else 0 :=
   cond_decide _ _ _
 
@@ -47,9 +52,9 @@ theorem toNat_False : toNat False = 0 := by simp_rw [_root_.decide_false, toNat_
 
 theorem decide_toNat_eq_one : (b.toNat = 1 : Bool) = b := by simp_rw [toNat_eq_one, decide_eq_true]
 
-theorem toNat_injective : toNat b = toNat b' → b = b' := b'.recOn
-  (by simp_rw [toNat_false, toNat_eq_zero, imp_self])
-  (by simp_rw [toNat_true, toNat_eq_one, imp_self])
+theorem toNat_injective : Function.Injective toNat := fun b b' => by cases b <;> cases b' <;> grind
+
+theorem toNat_inj : toNat b = toNat b' ↔ b = b' := toNat_injective.eq_iff
 
 @[simp]
 theorem decide_mod_two_eq_one_toNat : (p % 2 = 1 : Bool).toNat = p % 2 := by
@@ -138,18 +143,6 @@ theorem size_le_self {n : ℕ} (hn : n ≠ 0) : 2^(n.size - 1) ≤ n := by
 
 end Size
 
-section DivMod
-
-theorem divMod_ext_iff {x y : ℕ} (d : ℕ) : x = y ↔ x / d = y / d ∧ x % d = y % d := by
-  rcases eq_or_ne d 0 with rfl | hd
-  · simp_rw [Nat.div_zero, mod_zero, true_and]
-  · haveI : NeZero d := ⟨hd⟩
-    rw [← (Nat.divModEquiv d).apply_eq_iff_eq]
-    simp_rw [divModEquiv_apply, Prod.mk.injEq,
-      Fin.ext_iff, Fin.ofNat_eq_cast, Fin.val_natCast]
-
-end DivMod
-
 section Bit
 
 lemma bit_true_zero : bit true 0 = 1 := rfl
@@ -165,17 +158,26 @@ end BOdd
 
 section TestBit
 
-theorem testBit_zero_eq_bodd (m : ℕ) : m.testBit 0 = m.bodd := by
-  simp_rw [Nat.bodd_eq_one_and_ne_zero, testBit.eq_def, shiftRight_zero]
+theorem testBit_eq_bool {x i : ℕ} {b} : x.testBit i = b ↔ x / 2^i % 2 = b.toNat := by
+  simp_rw [← Bool.toNat_inj, toNat_testBit]
+
+theorem testBit_eq_false {x i : ℕ} : x.testBit i = false ↔ x / 2^i % 2 = 0 := by
+  simp_rw [testBit_eq_bool, Bool.toNat_false]
+
+theorem testBit_eq_true {x i : ℕ} : x.testBit i = true ↔ x / 2^i % 2 = 1 := by
+  simp_rw [testBit_eq_bool, Bool.toNat_true]
+
+theorem testBit_eq_testBit {x y i j : ℕ} :
+    x.testBit i = y.testBit j ↔ x / 2^i % 2 = y / 2^j % 2 := by
+  simp_rw [testBit_eq_bool, toNat_testBit]
+
+theorem testBit_zero_eq_bodd (m : ℕ) : m.testBit 0 = m.bodd := (Nat.bodd_eq_one_and_ne_zero _).symm
 
 theorem testBit_succ_eq_testBit_div2 (m i : ℕ) : m.testBit (i + 1) = m.div2.testBit i := by
   simp_rw [testBit_succ, div2_val]
 
-theorem testBit_apply (m i : ℕ) : testBit m i = decide (m / 2^i % 2 = 1) := by
-  induction i generalizing m with | zero => _ | succ _ IH => _
-  · simp_rw [testBit_zero_eq_bodd, pow_zero, Nat.div_one,
-      Nat.mod_two_of_bodd, Bool.toNat_eq_one, Bool.decide_eq_true]
-  · simp_rw [testBit_succ_eq_testBit_div2, IH, div2_val, Nat.div_div_eq_div_mul, pow_succ']
+theorem testBit_apply (m i : ℕ) : testBit m i = decide (m / 2^i % 2 = 1) :=
+  Nat.testBit_eq_decide_div_mod_eq
 
 theorem testBit_bit (m : ℕ) (b : Bool) (n : ℕ) :
     (Nat.bit b n).testBit m = if m = 0 then b else n.testBit (m - 1) := by
@@ -252,11 +254,6 @@ theorem testBit_false_iff_mod_two_pow_succ_lt_two_pow {i k : ℕ} :
     testBit k i = false ↔ k % 2^(i + 1) < 2^i := by
   rw [lt_iff_not_ge, ← testBit_true_iff_two_pow_le_mod_two_pow_succ, Bool.not_eq_true]
 
-theorem testBit_two_pow' (n : ℕ) (m : ℕ) : (2 ^ n).testBit m = decide (n = m) := by
-  rcases eq_or_ne n m with rfl | h
-  · simp_rw [testBit_two_pow_self, decide_true]
-  · simp_rw [testBit_two_pow_of_ne h, h, decide_false]
-
 theorem testBit_add_two_pow_eq (x : Nat) (i : Nat) :
     (x + 2^i).testBit i = !x.testBit i := by rw [add_comm, testBit_two_pow_add_eq]
 
@@ -273,14 +270,12 @@ theorem testBit_add_mul_two_pow_eq (a : Nat) (b : Nat) (i : Nat) :
 theorem testBit_two_pow_add_ne_of_testBit_false {i : Nat} {j : Nat} (hij : i ≠ j) {x : Nat}
     (hx : x.testBit i = false) : (2 ^ i + x).testBit j = x.testBit j := by
   rcases hij.lt_or_gt with hij | hij
-  · rw [testBit_eq_decide_div_mod_eq, decide_eq_false_iff_not, ← ne_eq, mod_two_ne_one] at hx
-    rcases Nat.exists_eq_add_of_lt hij with ⟨k, rfl⟩
-    simp_rw [testBit_eq_decide_div_mod_eq, decide_eq_decide,
-    add_assoc, pow_add _ i,  pow_succ', ← Nat.div_div_eq_div_mul,
+  · rcases Nat.exists_eq_add_of_lt hij with ⟨k, rfl⟩
+    simp_rw [testBit_eq_testBit, add_assoc, pow_add _ i,  pow_succ', ← Nat.div_div_eq_div_mul,
     Nat.add_div_left _ (Nat.two_pow_pos _)]
     rw [← div_add_mod (x / 2^i) 2]
-    simp_rw [hx, add_assoc, Nat.mul_add_div (zero_lt_two), Nat.zero_div, zero_add,
-    div_eq_of_lt (one_lt_two)]
+    simp_rw [testBit_eq_false.mp hx, add_assoc, Nat.mul_add_div zero_lt_two,
+      Nat.zero_div, zero_add, div_eq_of_lt one_lt_two]
   · rw [testBit_two_pow_add_gt hij]
 
 theorem testBit_add_two_pow_ne_of_testBit_false {i : Nat} {j : Nat} (hij : i ≠ j) {x : Nat}
@@ -301,14 +296,12 @@ theorem testBit_sub_two_pow_eq_of_testBit_true {i : Nat} {x : Nat}
 
 theorem exists_pow_two_mul_of_testBit {k : ℕ} (b : ℕ) (hb : ∀ i < k, b.testBit i = false) :
     ∃ n, b = 2^k * n := by
-  induction k generalizing b with | zero | succ k IH
-  · exact ⟨b, by rw [pow_zero, one_mul]⟩
-  · rcases IH _ (fun i hi => hb i  (hi.trans (Nat.lt_succ_self _))) with ⟨b, rfl⟩
-    have h := hb k (Nat.lt_succ_self _)
-    simp_rw [testBit_two_pow_mul, le_refl, decide_true, Bool.true_and, Nat.sub_self,
-      testBit_zero, decide_eq_false_iff_not, mod_two_ne_one, ← Nat.dvd_iff_mod_eq_zero] at h
-    rcases h with ⟨b, rfl⟩
-    exact ⟨b, by rw [← mul_assoc, pow_succ]⟩
+  refine ⟨b / 2^k, ?_⟩
+  simp_rw [testBit_ext_iff, testBit_two_pow_mul, testBit_div_two_pow]
+  intro i
+  rcases lt_or_ge i k with hik | hik
+  · simp_rw [hik.not_ge, decide_false, Bool.false_and, hb _ hik]
+  · simp_rw [hik, decide_true, Bool.true_and, Nat.sub_add_cancel hik]
 
 theorem nat_eq_testBit_sum_range {a m : ℕ} (ha : a < 2^m) :
     a = ∑ i ∈ Finset.range m, (a.testBit i).toNat * 2^i := by
@@ -587,20 +580,20 @@ theorem mergeBitRes_succ {q : ℕ} :
 
 @[simp]
 theorem testBit_mergeBitRes_of_eq {p : ℕ} : (p.mergeBitRes b i).testBit i = b := by
-  induction i generalizing p b with | zero => _ | succ _ IH => _
+  induction i generalizing p b with | zero | succ _ IH
   · simp_rw [mergeBitRes_zero, testBit_bit_zero]
   · simp_rw [mergeBitRes_succ, testBit_succ_eq_testBit_div2, div2_bit, IH]
 
 @[simp]
 theorem testRes_mergeBitRes_of_eq {p : ℕ} : (p.mergeBitRes b i).testRes i = p := by
-  induction i generalizing p b with | zero => _ | succ _ IH => _
+  induction i generalizing p b with | zero | succ _ IH
   · simp_rw [mergeBitRes_zero, testRes_zero, div2_bit]
   · simp_rw [mergeBitRes_succ, testRes_succ, div2_bit, bodd_bit, IH, bit_bodd_div2]
 
 @[simp]
 theorem mergeBitRes_testBit_testRes_of_eq {q : ℕ} :
     (q.testRes i).mergeBitRes (q.testBit i) i = q := by
-  induction i generalizing q with | zero => _ | succ _ IH => _
+  induction i generalizing q with | zero | succ _ IH
   · simp_rw [mergeBitRes_zero, testRes_zero, testBit_zero_eq_bodd, bit_bodd_div2]
   · simp_rw [mergeBitRes_succ, testRes_succ, testBit_succ_eq_testBit_div2,
       div2_bit, bodd_bit, IH, bit_bodd_div2]
@@ -639,13 +632,13 @@ end MergeBitEquiv
 -- basic application theorems
 
 theorem testRes_apply : q.testRes i = 2^i * (q / 2^(i + 1)) + q % 2^i := by
-  induction i generalizing q with | zero => _ | succ _ IH => _
+  induction i generalizing q with | zero | succ _ IH
   · simp_rw [testRes_zero, div2_val, pow_zero, zero_add, pow_one, one_mul, mod_one, add_zero]
   · simp_rw [testRes_succ, IH, bit_val, div2_val, bodd_toNat, pow_succ', mod_mul, mul_add,
     mul_assoc, Nat.div_div_eq_div_mul, add_assoc, add_comm]
 
 theorem mergeBitRes_apply : p.mergeBitRes b i = p + 2^i * ((p / 2^i) + b.toNat) := by
-  induction i generalizing p b with | zero => _ | succ _ IH => _
+  induction i generalizing p b with | zero | succ _ IH
   · simp_rw [mergeBitRes_zero, bit_val, pow_zero, Nat.div_one, one_mul, two_mul, add_assoc]
   · simp_rw [mergeBitRes_succ, IH, bit_val, div2_val, bodd_toNat, pow_succ', mul_add, mul_assoc,
       Nat.div_div_eq_div_mul, add_right_comm, Nat.div_add_mod]
@@ -2595,8 +2588,7 @@ theorem one_bitInvariant : BitInvariant i (1 : PermOf n) := rfl
 theorem bitInvariant_iff_testBit_getElem_eq_testBit : a.BitInvariant i ↔
     ∀ {x} (h : x < n), a[x].testBit i = x.testBit i := by
   unfold BitInvariant
-  simp_rw [Vector.ext_iff]
-  simp_rw [Vector.getElem_map, getElem_toVector, Vector.getElem_range]
+  simp_rw [Vector.ext_iff, Vector.getElem_map, getElem_toVector, Vector.getElem_range]
 
 theorem bitInvariant_of_ge (h : n ≤ 2^i) : a.BitInvariant i := by
   simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit, a.getElem_testBit_of_ge h]
@@ -2605,17 +2597,31 @@ theorem bitInvariant_of_ge (h : n ≤ 2^i) : a.BitInvariant i := by
 theorem bitInvariant_of_ge_of_ge (h : n ≤ 2^i) (hk : i ≤ k) : a.BitInvariant k :=
   bitInvariant_of_ge (h.trans (Nat.pow_le_pow_right zero_lt_two hk))
 
+theorem bitInvariant_lt_of_lt_iff_testBit_getElem_eq_testBit_of_lt : (∀ k < i, a.BitInvariant k) ↔
+    (∀ {x : ℕ} (h : x < n), ∀ k < i, a[x].testBit k = x.testBit k) := by
+  simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit]
+  exact forall₂_swap
+
+theorem bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow : (∀ k < i, a.BitInvariant k) ↔
+    ∀ {x} (h : x < n), a[x] % 2^i = x % 2^i := by
+  simp_rw [testBit_ext_iff, testBit_mod_two_pow,
+    bitInvariant_lt_of_lt_iff_testBit_getElem_eq_testBit_of_lt,
+    Bool.and_inj_left, decide_eq_false_iff_not, imp_iff_not_or]
+
+theorem bitInvariant_lt_of_lt_iff_getElem_modEq : (∀ k < i, a.BitInvariant k) ↔
+    ∀ {x} (h : x < n), a[x] ≡ x [MOD 2^i] := by
+  simp_rw [bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow]
+  exact Iff.rfl
+
+theorem bitInvariant_lt_of_lt_iff_two_pow_div_sub : (∀ k < i, a.BitInvariant k) ↔
+    ∀ {x} (h : x < n), 2^i ∣ (x : ℤ) - a[x] := by
+  simp_rw [bitInvariant_lt_of_lt_iff_getElem_modEq, modEq_iff_dvd, cast_pow, cast_ofNat]
+
 theorem forall_lt_bitInvariant_iff_eq_one_of_ge (hin : n ≤ 2^i) :
     (∀ k < i, a.BitInvariant k) ↔ a = 1 := by
-  refine ⟨fun h => PermOf.ext ?_, fun h _ _ => h ▸ one_bitInvariant⟩
-  simp only [getElem_one, testBit_ext_iff]
-  intro j hj k
-  rcases lt_or_ge k i with hk | hk
-  · simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit] at h
-    apply h _ hk
-  · have H := a.bitInvariant_of_ge_of_ge hin hk
-    simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit] at H
-    apply H
+  simp_rw [bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow,
+    PermOf.ext_iff, getElem_one, Nat.mod_eq_of_lt <| (a.getElem_lt _).trans_le hin]
+  exact forall₂_congr (fun k hk => (Nat.mod_eq_of_lt <| hk.trans_le hin).congr_right)
 
 @[simp]
 theorem BitInvariant.testBit_getElem_eq_testBit (ha : a.BitInvariant i) {x : ℕ}
@@ -2654,14 +2660,11 @@ theorem BitInvariant.zpow (ha : a.BitInvariant i) (p : ℤ) : (a ^ p).BitInvaria
   · simp only [zpow_negSucc]
     exact (ha.pow _).inv
 
-theorem getElem_eq_self_of_forall_bitInvariant_lt_of_lt (ha : ∀ k < i, a.BitInvariant k)
-    (hx : x < 2^i) (hin : 2^i ≤ n) : ∀ k, x ≤ (a^k)[x] := fun k => by
-  refine Nat.le_of_testBit ?_
-  intro j
-  rcases lt_or_ge j i with hj | hj
-  · simp_rw [((ha _ hj).pow _).testBit_getElem_eq_testBit, imp_self]
-  · simp_rw [testBit_lt_two_pow (hx.trans_le (Nat.pow_le_pow_of_le one_lt_two hj)),
-      Bool.false_eq_true, false_implies]
+theorem self_le_getElem_of_forall_bitInvariant_lt_of_lt (ha : ∀ k < i, a.BitInvariant k)
+    (hx : x < 2^i) (hin : 2^i ≤ n) : ∀ k, x ≤ (a^k)[x] := fun k =>
+  ((Nat.mod_eq_of_lt hx).symm.trans
+  ((bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow.mp
+    (fun _ hk => (ha _ hk).pow k) _).symm)).trans_le (Nat.mod_le _ (2^i))
 
 theorem flipBit_of_ne {j : ℕ} (hij : i ≠ j) :
     (flipBit j : PermOf n).BitInvariant i := by
@@ -2689,7 +2692,7 @@ theorem BitInvariant.flipBitCommutator_of_ne (ha : a.BitInvariant i) {j : ℕ} (
   exact (ha.flipBitIndices_of_ne hij).mul (ha.flipBitVals_of_ne hij).inv
 
 theorem cycleOf_subset_bitMatchUnder {x : ℕ} (a : PermOf (2^(n + 1))) (i : ℕ)
-  (ha : ∀ k < (i : ℕ), a.BitInvariant k) (hk : x < 2^(n + 1)) :
+  (ha : ∀ k < i, a.BitInvariant k) (hk : x < 2^(n + 1)) :
   a.cycleOf x ⊆ bitMatchUnder i ⟨x, hk⟩ := by
   simp_rw [Finset.subset_iff, mem_cycleOf_iff_exists_getElem_zpow _ hk, mem_bitMatchUnder_iff,
       forall_exists_index, forall_apply_eq_imp_iff, getElem_lt _,
