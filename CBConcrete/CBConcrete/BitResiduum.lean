@@ -179,7 +179,7 @@ theorem testBit_apply (m i : ℕ) : testBit m i = decide (m / 2^i % 2 = 1) := by
 
 theorem testBit_bit (m : ℕ) (b : Bool) (n : ℕ) :
     (Nat.bit b n).testBit m = if m = 0 then b else n.testBit (m - 1) := by
-  cases' m
+  cases m
   · simp_rw [Nat.testBit_bit_zero, if_true]
   · simp_rw [Nat.testBit_bit_succ, Nat.succ_ne_zero, if_false, Nat.add_sub_cancel]
 
@@ -188,12 +188,12 @@ theorem testBit_size_self {x : ℕ} : x.testBit x.size = false :=
   Nat.testBit_eq_false_of_lt x.lt_size_self
 
 theorem testBit_pred_size_self {x : ℕ} : x ≠ 0 → x.testBit (x.size - 1) = true := by
-  induction' x using Nat.binaryRec with b n IH
+  induction x using Nat.binaryRec with | zero | bit b n IH
   · simp_rw [ne_eq, not_true_eq_false, false_implies]
   · intros H
     rw [Nat.size_bit H, succ_eq_add_one, Nat.add_sub_cancel, testBit_bit]
     rw [Nat.bit_ne_zero_iff] at H
-    cases' n with n
+    cases n
     · simp_rw [size_zero, if_true]
       exact H rfl
     · simp_rw [size_succ, if_false]
@@ -301,7 +301,7 @@ theorem testBit_sub_two_pow_eq_of_testBit_true {i : Nat} {x : Nat}
 
 theorem exists_pow_two_mul_of_testBit {k : ℕ} (b : ℕ) (hb : ∀ i < k, b.testBit i = false) :
     ∃ n, b = 2^k * n := by
-  induction' k with k IH generalizing b
+  induction k generalizing b with | zero | succ k IH
   · exact ⟨b, by rw [pow_zero, one_mul]⟩
   · rcases IH _ (fun i hi => hb i  (hi.trans (Nat.lt_succ_self _))) with ⟨b, rfl⟩
     have h := hb k (Nat.lt_succ_self _)
@@ -312,7 +312,7 @@ theorem exists_pow_two_mul_of_testBit {k : ℕ} (b : ℕ) (hb : ∀ i < k, b.tes
 
 theorem nat_eq_testBit_sum_range {a m : ℕ} (ha : a < 2^m) :
     a = ∑ i ∈ Finset.range m, (a.testBit i).toNat * 2^i := by
-  induction' m with m IH generalizing a
+  induction m generalizing a with | zero | succ m IH
   · simp_rw [pow_zero, lt_one_iff] at ha
     simp_rw [ha, Finset.range_zero, zero_testBit, Bool.toNat_false, zero_mul,
       Finset.sum_const_zero]
@@ -480,20 +480,20 @@ theorem shiftLeft'_succ {b : Bool} {m i: ℕ} :
 
 theorem testBit_shiftLeft' {b : Bool} {m i j : ℕ}  :
     (shiftLeft' b m i).testBit j = bif j < i then b else m.testBit (j - i) := by
-  induction' i with i IH generalizing j
+  induction i generalizing j with | zero | succ i IH
   · simp_rw [shiftLeft'_zero, Nat.not_lt_zero, decide_false, cond_false, Nat.sub_zero]
   · simp_rw [shiftLeft'_succ, Nat.lt_succ_iff]
     cases b
     · simp_rw [bit_false]
       rw [← pow_one 2, testBit_two_pow_mul, IH]
-      cases' j
+      cases j
       · simp_rw [zero_lt_one.not_ge, decide_false, Bool.false_and, zero_le, decide_true, cond_true]
       · simp_rw [Nat.add_sub_cancel, Nat.add_sub_add_right, Nat.succ_le_iff, zero_lt_succ,
           decide_true, Bool.true_and]
     · simp_rw [bit_true, Bool.cond_true_left]
       rw [← pow_one 2, testBit_two_pow_mul_add _ (one_lt_two), IH]
       simp only [Bool.cond_true_left]
-      cases' j
+      cases j
       · simp_rw [zero_lt_one, if_true, zero_le, decide_true, Bool.true_or,
           testBit_zero, decide_true]
       · simp_rw [Nat.add_sub_cancel, Nat.add_sub_add_right, Nat.succ_le_iff, Nat.succ_lt_succ_iff,
@@ -595,15 +595,15 @@ theorem testBit_mergeBitRes_of_eq {p : ℕ} : (p.mergeBitRes b i).testBit i = b 
 theorem testRes_mergeBitRes_of_eq {p : ℕ} : (p.mergeBitRes b i).testRes i = p := by
   induction i generalizing p b with | zero => _ | succ _ IH => _
   · simp_rw [mergeBitRes_zero, testRes_zero, div2_bit]
-  · simp_rw [mergeBitRes_succ, testRes_succ, div2_bit, bodd_bit, IH, bit_decomp]
+  · simp_rw [mergeBitRes_succ, testRes_succ, div2_bit, bodd_bit, IH, bit_bodd_div2]
 
 @[simp]
 theorem mergeBitRes_testBit_testRes_of_eq {q : ℕ} :
     (q.testRes i).mergeBitRes (q.testBit i) i = q := by
   induction i generalizing q with | zero => _ | succ _ IH => _
-  · simp_rw [mergeBitRes_zero, testRes_zero, testBit_zero_eq_bodd, bit_decomp]
+  · simp_rw [mergeBitRes_zero, testRes_zero, testBit_zero_eq_bodd, bit_bodd_div2]
   · simp_rw [mergeBitRes_succ, testRes_succ, testBit_succ_eq_testBit_div2,
-      div2_bit, bodd_bit, IH, bit_decomp]
+      div2_bit, bodd_bit, IH, bit_bodd_div2]
 
 -- Equivalence family
 
@@ -1551,7 +1551,7 @@ theorem condFlipBit_of_mkVector_false :
 theorem condFlipBit_lt_iff_lt (hin : 2^(i + 1) ∣ n) :
     q.condFlipBit i c < n ↔ q < n := by
   rw [condFlipBit_apply]
-  cases' c[q.testRes i]?.getD false
+  cases c[q.testRes i]?.getD false
   · rw [cond_false]
   · rw [cond_true, flipBit_lt_iff_lt hin]
 
@@ -1593,7 +1593,7 @@ theorem flipBitIndicesAux_succ {v : Vector α n} {i t : ℕ} :
 theorem getElem_flipBitIndicesAux {v : Vector α n} {i t k : ℕ}
     (hk : k < n) : (flipBitIndicesAux v i t)[k] =
     if hk' : k.testRes i < t ∧ k.flipBit i < n then v[k.flipBit i] else v[k] := by
-  induction' t with t IH generalizing k
+  induction t generalizing k with | zero | succ t IH
   · rfl
   · simp_rw [Nat.lt_succ_iff, flipBitIndicesAux_succ, getElem_swapIfInBounds,
       getElem_swap_eq_getElem_swap_apply, IH]
@@ -1670,7 +1670,7 @@ theorem getElem_condFlipBitIndicesAux {v : Vector α n} {i t k : ℕ} {c : Vecto
     (condFlipBitIndicesAux v i c t)[k] =
     if hk' : k.testRes i < t ∧ k.condFlipBit i c < n then
       v[k.condFlipBit i c] else v[k] := by
-  induction' t with t IH generalizing k
+  induction t generalizing k with | zero | succ t IH
   · rfl
   · simp_rw [condFlipBitIndicesAux_succ, getElem_swapIfInBounds, getElem_swap, IH,
       Nat.testRes_mergeBitRes_of_eq, lt_self_iff_false, false_and, dite_false,
@@ -2301,7 +2301,7 @@ theorem flipBitCommutator_flipBitCommutator :
 theorem flipBitCommutator_two_pow_flipBitCommutator :
     ((a.flipBitCommutator i)^(2^p)).flipBitCommutator i =
     (a.flipBitCommutator i ^ (2^(p + 1))) := by
-  induction' p with p IH
+  induction p with | zero | succ p IH
   · simp_rw [zero_add, pow_zero, pow_one, pow_two]
     exact flipBitCommutator_flipBitCommutator
   · nth_rewrite 2 [pow_succ]
@@ -2343,7 +2343,7 @@ theorem inv_flipBitCommutator_flipBitVals :
 theorem flipBitCommutator_pow_flipBitIndices_inv :
     (((a.flipBitCommutator i)^p).flipBitIndices i)⁻¹ =
     ((a.flipBitCommutator i)^p).flipBitIndices i := by
-  induction' p with p IH
+  induction p with | zero | succ p IH
   · simp_rw [pow_zero, one_flipBitIndices, flipBit_inv]
   · nth_rewrite 1 [pow_succ']
     simp_rw [pow_succ, mul_flipBitIndices, mul_inv_rev, IH, flipBitIndices_mul,
@@ -2353,7 +2353,7 @@ theorem flipBitCommutator_pow_flipBitIndices_inv :
 theorem flipBitCommutator_pow_flipBitVals_inv :
     (((a.flipBitCommutator i)^p).flipBitVals i)⁻¹ =
     ((a.flipBitCommutator i)^p).flipBitVals i := by
-  induction' p with p IH
+  induction p with | zero | succ p IH
   · simp_rw [pow_zero, one_flipBitVals, flipBit_inv]
   · nth_rewrite 1 [pow_succ']
     simp_rw [pow_succ, mul_flipBitVals, mul_inv_rev, inv_flipBitCommutator_flipBitVals_inv,
@@ -2504,7 +2504,7 @@ theorem getElem_flipBitCommutator_flipBit_ne {hk : k < n} :
 
 theorem getElem_pow_flipBitCommutator_ne_flipBit {hk : k < n} {p : ℕ} :
     ((a.flipBitCommutator i) ^ p)[k] ≠ k.flipBit i := by
-  induction' p using Nat.twoStepInduction with p IH generalizing k
+  induction p using Nat.twoStepInduction generalizing k with | zero | one | more p IH
   · rw [pow_zero, getElem_one]
     exact Nat.flipBit_ne_self.symm
   · rw [pow_one]
@@ -2642,13 +2642,13 @@ theorem BitInvariant.mul (ha : a.BitInvariant i) (hb : b.BitInvariant i) :
   hb.testBit_getElem_eq_testBit, implies_true]
 
 theorem BitInvariant.pow (ha : a.BitInvariant i) (p : ℕ) : (a ^ p).BitInvariant i := by
-  induction' p with p IH
+  induction p with | zero | succ p IH
   · exact one_bitInvariant
   · rw [pow_succ]
     exact BitInvariant.mul IH ha
 
 theorem BitInvariant.zpow (ha : a.BitInvariant i) (p : ℤ) : (a ^ p).BitInvariant i := by
-  cases' p
+  cases p
   · simp_rw [Int.ofNat_eq_coe, zpow_natCast]
     exact ha.pow _
   · simp only [zpow_negSucc]
@@ -2729,8 +2729,7 @@ theorem flipBit_getElem_cycleMinVector_flipBitCommutator_comm (a : PermOf (2^(n 
     (hk : k < 2^(n + 1)) (hi : i < n + 1):
     ((a.flipBitCommutator i).CycleMinVector (n - i))[(k.flipBit i)]'
     (by rwa [flipBit_lt_iff_lt <| (Nat.pow_dvd_pow _ hi).trans (dvd_of_eq rfl)]) =
-    (((a.flipBitCommutator i).CycleMinVector (n - i))[k]).flipBit i
-     := by
+    (((a.flipBitCommutator i).CycleMinVector (n - i))[k]).flipBit i := by
   have hin : 2 ^ ((i : ℕ) + 1) ∣ 2^(n + 1) := Nat.pow_dvd_pow _ hi
   have hk' := (flipBit_lt_two_pow_iff_lt_two_pow hi).mpr hk
   simp_rw [getElem_cycleMinVector_eq_min'_cycleOf _
