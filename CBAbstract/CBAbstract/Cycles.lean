@@ -18,7 +18,7 @@ theorem SameCycle.exists_pow_lt_finset_card_of_apply_zpow_mem {f : Perm α} (s :
     inv_pow, inv_eq_iff_eq, eq_comm, ← zpow_natCast, Int.natCast_sub hij.le] at hijf
   have hij : (0 : ℤ) < ↑j - ↑i := by rwa [sub_pos, Nat.cast_lt]
   rintro ⟨k, hkf⟩
-  rw [← Int.emod_add_ediv k (j - i), zpow_add, mul_apply, zpow_mul,
+  rw [← Int.emod_add_mul_ediv k (j - i), zpow_add, mul_apply, zpow_mul,
     Equiv.Perm.zpow_apply_eq_self_of_apply_eq_self hijf,
     ← Int.natAbs_of_nonneg (Int.emod_nonneg _ hij.ne'), zpow_natCast] at hkf
   have hks : (k % (↑j - ↑i)).natAbs < s.card := by
@@ -56,7 +56,7 @@ section LinearOrder
 variable [LinearOrder α]
 
 lemma fastCycleMin_le : ∀ k < 2^i, FastCycleMin i π x ≤ (π ^ k) x := by
-  induction' i with i IH generalizing x
+  induction i generalizing x with | zero | succ i IH
   · simp_rw [pow_zero, Nat.lt_one_iff, fastCycleMin_zero, forall_eq, pow_zero, one_apply, le_rfl]
   · simp_rw [pow_succ', two_mul, fastCycleMin_succ, min_le_iff]
     intro k hk'
@@ -67,7 +67,7 @@ lemma fastCycleMin_le : ∀ k < 2^i, FastCycleMin i π x ≤ (π ^ k) x := by
       rw [← Equiv.Perm.mul_apply, ← pow_add, Nat.sub_add_cancel hk]
 
 lemma le_fastCycleMin : ∀ z, (∀ k < 2^i, z ≤ (π ^ k) x) → z ≤ FastCycleMin i π x := by
-  induction' i with i IH generalizing x
+  induction i generalizing x with | zero | succ i IH
   · simp_rw [pow_zero, Nat.lt_one_iff, forall_eq, pow_zero, one_apply, fastCycleMin_zero, imp_self,
     implies_true]
   · simp_rw [fastCycleMin_succ, le_min_iff]
@@ -98,7 +98,7 @@ lemma fastCycleMin_eq_self_iff : FastCycleMin i π x = x ↔ x ≤ FastCycleMin 
 lemma exists_lt_fastCycleMin_eq_pow_apply (x : α) (i : ℕ) :
     ∃ k < 2^i, (π ^ k) x = FastCycleMin i π x := by
   simp_rw [eq_comm]
-  induction' i with i IH generalizing x
+  induction i generalizing x with | zero | succ i IH
   · exact ⟨0, Nat.two_pow_pos _, rfl⟩
   · rcases (IH (x := x)) with ⟨k, hk, hπk⟩
     rcases (IH (x := (π ^ (2 ^ i)) x)) with ⟨k', hk', hπk'⟩
@@ -127,7 +127,7 @@ lemma fastCycleMin_eq_min'_image_interval [DecidableEq α] : FastCycleMin i π x
 
 lemma min_fastCycleMin_apply :
     min (FastCycleMin i π (π x)) x = min (FastCycleMin i π x) ((π ^ 2^i) x) := by
-  simp_rw [fastCycleMin_eq_min'_image_interval, ← Finset.min'_insert, ← mul_apply,
+  simp_rw [fastCycleMin_eq_min'_image_interval, min_comm, ← Finset.min'_insert, ← mul_apply,
   ← pow_succ, ← Finset.image_insert (fun k => (π ^ k) x), Finset.Iio_insert]
   congr 1
   ext y

@@ -10,23 +10,22 @@ universe u
 variable {G : Type u} [Group G] {x y : G}
 
 lemma cmtr_inv_mul_eq_mul_inv_cmtr : ⁅x, y⁆⁻¹ * y = y * ⁅x, y⁻¹⁆ := by
-simp_rw [commutatorElement_inv, commutatorElement_def, inv_inv, mul_assoc]
+  simp_rw [commutatorElement_inv, commutatorElement_def, inv_inv, mul_assoc]
 
 lemma cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow {k : ℕ} : ((⁅x, y⁆)^k)⁻¹ * y = y * ((⁅x, y⁻¹⁆)^k) := by
-induction' k with n hn
-· simp_rw [pow_zero, inv_one, mul_one, one_mul]
-· simp_rw [pow_succ ⁅x, y⁻¹⁆, pow_succ' ⁅x, y⁆, ← mul_assoc, hn.symm, mul_inv_rev, mul_assoc,
+  induction k with | zero | succ n hn
+  · simp_rw [pow_zero, inv_one, mul_one, one_mul]
+  · simp_rw [pow_succ ⁅x, y⁻¹⁆, pow_succ' ⁅x, y⁆, ← mul_assoc, hn.symm, mul_inv_rev, mul_assoc,
     cmtr_inv_mul_eq_mul_inv_cmtr]
 
 lemma cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow {k : ℤ} : ((⁅x, y⁆)^k)⁻¹ * y = y * (⁅x, y⁻¹⁆)^k := by
-cases k
-· simp only [Int.ofNat_eq_coe, zpow_natCast, cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow]
-· simp_rw [zpow_negSucc, inv_inv, eq_mul_inv_iff_mul_eq, mul_assoc, ← eq_inv_mul_iff_mul_eq,
-    cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow, inv_mul_cancel_left]
+  cases k
+  · simp only [Int.ofNat_eq_coe, zpow_natCast, cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow]
+  · simp_rw [zpow_negSucc, inv_inv, eq_mul_inv_iff_mul_eq, mul_assoc, ← eq_inv_mul_iff_mul_eq,
+      cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow, inv_mul_cancel_left]
 
-lemma cmtr_zpow_mul_eq_mul_inv_cmtr_zpow_inv {k : ℤ} :
-(⁅x, y⁆)^k * y = y * ((⁅x, y⁻¹⁆)^k)⁻¹ := by
-rw [← zpow_neg, ← cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow, zpow_neg, inv_inv]
+lemma cmtr_zpow_mul_eq_mul_inv_cmtr_zpow_inv {k : ℤ} : (⁅x, y⁆)^k * y = y * ((⁅x, y⁻¹⁆)^k)⁻¹ := by
+  rw [← zpow_neg, ← cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow, zpow_neg, inv_inv]
 
 lemma cmtr_mul_eq_mul_inv_cmtr_inv : ⁅x, y⁆ * y = y * ⁅x, y⁻¹⁆⁻¹ := by
   have H := cmtr_zpow_mul_eq_mul_inv_cmtr_zpow_inv (x := x) (y := y) (k := 1)
@@ -59,7 +58,7 @@ lemma mul_cmtr_unfix_of_unfix (hy : ∀ q : α, y q ≠ q) :
 
 lemma mul_cmtr_pow_unfix {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
 (hy : ∀ q : α, y q ≠ q) : ∀ q : α, (y * ⁅x, y⁆^k) q ≠ q := by
-  induction' k using Nat.twoStepInduction with k IH
+  induction k using Nat.twoStepInduction with | zero | one | more k IH
   · rw [pow_zero, mul_one]
     exact hy
   · rw [pow_one]
@@ -83,7 +82,7 @@ lemma cmtr_mul_unfix_of_unfix (hy : ∀ q : α, y q ≠ q) :
 lemma cmtr_pow_mul_unfix {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
 (hy : ∀ q : α, y q ≠ q) :
 ∀ q : α, (⁅x, y⁆^k * y) q ≠ q := by
-  induction' k using Nat.twoStepInduction with k IH
+  induction k using Nat.twoStepInduction with | zero | one | more k IH
   · rw [pow_zero, one_mul]
     exact hy
   · rw [pow_one]
