@@ -132,11 +132,10 @@ theorem getElem_ne_iff {i : ℕ} (hi : i < n) {j : ℕ} (hj : j < n) :
 
 theorem getElem_surjective (hi : i < n) :
     ∃ (j : ℕ) (hj : j < n), a[j] = i := by
-  have h_inj : Injective (⟨a[·], a.getElem_lt⟩ : Fin n → Fin n) :=
+  have h_inj : Injective (⟨a[↑·], a.getElem_lt⟩ : Fin n → Fin n) :=
     fun _ _ hij => Fin.ext (a.getElem_injective _ _ (Fin.val_eq_of_eq hij))
-  have h_surj := h_inj.surjective_of_fintype (Equiv.refl (Fin n))
-  rcases h_surj ⟨i, hi⟩ with ⟨⟨j, hj⟩, ⟨_, _⟩⟩
-  exact ⟨j, hj, rfl⟩
+  have h_surj := h_inj.surjective_of_fintype (Equiv.refl (Fin n)) ⟨i, hi⟩
+  grind
 
 end GetElem
 

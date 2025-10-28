@@ -104,11 +104,11 @@ lemma getBitResZero_symm_apply : getBitResZero.symm (b, p) =
 
 lemma getBitRes_zero : getBitRes (0 : Fin (m + 1)) = getBitResZero := by
   ext q : 1
-  simp_rw [getBitRes_apply, getBitResZero_apply, Fin.zero_succAbove, finFunctionFinEquiv,
-    Equiv.ofRightInverseOfCardLE_symm_apply, Fin.val_zero, pow_zero, Nat.div_one,
-    finTwoEquiv_apply, Fin.val_succ, Equiv.ofRightInverseOfCardLE_apply,
-    Nat.pow_eq, Prod.mk.injEq, decide_eq_decide, Fin.ext_iff, Fin.val_one, Fin.coe_modNat,
-    Finset.sum_fin_eq_sum_range, dite_eq_ite, Fin.coe_divNat, true_and]
+  simp only [getBitRes_apply, finFunctionFinEquiv, Finset.sum_fin_eq_sum_range,
+    Equiv.ofRightInverseOfCardLE_symm_apply, Fin.coe_ofNat_eq_mod, Nat.zero_mod, pow_zero,
+    Nat.div_one, finTwoEquiv_apply, Fin.isValue, Fin.ext_iff, Nat.mod_succ, Fin.zero_succAbove,
+    Fin.val_succ, Equiv.ofRightInverseOfCardLE_apply, dite_eq_ite, getBitResZero_apply, Nat.pow_eq,
+    Fin.modNat, Fin.divNat, Prod.mk.injEq, true_and]
   rw [Finset.sum_ite_of_true (h := fun _ H => (Finset.mem_range.mp H))]
   refine Nat.eq_of_mul_eq_mul_left (zero_lt_two)
     (add_right_cancel (b := (q : ℕ) / 2 ^ 0 % 2 * 2 ^ 0) ?_)
@@ -621,7 +621,7 @@ section FlipBit
 variable {k : BV m}
 
 def flipBit (i : Fin (m + 1)) : Equiv.Perm (BV (m + 1)) :=
-(getBitRes i).symm.permCongr <| boolInversion.prodCongr (Equiv.refl _)
+(getBitRes i).symm.permCongr <| Equiv.boolNot.prodCongr (Equiv.refl _)
 
 lemma flipBit_apply {i : Fin (m + 1)} :
 flipBit i q = mergeBitRes i (!(getBit i q)) (getRes i q) := rfl

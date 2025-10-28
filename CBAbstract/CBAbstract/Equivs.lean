@@ -67,8 +67,4 @@ lemma finTwoEquiv_symm_apply : ∀ j, finTwoEquiv.symm j = bif j then 1 else 0 :
   (Bool.forall_bool).mpr ⟨rfl, rfl⟩
 
 @[simps!]
-def boolInversion : Equiv.Perm Bool where
-  toFun := not
-  invFun := not
-  left_inv := Bool.not_not
-  right_inv := Bool.not_not
+def Equiv.boolNot : Equiv.Perm Bool := Bool.involutive_not.toPerm
