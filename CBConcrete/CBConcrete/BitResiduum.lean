@@ -1344,7 +1344,7 @@ theorem flipBit_lt_iff_lt_flipBit_of_testBit_eq_not_testBit {r : ℕ}
 
 @[simp]
 theorem flipBit_flipBit_of_eq : (q.flipBit i).flipBit i = q := by
-  simp_rw [flipBit_def, Nat.xor_cancel_right]
+  simp_rw [flipBit_def, Nat.xor_xor_cancel_right]
 
 theorem flipBit_lt_flipBit_iff_lt_of_testBit_eq_testBit {q r : ℕ}
     (h : q.testBit i = r.testBit i) : q.flipBit i < r.flipBit i ↔ q < r := by
@@ -1408,7 +1408,8 @@ theorem flipBit_lt_flipBit_of_lt_of_ne_flipBit_of_lt_testBit_eq {r : ℕ} (hrq :
 
 @[pp_nodot, simps!]
 def flipBitPerm (i : ℕ) : Equiv.Perm ℕ :=
-  ⟨(flipBit · i), (flipBit · i), xor_cancel_right _, xor_cancel_right _⟩
+  ⟨(flipBit · i), (flipBit · i),
+    fun _ => xor_xor_cancel_right _ _, fun _ => xor_xor_cancel_right _ _⟩
 
 @[simp]
 theorem flipBitPerm_inv_apply : ∀ (x i : ℕ), (flipBitPerm i)⁻¹ x = x.flipBit i := fun _ _ => rfl
