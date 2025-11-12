@@ -2551,7 +2551,7 @@ theorem disjoint_flipBitCommutator_cycleOf_map_self_flipBitPerm (k : ℕ) :
   · simp_rw [smul_of_ge hk]
     exact fun _ _ => Nat.flipBit_ne_self.symm
 
-theorem two_mul_filter_sameCycle_card_le_card (s : Finset ℕ)
+theorem period_le_card_div_two_of_flipBit_invar_of_cycle_subset (s : Finset ℕ)
     (hsy : ∀ q, q ∈ s → q.flipBit i ∈ s) (k : ℕ) (hsc : (a.flipBitCommutator i).cycleOf k ⊆ s) :
   MulAction.period (a.flipBitCommutator i) k ≤ s.card / 2 := by
   rw [← card_cycleOf, Nat.le_div_iff_mul_le zero_lt_two, mul_two]
@@ -2709,7 +2709,7 @@ theorem period_le_two_pow_sub_of_bitInvariant_lt {a : PermOf (2^(n + 1))} {i : �
     rcases lt_or_ge k (2^(n + 1)) with hk | hk
     · rw [← Nat.mul_div_cancel (2^(n - i)) (zero_lt_two), ← pow_succ,
         ← Nat.sub_add_comm hi, ← card_bitMatchUnder i ⟨k, hk⟩]
-      refine two_mul_filter_sameCycle_card_le_card
+      refine period_le_card_div_two_of_flipBit_invar_of_cycle_subset
         (Nat.pow_dvd_pow _ (Nat.succ_le_succ hi)) _ ?_ _ ?_
       · exact flipBit_mem_bitMatchUnder ⟨le_rfl, Nat.lt_succ_of_le hi⟩
       · exact (a.flipBitCommutator i).cycleOf_subset_bitMatchUnder _
