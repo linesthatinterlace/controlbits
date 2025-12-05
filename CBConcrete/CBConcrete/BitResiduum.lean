@@ -111,7 +111,7 @@ theorem val_succAbove {i : Fin m} {j : Fin (m + 1)} :
     rw [Fin.le_iff_val_le_val, coe_castSucc] at h
     simp_rw [val_succ, Bool.toNat_pos h]
   · rw [succAbove_of_castSucc_lt _ _ h]
-    rw [Fin.lt_iff_val_lt_val, coe_castSucc] at h
+    rw [Fin.lt_def, coe_castSucc] at h
     simp_rw [coe_castSucc, Bool.toNat_neg h.not_ge, add_zero]
 
 theorem val_predAbove {i : Fin m} {j : Fin (m + 1)} :
@@ -121,7 +121,7 @@ theorem val_predAbove {i : Fin m} {j : Fin (m + 1)} :
     rw [Fin.le_iff_val_le_val, coe_castSucc] at h
     simp_rw [coe_castPred, Bool.toNat_neg h.not_gt, Nat.sub_zero]
   · rw [predAbove_of_castSucc_lt _ _ h]
-    rw [Fin.lt_iff_val_lt_val, coe_castSucc] at h
+    rw [Fin.lt_def, coe_castSucc] at h
     simp_rw [coe_pred, Bool.toNat_pos h]
 
 @[simp]
@@ -2366,7 +2366,7 @@ theorem flipBitCommutator_zpow_flipBitIndices_inv {p : ℤ} :
     (((a.flipBitCommutator i)^p).flipBitIndices i)⁻¹ =
     ((a.flipBitCommutator i)^p).flipBitIndices i := by
   cases p
-  · simp_rw [Int.ofNat_eq_coe, zpow_natCast, flipBitCommutator_pow_flipBitIndices_inv]
+  · simp_rw [Int.ofNat_eq_natCast, zpow_natCast, flipBitCommutator_pow_flipBitIndices_inv]
   · simp_rw [zpow_negSucc, inv_flipBitCommutator_pow_flipBitIndices,
       flipBitCommutator_pow_flipBitVals_inv]
 
@@ -2375,7 +2375,7 @@ theorem flipBitCommutator_zpow_flipBitVals_inv {p : ℤ} :
     (((a.flipBitCommutator i)^p).flipBitVals i)⁻¹ =
     ((a.flipBitCommutator i)^p).flipBitVals i := by
   cases p
-  · simp_rw [Int.ofNat_eq_coe, zpow_natCast, flipBitCommutator_pow_flipBitVals_inv]
+  · simp_rw [Int.ofNat_eq_natCast, zpow_natCast, flipBitCommutator_pow_flipBitVals_inv]
   · simp_rw [zpow_negSucc, inv_flipBitCommutator_pow_flipBitVals,
       flipBitCommutator_pow_flipBitIndices_inv]
 
@@ -2519,7 +2519,7 @@ theorem getElem_flipBitCommutator_pow_flipBit_ne {hk : k < n} {p : ℕ} :
 theorem getElem_zpow_flipBitCommutator_ne_flipBit {hk : k < n} {p : ℤ} :
     ((a.flipBitCommutator i) ^ p)[k] ≠ k.flipBit i := by
   cases p
-  · simp only [Int.ofNat_eq_coe, zpow_natCast]
+  · simp only [Int.ofNat_eq_natCast, zpow_natCast]
     exact getElem_pow_flipBitCommutator_ne_flipBit hin
   · have hk' : k.flipBit i < n := by rwa [Nat.flipBit_lt_iff_lt hin]
     simp_rw [zpow_negSucc, getElem_inv_ne_iff _ hk']
@@ -2656,7 +2656,7 @@ theorem BitInvariant.pow (ha : a.BitInvariant i) (p : ℕ) : (a ^ p).BitInvarian
 
 theorem BitInvariant.zpow (ha : a.BitInvariant i) (p : ℤ) : (a ^ p).BitInvariant i := by
   cases p
-  · simp_rw [Int.ofNat_eq_coe, zpow_natCast]
+  · simp_rw [Int.ofNat_eq_natCast, zpow_natCast]
     exact ha.pow _
   · simp only [zpow_negSucc]
     exact (ha.pow _).inv

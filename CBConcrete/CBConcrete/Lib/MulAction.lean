@@ -14,7 +14,7 @@ theorem period_le_card_of_smul_pow_mem (a : G) {i : α}
   · exact H _ _ hia _ (Finset.mem_univ _) _ (Finset.mem_univ _)
       hxy.symm ha.symm (hxy.symm.lt_of_le (le_of_not_gt hxy'))
   · rw [← inv_smul_eq_iff, ← mul_smul, ← inv_pow_sub _ hxy'.le, inv_pow, inv_smul_eq_iff] at ha
-    rw [Fin.lt_iff_val_lt_val, ← Nat.sub_pos_iff_lt] at hxy'
+    rw [Fin.lt_def, ← Nat.sub_pos_iff_lt] at hxy'
     exact (MulAction.period_le_of_fixed hxy' ha.symm).trans
       ((Nat.sub_le _ _).trans y.is_le)
 

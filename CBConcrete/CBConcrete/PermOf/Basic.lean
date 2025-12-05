@@ -91,8 +91,9 @@ structure PermOf (n : ℕ) where
   Gives the inverse of the `PermOf` as a vector of size `n`.
   -/
   protected invVector : Vector ℕ n
-  getElem_toVector_lt (i : ℕ) (hi : i < n := by get_elem_tactic) : toVector[i] < n := by decide
-  getElem_invVector_getElem_toVector (i : ℕ) (hi : i < n := by get_elem_tactic) :
+  private getElem_toVector_lt (i : ℕ) (hi : i < n := by get_elem_tactic) :
+      toVector[i] < n := by decide
+  private getElem_invVector_getElem_toVector (i : ℕ) (hi : i < n := by get_elem_tactic) :
       invVector[toVector[i]]'(getElem_toVector_lt i hi) = i := by decide
   deriving DecidableEq
 
@@ -138,6 +139,13 @@ theorem getElem_surjective (hi : i < n) :
   grind
 
 end GetElem
+
+def toFinVector (a : PermOf n) : Vector (Fin n) n := Vector.ofFn fun i => ⟨a[i.1], getElem_lt⟩
+
+@[simp]
+theorem coe_getElem_toFinVector (h : i < n) : a.toFinVector[i] = a[i] :=
+  congrArg Fin.val (Vector.getElem_ofFn _)
+
 
 @[ext]
 theorem ext (h : ∀ (i : ℕ) (hi : i < n), a[i] = b[i]) : a = b := by
@@ -200,7 +208,7 @@ instance : Inv (PermOf n) where
     (invVector := a.toVector)
     (getElem_toVector_lt := fun i hi => by
       rcases a.getElem_surjective hi with ⟨j, hj, rfl⟩
-      exact hj.trans_eq' (a.getElem_invVector_getElem_toVector _))
+      exact hj.trans_eq' (a.getElem_invVector_getElem_toVector _).symm)
     (getElem_invVector_getElem_toVector := fun i hi => by
       rcases a.getElem_surjective hi with ⟨j, hj, rfl⟩
       congr 1
@@ -406,7 +414,7 @@ def ofVector (a : Vector ℕ n) (hx : ∀ x (hx : x < n), a[x] < n := by decide)
   getElem_toVector_lt := hx
   getElem_invVector_getElem_toVector := fun {i} hi => by
     simp_rw [Vector.getElem_map, Vector.getElem_range]
-    exact a.toList.idxOf_getElem ha _ _
+    exact ha.idxOf_getElem _ _
 
 section OfVector
 
@@ -593,35 +601,35 @@ end PermOf
 
 namespace Vector
 
-open PermOf
-
 variable {n : ℕ} {a b : PermOf n} {α : Type*} {v : Vector α n}
 
+open PermOf
+
 def shuffle {α : Type*} (a : PermOf n) (v : Vector α n) : Vector α n :=
-  Vector.ofFn (fun i => v[a[i]])
+  Vector.ofFn (fun i => v[a[i.1]])
 
 section Shuffle
 
-@[simp] theorem getElem_shuffle {i : ℕ} (hi : i < n) :
+@[simp, grind =] theorem getElem_shuffle {i : ℕ} (hi : i < n) :
     (v.shuffle a)[i] = v[a[i]] := Vector.getElem_ofFn _
 
+@[simp, grind =] theorem getElem?_shuffle {i : ℕ} :
+    (v.shuffle a)[i]? = if h : i < n then some v[a[i]] else none := Vector.getElem?_ofFn
+
+@[simp, grind =]
+theorem toList_shuffle : (v.shuffle a).toList = List.ofFn (fun i => v[a[i.1]]) :=
+    List.ext_getElem? <| by grind
+
+theorem mem_shuffle_iff {x : α} :
+    x ∈ v.shuffle a ↔ x ∈ v := by
+  simp_rw [Vector.mem_iff_getElem, getElem_shuffle]
+  exact ⟨fun ⟨i, hi, hia⟩ => ⟨a[i], getElem_lt, by simpa using hia⟩,
+    fun ⟨i, hi, hia⟩ => ⟨a⁻¹[i], getElem_lt, by simpa using hia⟩⟩
+
 theorem mem_of_mem_shuffle {x : α}
-    (hx : x ∈ v.shuffle a) : x ∈ v := by
-  simp_rw [Vector.mem_iff_getElem] at hx ⊢
-  simp_rw [getElem_shuffle] at hx
-  rcases hx with ⟨i, hi, hix⟩
-  exact ⟨a[i], a.getElem_lt, hix⟩
-
+    (hx : x ∈ v.shuffle a) : x ∈ v := mem_shuffle_iff.mp hx
 theorem mem_shuffle_of_mem {x : α}
-    (hx : x ∈ v) : x ∈ v.shuffle a := by
-  simp_rw [Vector.mem_iff_getElem] at hx ⊢
-  simp_rw [getElem_shuffle]
-  rcases hx with ⟨i, hi, hix⟩
-  refine ⟨a⁻¹[i], getElem_lt _, ?_⟩
-  simp_rw [getElem_getElem_inv, hix]
-
-theorem mem_onIndices_iff {x : α} :
-    x ∈ v.shuffle a ↔ x ∈ v := ⟨v.mem_of_mem_shuffle, v.mem_shuffle_of_mem⟩
+    (hx : x ∈ v) : x ∈ v.shuffle a := mem_shuffle_iff.mpr hx
 
 @[simp]
 theorem shuffle_range :
@@ -652,8 +660,10 @@ theorem shuffle_toVector :
     a.toVector.shuffle b = (a * b).toVector := by
   simp_rw [Vector.ext_iff, getElem_shuffle, getElem_toVector, a.getElem_mul, implies_true]
 
-instance {α : Type*} : SMul (PermOf n)ᵐᵒᵖ (Vector α n) where
+instance {α : Type*} : MulAction (PermOf n)ᵐᵒᵖ (Vector α n) where
   smul a v := v.shuffle a.unop
+  one_smul := one_shuffle
+  mul_smul _ _ := mul_shuffle
 
 section SMulOp
 
