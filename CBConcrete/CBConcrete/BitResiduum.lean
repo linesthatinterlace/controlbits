@@ -20,6 +20,61 @@ def boolInversion : Equiv.Perm Bool where
   left_inv := Bool.not_not
   right_inv := Bool.not_not
 
+@[simp, grind =]
+theorem getElem_dite {coll idx elem valid} [GetElem coll idx elem valid] (P : Prop)
+    [Decidable P] (f : P → coll) (g : ¬ P → coll)
+    {k : idx} {hk : valid (if h : P then f h else g h) k} :
+    (if h : P then f h else g h)[k] =
+    if h : P then (f h)[k]'(by grind) else (g h)[k]'(by grind) := by grind
+
+@[simp, grind =]
+theorem getElem_ite {coll idx elem valid} [GetElem coll idx elem valid] (P : Prop)
+    [Decidable P] (f g : coll)
+    {k : idx} {hk : valid (if P then f else g) k} :
+    (if P then f else g)[k] =
+    if h : P then f[k]'(by grind) else g[k]'(by grind) := by grind
+
+@[simp, grind =]
+theorem dite_getElem {coll idx elem valid} [GetElem coll idx elem valid] (P : Prop)
+    [Decidable P] (f : P → idx) (g : ¬ P → idx)
+    {v : coll} {hk : valid v (if h : P then f h else g h)} :
+    v[if h : P then f h else g h] =
+    if h : P then v[f h]'(by grind) else v[g h]'(by grind) := by grind
+
+@[simp, grind =]
+theorem ite_getElem {coll idx elem valid} [GetElem coll idx elem valid] (P : Prop)
+    [Decidable P] (f g : idx)
+    {v : coll} {hk : valid v (if P then f  else g)} :
+    v[if P then f else g] =
+    if h : P then v[f]'(by grind) else v[g]'(by grind) := by grind
+
+@[simp]
+theorem exists_or_index (P Q : Prop) (f : P ∨ Q → Prop) :
+    (∃ (h : P ∨ Q), f h) ↔ (∃ (hp : P), f (by grind)) ∨ ∃ (hq : Q), f (by grind) := by grind
+
+theorem dite_and {α} (P Q : Prop) [Decidable P] [Decidable Q] (f : P ∧ Q → α) (g : ¬ (P ∧ Q) → α) :
+  (if h : P ∧ Q then f h else g h) =
+  if hp : P then if hq : Q then f (by grind) else g (by grind) else g (by grind) := by grind
+
+theorem dite_and_right {α} (P Q : Prop) [Decidable P] [Decidable Q] (f : P ∧ Q → α) (g : ¬ (P ∧ Q) → α) :
+  (if h : P ∧ Q then f h else g h) =
+  if hp : Q then if hq : P then f (by grind) else g (by grind) else g (by grind) := by grind
+
+theorem dite_or {α} (P Q : Prop) [Decidable P] [Decidable Q] (f : P ∨ Q → α) (g : ¬ (P ∨ Q) → α) :
+  (if h : P ∨ Q then f h else g h) =
+  if hp : P then f (Or.inl hp) else if hq : Q then f (Or.inr hq) else g (by grind) := by grind
+
+theorem dite_or_right {α} (P Q : Prop) [Decidable P] [Decidable Q] (f : P ∨ Q → α) (g : ¬ (P ∨ Q) → α) :
+  (if h : P ∨ Q then f h else g h) =
+  if hq : Q then f (Or.inr hq) else if hp : P then f (Or.inl hp) else g (by grind) := by grind
+
+theorem ite_and_right {α} (P Q : Prop) [Decidable P] [Decidable Q] (a b : α) :
+  (if P ∧ Q then a else b) = if Q then if P then a else b else b := by grind
+
+theorem ite_or_right {α} (P Q : Prop) [Decidable P] [Decidable Q] (a b : α) :
+  (if P ∨ Q then a else b) =
+  if Q then a else if P then a else b := by grind
+
 namespace Bool
 
 variable {a b b' : Bool} {p : ℕ} {α β : Type*}
@@ -208,6 +263,8 @@ theorem lt_pow_two_iff_ge_imp_testBit_eq_false {n : Nat} {x : Nat} :
 
 theorem exists_eq_add_iff_le {m n : ℕ} : m ≤ n ↔ ∃ k, n = m + k := by exact
   le_iff_exists_add
+
+attribute [ext, grind ext] Nat.eq_of_testBit_eq
 
 theorem testBit_ext_iff {q q' : ℕ} : q = q' ↔ (∀ i : ℕ, q.testBit i = q'.testBit i) :=
   ⟨fun h _ => h ▸ rfl, Nat.eq_of_testBit_eq⟩
@@ -555,7 +612,7 @@ theorem mergeBitRes_zero : q.mergeBitRes b 0 = q.bit b := by
   · simp_rw [Bool.toNat_false, or_zero, bit_false]
   · simp_rw [Bool.toNat_true, or_one, div2_bit0]
 
-theorem testRes_succ {q : ℕ} : q.testRes (i + 1) = (q.div2.testRes i).bit q.bodd := by
+theorem testRes_succ {q i : ℕ} : q.testRes (i + 1) = (q.div2.testRes i).bit q.bodd := by
   simp_rw [testRes_def, and_two_pow_sub_one_eq_mod, testBit_ext_iff, testBit_bit, testBit_or,
     testBit_shiftLeft, testBit_shiftRight, testBit_mod_two_pow]
   rintro (_ | _)
@@ -565,7 +622,7 @@ theorem testRes_succ {q : ℕ} : q.testRes (i + 1) = (q.div2.testRes i).bit q.bo
       add_tsub_cancel_right, add_tsub_add_eq_tsub_right,
       Nat.add_right_comm _ 1, testBit_succ_eq_testBit_div2]
 
-theorem mergeBitRes_succ {q : ℕ} :
+theorem mergeBitRes_succ {q i : ℕ} :
     q.mergeBitRes b (i + 1) = (q.div2.mergeBitRes b i).bit q.bodd := by
   simp_rw [mergeBitRes_def, and_two_pow_sub_one_eq_mod, testBit_ext_iff, testBit_bit, testBit_or,
     testBit_shiftLeft, testBit_shiftRight, testBit_mod_two_pow]
@@ -578,20 +635,20 @@ theorem mergeBitRes_succ {q : ℕ} :
 
 -- basic combination eq theorems
 
-@[simp]
-theorem testBit_mergeBitRes_of_eq {p : ℕ} : (p.mergeBitRes b i).testBit i = b := by
+@[simp, grind =]
+theorem testBit_mergeBitRes_of_eq {p i : ℕ} : (p.mergeBitRes b i).testBit i = b := by
   induction i generalizing p b with | zero | succ _ IH
   · simp_rw [mergeBitRes_zero, testBit_bit_zero]
   · simp_rw [mergeBitRes_succ, testBit_succ_eq_testBit_div2, div2_bit, IH]
 
-@[simp]
-theorem testRes_mergeBitRes_of_eq {p : ℕ} : (p.mergeBitRes b i).testRes i = p := by
+@[simp, grind =]
+theorem testRes_mergeBitRes_of_eq {p i : ℕ} : (p.mergeBitRes b i).testRes i = p := by
   induction i generalizing p b with | zero | succ _ IH
   · simp_rw [mergeBitRes_zero, testRes_zero, div2_bit]
   · simp_rw [mergeBitRes_succ, testRes_succ, div2_bit, bodd_bit, IH, bit_bodd_div2]
 
-@[simp]
-theorem mergeBitRes_testBit_testRes_of_eq {q : ℕ} :
+@[simp, grind =]
+theorem mergeBitRes_testBit_testRes_of_eq {q i : ℕ} :
     (q.testRes i).mergeBitRes (q.testBit i) i = q := by
   induction i generalizing q with | zero | succ _ IH
   · simp_rw [mergeBitRes_zero, testRes_zero, testBit_zero_eq_bodd, bit_bodd_div2]
@@ -755,6 +812,7 @@ theorem testBit_mergeBitRes_of_ne {i j p : ℕ} (hij : i ≠ j) : (p.mergeBitRes
   · simp_rw [testBit_mergeBitRes_of_lt hij, Bool.toNat_neg (hij.not_gt), tsub_zero] ;
   · simp only [testBit_mergeBitRes_of_gt hij, Bool.toNat_pos hij]
 
+@[grind =]
 theorem testBit_mergeBitRes {i j p : ℕ} : (p.mergeBitRes b j).testBit i =
     bif (i = j) then b else p.testBit (i - (decide (j < i)).toNat) := by
   rcases eq_or_ne i j with rfl | hij
@@ -775,6 +833,7 @@ theorem mergeBitRes_eq_iff : p.mergeBitRes b i = q ↔ (b = testBit q i) ∧ (p 
   ⟨fun H => H ▸ ⟨testBit_mergeBitRes_of_eq.symm, testRes_mergeBitRes_of_eq.symm⟩,
     fun h => by simp_rw [h, mergeBitRes_testBit_testRes_of_eq]⟩
 
+@[grind =]
 theorem mergeBitRes_eq_mergeBitRes_iff {r : ℕ} :
     q.mergeBitRes b i = r.mergeBitRes b' i ↔ b = b' ∧ q = r := by
   rw [mergeBitRes_eq_iff, testBit_mergeBitRes_of_eq, testRes_mergeBitRes_of_eq]
@@ -809,6 +868,7 @@ theorem mergeBitRes_strictMono : StrictMono (mergeBitRes b · i) := by
   exact Nat.add_le_add_right (Nat.add_le_add hpq (Nat.mul_le_mul_left _
     (Nat.div_le_div_right hpq))) _
 
+@[grind! .]
 theorem mergeBitRes_false_lt_mergeBitRes_true {q : ℕ} :
     q.mergeBitRes false i < q.mergeBitRes true i :=
   mergeBitRes_apply_false_add_pow_two ▸ Nat.lt_add_of_pos_right (Nat.two_pow_pos _)
@@ -818,6 +878,10 @@ theorem mergeBitRes_strictMono_right : StrictMono (mergeBitRes · p i) := by
     (fun b b' => b.rec (fun _ => b'.rec le_rfl mergeBitRes_false_lt_mergeBitRes_true.le)
     (fun hbb' => hbb' rfl ▸ le_rfl)) mergeBitRes_right_injective
 
+theorem mergeBitRes_false_le_mergeBitRes_true {q : ℕ} {b : Bool} :
+    q.mergeBitRes false i ≤ q.mergeBitRes b i := by
+  cases b <;> grind
+
 theorem mergeBitRes_lt_mergeBitRes_iff_lt {r : ℕ} :
     q.mergeBitRes b i < r.mergeBitRes b i ↔ q < r :=
   mergeBitRes_strictMono.lt_iff_lt
@@ -826,10 +890,12 @@ theorem mergeBitRes_le_mergeBitRes_iff_le {r : ℕ} :
     q.mergeBitRes b i ≤ r.mergeBitRes b i ↔ q ≤ r :=
   mergeBitRes_strictMono.le_iff_le
 
+@[grind =]
 theorem lt_testRes_iff {p : ℕ} : q < p.testRes i ↔ q.mergeBitRes (p.testBit i) i < p := by
-  nth_rewrite 3 [← mergeBitRes_testBit_testRes_of_eq (q := p) (i := i)]
-  rw [mergeBitRes_lt_mergeBitRes_iff_lt]
+  rw [← mergeBitRes_lt_mergeBitRes_iff_lt (r := p.testRes i) (b := p.testBit i) (i := i),
+    mergeBitRes_testBit_testRes_of_eq]
 
+@[grind =]
 theorem testRes_lt_iff {p : ℕ} : p.testRes i < q ↔ p < q.mergeBitRes (p.testBit i) i := by
   nth_rewrite 2 [← mergeBitRes_testBit_testRes_of_eq (q := p) (i := i)]
   rw [mergeBitRes_lt_mergeBitRes_iff_lt]
@@ -898,8 +964,9 @@ theorem testRes_mergeBitRes_of_ne {p : ℕ} (hij : i ≠ j) : (p.mergeBitRes b j
   · simp only [testRes_mergeBitRes_of_gt hij, hij, decide_true, Bool.toNat_true, hij.not_gt,
     decide_false, Bool.toNat_false, tsub_zero]
 
+@[grind =]
 theorem testRes_mergeBitRes {i j p : ℕ} : (p.mergeBitRes b j).testRes i = bif i = j then p else
-    (p.testRes (i - (decide (j < i)).toNat)).mergeBitRes b  (j - (decide (i < j)).toNat) := by
+    (p.testRes (i - (decide (j < i)).toNat)).mergeBitRes b (j - (decide (i < j)).toNat) := by
   rcases eq_or_ne i j with rfl | hij
   · simp_rw [testRes_mergeBitRes_of_eq, decide_true, cond_true]
   · simp_rw [hij, testRes_mergeBitRes_of_ne hij, decide_false, cond_false]
@@ -941,6 +1008,7 @@ theorem mergeBitRes_testRes_of_eq {i q : ℕ} : (q.testRes i).mergeBitRes b i =
   · simp_rw [mergeBitRes_testBit_testRes_of_eq, Bool.bne_not_self, cond_true]
   · simp_rw [Bool.not_not, bne_self_eq_false, mergeBitRes_not_testBit_testRes_of_eq, cond_false]
 
+@[grind =]
 theorem mergeBitRes_testRes {i j : ℕ} : (q.testRes j).mergeBitRes b i =
     bif i = j then bif (q.testBit i).xor !b then q else (bif q.testBit i then q - 2^i else q + 2^i)
     else (q.mergeBitRes b (i + (decide (j < i)).toNat)).testRes (j + (decide (i < j)).toNat) := by
@@ -981,6 +1049,7 @@ theorem testRes_testRes_of_ge {i j q : ℕ} (hij : j ≤ i) :
   · have h : k + (decide (j ≤ k)).toNat < i + 1 := add_lt_add_of_lt_of_le hik (Bool.toNat_le _)
     simp only [hik.not_ge, h.not_ge, decide_false, Bool.toNat_false, add_zero]
 
+@[grind =]
 theorem testRes_testRes {i j q : ℕ} : (q.testRes j).testRes i =
     (q.testRes (i + (decide (j ≤ i)).toNat)).testRes (j - (!decide (j ≤ i)).toNat) := by
   rcases lt_or_ge i j with hij | hij
@@ -1023,6 +1092,7 @@ theorem mergeBitRes_mergeBitRes_of_ne {i j p : ℕ} {b b' : Bool} (hij : i ≠ j
   · simp_rw [mergeBitRes_mergeBitRes_of_gt hij, hij, hij.not_gt, decide_false,
     decide_true, Bool.toNat_false, Bool.toNat_true, add_zero]
 
+@[grind =]
 theorem mergeBitRes_mergeBitRes {i j p : ℕ} {b b' : Bool} : (p.mergeBitRes b' j).mergeBitRes b i  =
     (p.mergeBitRes b (i - (decide (j < i)).toNat)).mergeBitRes b' (j + (decide (i ≤ j)).toNat) := by
   rcases eq_or_ne i j with rfl | hij
@@ -1121,6 +1191,7 @@ variable {p q b i j k n m : ℕ} {b : Bool}
 
 def flipBit (q i : ℕ) := q ^^^ 1 <<< i
 
+@[grind =]
 theorem flipBit_def : ∀ (i q : ℕ), q.flipBit i = q ^^^ 1 <<< i := fun _ _ => rfl
 
 -- inductive theorems
@@ -1143,16 +1214,18 @@ theorem testBit_flipBit : (q.flipBit j).testBit i = (q.testBit i).xor (i = j) :=
   simp_rw [flipBit_def, testBit_xor, testBit_shiftLeft, testBit_one, Nat.sub_eq_zero_iff_le,
     le_antisymm_iff (a := i), Bool.decide_and, Bool.and_comm]
 
-@[simp]
+@[simp, grind =]
 theorem testBit_flipBit_of_eq : (q.flipBit i).testBit i = !(q.testBit i) := by
   simp_rw [testBit_flipBit, decide_true, Bool.xor_true]
 
+@[grind =]
 theorem testBit_flipBit_of_ne {i j : ℕ} (hij : i ≠ j) :
     (q.flipBit j).testBit i = q.testBit i := by
   simp_rw [testBit_flipBit, hij, decide_false, Bool.xor_false]
 
 -- representations of flipBit
 
+@[grind =]
 theorem flipBit_apply {i : ℕ} :
     q.flipBit i = (q.testRes i).mergeBitRes (!(testBit q i)) i := by
   simp_rw [testBit_ext_iff]
@@ -1188,7 +1261,7 @@ theorem flipBit_mod_two_pow_eq {i : ℕ} (h : k ≤ i) : q.flipBit i % 2^k = q %
 
 theorem flipBit_modEq_two_pow (h : k ≤ i) : q.flipBit i ≡ q [MOD 2^k] := flipBit_mod_two_pow_eq h
 
-@[simp]
+@[simp, grind =]
 theorem flipBit_lt_iff_lt (hin : 2^(i + 1) ∣ n) : q.flipBit i < n ↔ q < n := by
   rcases hin with ⟨k, rfl⟩
   simp_rw [mul_comm _ k, ← Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _),
@@ -1255,7 +1328,7 @@ theorem testRes_flipBit_of_ne (hij : i ≠ j) :
   · simp only [testRes_flipBit_of_gt hij, hij, not_lt_of_gt,
     decide_false, Bool.toNat_false, Nat.sub_zero]
 
-@[simp]
+@[simp, grind =]
 theorem testRes_flipBit_of_eq : (q.flipBit i).testRes i = q.testRes i := by
   rw [flipBit_apply, testRes_mergeBitRes_of_eq]
 
@@ -1337,12 +1410,13 @@ theorem testRes_le_testRes_iff {r : ℕ} :
     (or_congr Iff.rfl (iff_self_and.mpr (fun h => h ▸ rfl)))
     (or_congr Iff.rfl (iff_self_and.mpr (fun h => h ▸ testBit_flipBit_of_eq)))
 
+@[grind =]
 theorem flipBit_lt_iff_lt_flipBit_of_testBit_eq_not_testBit {r : ℕ}
     (h : q.testBit i ≠ r.testBit i) : q.flipBit i < r ↔ q < r.flipBit i := by
   simp_rw [flipBit_apply, Bool.not_eq.mpr h, ← Bool.eq_not.mpr h,
     ← testRes_lt_iff, ← lt_testRes_iff]
 
-@[simp]
+@[simp, grind =]
 theorem flipBit_flipBit_of_eq : (q.flipBit i).flipBit i = q := by
   simp_rw [flipBit_def, Nat.xor_xor_cancel_right]
 
@@ -1351,10 +1425,13 @@ theorem flipBit_lt_flipBit_iff_lt_of_testBit_eq_testBit {q r : ℕ}
   rw [flipBit_lt_iff_lt_flipBit_of_testBit_eq_not_testBit
     (testBit_flipBit_of_eq ▸ (Bool.not_eq_not.mpr h)), flipBit_flipBit_of_eq]
 
+theorem mergeBitRes_true_testRes_lt_iff {r : ℕ} :
+    (p.testRes i).mergeBitRes true i < r ↔ (p < r ∧ p.flipBit i < r) := by grind
+
 theorem flipBit_flipBit (i j) : (q.flipBit i).flipBit j = (q.flipBit j).flipBit i := by
   simp_rw [testBit_ext_iff, testBit_flipBit, Bool.xor_assoc, Bool.xor_comm, implies_true]
 
-@[simp]
+@[simp, grind .]
 theorem flipBit_ne_self : q.flipBit i ≠ q := by
   simp_rw [ne_eq, testBit_ext_iff, not_forall]
   exact ⟨i, by simp_rw [testBit_flipBit_of_eq, Bool.not_eq_self, not_false_eq_true]⟩
@@ -1425,129 +1502,91 @@ end FlipBit
 
 section CondFlipBit
 
-
 def condFlipBit (q : ℕ) (i : ℕ) {l : ℕ} (c : Vector Bool l) : ℕ :=
   q ^^^ ((c[q.testRes i]?.getD false).toNat <<< i)
 
 variable {p q l k i j n m : ℕ} {c d :  Vector Bool l} {b : Bool}
 
+@[grind =]
 theorem condFlipBit_apply_of_testRes_lt (h : q.testRes i < l) :
-    q.condFlipBit i c = bif c[q.testRes i] then q.flipBit i else q := by
-  unfold condFlipBit
-  rw [getElem?_pos c _ h, Option.getD_some]
-  rcases c[q.testRes i]
-  · rw [cond_false, Bool.toNat_false, zero_shiftLeft, xor_zero]
-  · rw [cond_true, Bool.toNat_true, flipBit_def]
+    q.condFlipBit i c = if c[q.testRes i] then q.flipBit i else q := by grind [condFlipBit]
 
+@[grind =]
 theorem condFlipBit_apply_of_le_testRes {c : Vector Bool l} (h : l ≤ q.testRes i) :
-    q.condFlipBit i c = q := by
-  unfold condFlipBit
-  rw [getElem?_neg c _ h.not_gt, Option.getD_none, Bool.toNat_false, zero_shiftLeft, xor_zero]
+    q.condFlipBit i c = q := by grind [condFlipBit]
 
-theorem condFlipBit_apply :
-    q.condFlipBit i c = bif c[q.testRes i]?.getD false then q.flipBit i else q := by
-  rcases lt_or_ge (q.testRes i) l with h | h
-  · rw [condFlipBit_apply_of_testRes_lt h, getElem?_pos c _ h, Option.getD_some]
-  · rw [condFlipBit_apply_of_le_testRes h, getElem?_neg c _ h.not_gt,
-      Option.getD_none, Bool.cond_false]
+theorem condFlipBit_apply : q.condFlipBit i c = if h : q.testRes i < l then
+    if c[q.testRes i] then q.flipBit i else q else q := by grind
 
-theorem testRes_condFlipBit_of_eq : (q.condFlipBit i c).testRes i = q.testRes i := by
-  rw [condFlipBit_apply, Bool.apply_cond (testRes · i), testRes_flipBit_of_eq, Bool.cond_self]
+@[simp, grind =]
+theorem condFlipBit_empty {i : ℕ}  :
+    q.condFlipBit i #v[] = q := by grind
 
+@[simp, grind =]
+theorem condFlipBit_push {i : ℕ} {c : Vector Bool l} {b : Bool} :
+    q.condFlipBit i (c.push b) =
+    if q.testRes i = l ∧ b then q.flipBit i else q.condFlipBit i c := by grind
+
+@[grind =]
+theorem testRes_condFlipBit_of_eq : (q.condFlipBit i c).testRes i = q.testRes i := by grind
+
+@[grind =]
 theorem testBit_condFlipBit_of_ne (hij : i ≠ j) :
-    (q.condFlipBit j c).testBit i = q.testBit i := by
-  rw [condFlipBit_apply, Bool.apply_cond (testBit · i), testBit_flipBit_of_ne hij, Bool.cond_self]
+    (q.condFlipBit j c).testBit i = q.testBit i := by grind
 
+@[grind =]
 theorem testBit_condFlipBit_of_eq :
-    (q.condFlipBit i c).testBit i = (c[q.testRes i]?.getD false).xor (q.testBit i) := by
-  rw [condFlipBit_apply, Bool.apply_cond (testBit · i), testBit_flipBit_of_eq]
-  rcases (c[q.testRes i]?.getD false)
-  · rw [cond_false, Bool.xor, Bool.false_bne]
-  · rw [cond_true, Bool.xor, Bool.true_bne]
-
-theorem testBit_condFlipBit_of_le_testRes (h : l ≤ q.testRes i) :
-    (q.condFlipBit i c).testBit j = q.testBit j := by
-  rw [condFlipBit_apply_of_le_testRes h]
-
-theorem testBit_condFlipBit_of_testRes_lt_of_eq (h : q.testRes i < l) :
-  (q.condFlipBit i c).testBit i = (c[q.testRes i]).xor (q.testBit i) := by
-  rw [testBit_condFlipBit_of_eq, getElem?_pos c _ h, Option.getD_some]
+    (q.condFlipBit i c).testBit i = (c[q.testRes i]?.getD false).xor (q.testBit i) := by grind
 
 theorem testBit_condFlipBit : (q.condFlipBit j c).testBit i =
-    (decide (i = j) && (c[q.testRes i]?.getD false)).xor (q.testBit i) := by
-  rcases eq_or_ne i j with rfl | hij
-  · simp_rw [decide_true, Bool.true_and, testBit_condFlipBit_of_eq]
-  · simp_rw [hij, decide_false, Bool.false_and, Bool.false_xor, testBit_condFlipBit_of_ne hij]
+    (decide (i = j) && (c[q.testRes i]?.getD false)).xor (q.testBit i) := by grind
+
+theorem testBit_condFlipBit_of_le_testRes (h : l ≤ q.testRes i) :
+    (q.condFlipBit i c).testBit j = q.testBit j := by grind
+
+theorem testBit_condFlipBit_of_testRes_lt_of_eq (h : q.testRes i < l) :
+  (q.condFlipBit i c).testBit i = c[q.testRes i].xor (q.testBit i) := by grind
 
 theorem condflipBit_apply : q.condFlipBit i c =
-    (q.testRes i).mergeBitRes ((c[q.testRes i]?.getD false).xor (q.testBit i)) i  := by
-  simp_rw [eq_mergeBitRes_iff, testRes_condFlipBit_of_eq, testBit_condFlipBit_of_eq, true_and]
+    (q.testRes i).mergeBitRes ((c[q.testRes i]?.getD false).xor (q.testBit i)) i  := by grind
 
 theorem condflipBit_apply_of_testRes_lt (h : q.testRes i < l) :
-    q.condFlipBit i c = (q.testRes i).mergeBitRes (c[q.testRes i].xor (q.testBit i)) i := by
-  simp_rw [eq_mergeBitRes_iff, testRes_condFlipBit_of_eq, testBit_condFlipBit_of_testRes_lt_of_eq h,
-    true_and]
+    q.condFlipBit i c = (q.testRes i).mergeBitRes (c[q.testRes i].xor (q.testBit i)) i := by grind
 
 theorem condFlipBit_apply_comm :
-(q.condFlipBit i d).condFlipBit i c = (q.condFlipBit i c).condFlipBit i d := by
-simp_rw [condflipBit_apply, testRes_mergeBitRes_of_eq,
-  testBit_mergeBitRes_of_eq, Bool.xor_left_comm]
+    (q.condFlipBit i d).condFlipBit i c = (q.condFlipBit i c).condFlipBit i d := by grind
 
 theorem condFlipBit_mergeBitRes :
-    (p.mergeBitRes b i).condFlipBit i c = p.mergeBitRes ((c[p]?.getD false).xor b) i := by
-  rw [condflipBit_apply, testRes_mergeBitRes_of_eq, testBit_mergeBitRes_of_eq]
-
-theorem condFlipBit_eq_dite : q.condFlipBit i c = if h : q.testRes i < l then
-    bif c[q.testRes i] then q.flipBit i else q else q := by
-  symm
-  rw [dite_eq_iff']
-  exact ⟨fun h => (condFlipBit_apply_of_testRes_lt h).symm,
-  fun h => (condFlipBit_apply_of_le_testRes (le_of_not_gt h)).symm⟩
+    (p.mergeBitRes b i).condFlipBit i c = p.mergeBitRes ((c[p]?.getD false).xor b) i := by grind
 
 @[simp]
-theorem condFlipBit_condFlipBit_of_eq : (q.condFlipBit i c).condFlipBit i c = q := by
-  simp_rw [condflipBit_apply, testRes_mergeBitRes_of_eq, testBit_mergeBitRes_of_eq,
-    Bool.xor, ← Bool.xor_assoc, Bool.xor_self, Bool.false_xor, mergeBitRes_testBit_testRes_of_eq]
+theorem condFlipBit_condFlipBit_of_eq : (q.condFlipBit i c).condFlipBit i c = q := by grind
 
 theorem condFlipBit_condFlipBit {d : Vector Bool l} :
-    (q.condFlipBit i c).condFlipBit i d = (q.condFlipBit i d).condFlipBit i c := by
-  simp_rw [testBit_ext_iff, testBit_condFlipBit]
-  intro k
-  rcases eq_or_ne k i with rfl | hki
-  · simp_rw [decide_true, Bool.true_and, testRes_condFlipBit_of_eq,
-    ← Bool.xor_assoc, Bool.xor_comm]
-  · simp_rw [hki, decide_false, Bool.false_and]
+    (q.condFlipBit i c).condFlipBit i d = (q.condFlipBit i d).condFlipBit i c := by grind
 
-theorem condFlipBit_of_all_of_lt_l (hq : q.testRes i < l)
-    (hc : ∀ (i : ℕ) (h : i < l), c[i] = true) :
-    q.condFlipBit i c = q.flipBit i := by
-  simp_rw [condFlipBit_eq_dite, hq, dite_true, hc _ hq, cond_true]
+@[simp, grind =]
+theorem condFlipBit_flipBit {c : Vector Bool l} :
+    (q.flipBit i).condFlipBit i c = (q.condFlipBit i c).flipBit i := by grind
 
-theorem condFlipBit_of_mkVector_true :
+theorem condFlipBit_of_all (hq : q.testRes i < l)
+    (hc : c.all id) : q.condFlipBit i c = q.flipBit i := by grind
+
+@[simp, grind =]
+theorem condFlipBit_of_replicate_true :
     q.condFlipBit i (Vector.replicate n true) = if q.testRes i < n then q.flipBit i else q := by
-  simp_rw [condFlipBit_eq_dite, Vector.getElem_replicate, cond_true, dite_eq_ite]
+  grind
 
-theorem condFlipBit_of_all_not (hc : c.all (fun x => !x)) :
-    q.condFlipBit i c = q := by
-  unfold Vector.all at hc
-  simp_rw [Array.all_eq_true, Bool.not_eq_true',
-    Vector.size_toArray, Vector.getElem_toArray] at hc
-  simp_rw [condFlipBit_eq_dite]
-  split_ifs with hq
-  · simp_rw [hc _ hq, cond_false]
-  · rfl
+theorem condFlipBit_of_all_not (hc : c.all (!·)) :
+    q.condFlipBit i c = q := by grind
 
-theorem condFlipBit_of_mkVector_false :
-    q.condFlipBit i (Vector.replicate n false) = q := by
-  simp_rw [condFlipBit_eq_dite, Vector.getElem_replicate, cond_false, dite_eq_ite, ite_self]
+@[simp, grind =]
+theorem condFlipBit_of_replicate_false :
+    q.condFlipBit i (Vector.replicate n false) = q := by grind
 
-@[simp]
+@[simp, grind =]
 theorem condFlipBit_lt_iff_lt (hin : 2^(i + 1) ∣ n) :
-    q.condFlipBit i c < n ↔ q < n := by
-  rw [condFlipBit_apply]
-  cases c[q.testRes i]?.getD false
-  · rw [cond_false]
-  · rw [cond_true, flipBit_lt_iff_lt hin]
+    q.condFlipBit i c < n ↔ q < n := by grind
 
 theorem condFlipBit_lt_two_pow_mul_iff_lt_two_pow_mul (h : i < m) (n : ℕ):
     q.condFlipBit i c < 2^m * n ↔ q < 2^m * n := by
@@ -1570,51 +1609,91 @@ end Nat
 
 namespace Vector
 
+@[grind =]
+theorem getElem_swap_mergeBitRes {α : Type*} {n i : ℕ}
+    {v : Vector α n} {k l : ℕ} (hk : k < n) {hl hl'}:
+    (v.swap (l.mergeBitRes false i) (l.mergeBitRes true i) hl hl')[k] =
+    if h : k.testRes i = l then v[k.flipBit i]'(Nat.flipBit_apply ▸ by grind) else v[k] := by
+  simp_rw [getElem_swap, Nat.eq_mergeBitRes_iff]
+  grind
+
+section CondFlipBit
+
+variable {α : Type*} {n i l : ℕ} {c : Vector Bool l}
+
+def condFlipBitIndices (v : Vector α n) (i : ℕ) (c : Vector Bool l) :
+    Vector α n :=
+  c.foldl (fun vn b => (vn.1.bswapIfInBounds b (vn.2.mergeBitRes false i)
+    (vn.2.mergeBitRes true i), vn.2 + 1)) (v, 0) |>.1
+
+@[simp, grind =]
+theorem condFlipBitIndices_empty {v : Vector α n} {i : ℕ}  :
+    condFlipBitIndices v i #v[] = v := by grind [condFlipBitIndices]
+
+@[simp, grind =]
+theorem condFlipBitIndices_zero {v : Vector α n} {i : ℕ} {c : Vector Bool 0} :
+    condFlipBitIndices v i c = v := c.eq_empty ▸ condFlipBitIndices_empty
+
+@[simp, grind =]
+theorem condFlipBitIndices_push {v : Vector α n} {i : ℕ} {c : Vector Bool l} {b : Bool} :
+    condFlipBitIndices v i (c.push b) =
+    if h : l.mergeBitRes true i < n ∧ b then
+    (condFlipBitIndices v i c).swap
+    (l.mergeBitRes false i) (l.mergeBitRes true i)
+    (Nat.mergeBitRes_false_le_mergeBitRes_true.trans_lt h.1) h.1 else
+    condFlipBitIndices v i c := by
+  trans (condFlipBitIndices v i c).bswapIfInBounds b
+    (l.mergeBitRes false i) (l.mergeBitRes true i)
+  · suffices (c.foldl (fun vn b => (vn.1.bswapIfInBounds b (vn.2.mergeBitRes false i)
+    (vn.2.mergeBitRes true i), vn.2 + 1)) (v, 0)) = (condFlipBitIndices v i c, l) by
+      grind [condFlipBitIndices]
+    induction c <;> grind [condFlipBitIndices]
+  · grind
+
+theorem condFlipBitIndices_succ {v : Vector α n} {i : ℕ} {c : Vector Bool (l + 1)} :
+    condFlipBitIndices v i c = if h : l.mergeBitRes true i < n ∧ c.back then
+    (condFlipBitIndices v i c.pop).swap
+    (l.mergeBitRes false i) (l.mergeBitRes true i)
+    (Nat.mergeBitRes_false_le_mergeBitRes_true.trans_lt h.1) else condFlipBitIndices v i c.pop := by
+  convert condFlipBitIndices_push
+  exact c.push_pop_back.symm
+
+@[grind =]
+theorem getElem_condFlipBitIndices {v : Vector α n} {c : Vector Bool l}
+    {i k : ℕ} (hk : k < n) :
+  (v.condFlipBitIndices i c)[k] =
+  if h : k.condFlipBit i c < n then v[k.condFlipBit i c] else v[k] := by
+  induction c generalizing k <;> grind
+
+@[simp] theorem condFlipBitIndices_condFlipBitIndices {v : Vector α n} :
+    (v.condFlipBitIndices i c).condFlipBitIndices i c = v := by grind
+
+def condFlipBitVals (v : Vector ℕ n) (i : ℕ) (c : Vector Bool l) : Vector ℕ n :=
+  v.map (fun k => if k.condFlipBit i c < n then k.condFlipBit i c else k)
+
+@[grind =]
+theorem getElem_condFlipBitVals {v : Vector ℕ n} {i : ℕ} {c : Vector Bool l} {k : ℕ}
+    (hk : k < n) : (condFlipBitVals v i c)[k] =
+    if v[k].condFlipBit i c < n then v[k].condFlipBit i c else v[k] := getElem_map _ _
+
+@[simp] theorem condFlipBitVals_condFlipBitVals_of_lt {v : Vector ℕ n}
+    (hv : ∀ i (hi : i < n), v[i] < n) :
+    (v.condFlipBitVals i c).condFlipBitVals i c = v := by grind
+
+end CondFlipBit
+
+
 section FlipBit
 
 variable {α : Type*} {n i : ℕ}
 
-def flipBitIndicesAux (v : Vector α n) (i t : ℕ) : Vector α n :=
-  t.fold (fun k _ v => v.swapIfInBounds (k.mergeBitRes false i) (k.mergeBitRes true i)) v
+def flipBitIndices (v : Vector α n) (i : ℕ) : Vector α n :=
+    v.condFlipBitIndices i (replicate (n.testRes i) true)
 
-@[simp]
-theorem flipBitIndicesAux_zero {v : Vector α n} {i : ℕ} : flipBitIndicesAux v i 0 = v := rfl
-@[simp]
-theorem flipBitIndicesAux_succ {v : Vector α n} {i t : ℕ} :
-    flipBitIndicesAux v i (t.succ) =
-    (flipBitIndicesAux v i t).swapIfInBounds (t.mergeBitRes false i) (t.mergeBitRes true i) := rfl
-
-theorem getElem_flipBitIndicesAux {v : Vector α n} {i t k : ℕ}
-    (hk : k < n) : (flipBitIndicesAux v i t)[k] =
-    if hk' : k.testRes i < t ∧ k.flipBit i < n then v[k.flipBit i] else v[k] := by
-  induction t generalizing k with | zero | succ t IH
-  · rfl
-  · simp_rw [Nat.lt_succ_iff, flipBitIndicesAux_succ, getElem_swapIfInBounds,
-      getElem_swap_eq_getElem_swap_apply, IH]
-    rcases eq_or_ne (k.testRes i) t with rfl | hkt
-    · simp_rw [le_rfl, true_and, lt_irrefl, false_and, dite_false]
-      have H1 := (k.testBit i).apply_false_apply_true_of_comm
-        Equiv.swap_comm ((k.testRes i).mergeBitRes · i)
-      have H2 := (k.testBit i).apply_false_apply_true_of_comm
-        (fun x _ => propext (and_comm (a := x < n))) ((k.testRes i).mergeBitRes · i)
-      simp_rw [H1, H2, Nat.mergeBitRes_testBit_testRes_of_eq,
-        Equiv.swap_apply_left, Nat.testRes_mergeBitRes_of_eq, Nat.flipBit_mergeBitRes_of_eq,
-        Bool.not_not, Nat.mergeBitRes_testBit_testRes_of_eq, Nat.flipBit_apply,
-        lt_irrefl, hk, true_and, false_and, dite_false]
-    · have H : ∀ {b}, k ≠ t.mergeBitRes b i := fun h => hkt (h ▸ Nat.testRes_mergeBitRes_of_eq)
-      simp_rw [Equiv.swap_apply_of_ne_of_ne H H, hkt.le_iff_lt]
-      split_ifs <;> rfl
-
-def flipBitIndices (v : Vector α n) (i : ℕ) : Vector α n := v.flipBitIndicesAux i (n.testRes i)
-
+@[grind =]
 theorem getElem_flipBitIndices {v : Vector α n} {i k : ℕ} (hk : k < n) :
     (v.flipBitIndices i)[k] = if hk : k.flipBit i < n then v[k.flipBit i] else v[k] := by
-  refine (getElem_flipBitIndicesAux hk).trans ?_
-  simp_rw [Nat.testRes_lt_testRes_iff, hk, true_and, Bool.eq_not]
-  rcases eq_or_ne (k.testBit i) (n.testBit i) with hkn | hkn
-  · simp_rw [hkn, true_or, true_and]
-  · simp_rw [ne_eq, hkn, not_false_eq_true, false_or, and_true,
-      Nat.flipBit_lt_iff_lt_flipBit_of_testBit_eq_not_testBit hkn, and_self]
+  grind [flipBitIndices]
 
 @[simp] theorem flipBitIndices_flipBitIndices {v : Vector α n} :
     (v.flipBitIndices i).flipBitIndices i = v := by
@@ -1626,6 +1705,7 @@ theorem getElem_flipBitIndices {v : Vector α n} {i k : ℕ} (hk : k < n) :
 def flipBitVals (v : Vector ℕ n) (i : ℕ) : Vector ℕ n := v.map
   (fun k => if k.flipBit i < n then k.flipBit i else k)
 
+@[grind =]
 theorem getElem_flipBitVals {v : Vector ℕ n} {i k : ℕ} (hk : k < n) :
     (flipBitVals v i)[k] = if v[k].flipBit i < n then v[k].flipBit i else v[k] :=
   getElem_map _ _
@@ -1641,110 +1721,6 @@ theorem getElem_flipBitVals {v : Vector ℕ n} {i k : ℕ} (hk : k < n) :
   · rfl
 
 end FlipBit
-
-section CondFlipBit
-
-variable {α : Type*} {n i l : ℕ} {c : Vector Bool l}
-
-def condFlipBitIndicesAux (v : Vector α n) (i : ℕ) (c : Vector Bool l) (t : ℕ) : Vector α n :=
-    t.fold (fun k _ v => v.swapIfInBounds (k.mergeBitRes false i)
-    (k.mergeBitRes (c[k]?.getD false) i)) v
-
-@[simp]
-theorem condFlipBitIndicesAux_zero {v : Vector α n} {i : ℕ} {c : Vector Bool l} :
-    condFlipBitIndicesAux v i c 0 = v := rfl
-
-@[simp]
-theorem condFlipBitIndicesAux_succ {v : Vector α n} {i t : ℕ} {c : Vector Bool l} :
-    condFlipBitIndicesAux v i c t.succ = (condFlipBitIndicesAux v i c t).swapIfInBounds
-    (t.mergeBitRes false i) (t.mergeBitRes (c[t]?.getD false) i) := rfl
-
-theorem getElem_condFlipBitIndicesAux {v : Vector α n} {i t k : ℕ} {c : Vector Bool l}
-    (hk : k < n) :
-    (condFlipBitIndicesAux v i c t)[k] =
-    if hk' : k.testRes i < t ∧ k.condFlipBit i c < n then
-      v[k.condFlipBit i c] else v[k] := by
-  induction t generalizing k with | zero | succ t IH
-  · rfl
-  · simp_rw [condFlipBitIndicesAux_succ, getElem_swapIfInBounds, getElem_swap, IH,
-      Nat.testRes_mergeBitRes_of_eq, lt_self_iff_false, false_and, dite_false,
-      Nat.eq_mergeBitRes_iff, Nat.lt_succ_iff]
-    rcases lt_trichotomy (k.testRes i) t with hkt | rfl | hkt
-    · simp_rw [hkt, hkt.ne, hkt.le, and_false, ite_false, true_and]
-      split_ifs <;> rfl
-    · simp_rw [and_true, lt_self_iff_false, false_and, dite_false, le_refl, true_and]
-      rcases lt_or_ge (k.testRes i) l with hkc | hkc
-      · simp_rw [getElem?_pos c (k.testRes i) hkc, Option.getD_some,
-        Nat.condFlipBit_apply_of_testRes_lt hkc]
-        rcases Bool.eq_false_or_eq_true (c[k.testRes i]) with hc | hc <;> simp_rw [hc]
-        · simp_rw [cond_true]
-          rcases Bool.eq_false_or_eq_true (k.testBit i) with hki | hki <;> simp_rw [hki]
-          · simp_rw [Bool.true_eq_false, ite_false, ite_true, ← Bool.not_true, ← hki,
-              ← Nat.flipBit_apply, Nat.mergeBitRes_testBit_testRes_of_eq, hk, and_true]
-          · simp_rw [if_true, ← Bool.not_false, ← hki, ← Nat.flipBit_apply,
-              Nat.mergeBitRes_testBit_testRes_of_eq, hk, true_and]
-        · simp_rw [cond_false, hk, dite_true]
-          split_ifs with _ h
-          · simp_rw [← h, Nat.mergeBitRes_testBit_testRes_of_eq]
-          · rfl
-          · rfl
-      · simp_rw [getElem?_neg c (k.testRes i) hkc.not_gt,
-          Option.getD_none, Nat.condFlipBit_apply_of_le_testRes hkc, hk, dite_true]
-        split_ifs with _ h
-        · simp_rw [← h, Nat.mergeBitRes_testBit_testRes_of_eq]
-        · rfl
-        · rfl
-    · simp_rw [hkt.ne', hkt.not_gt, hkt.not_ge,  and_false, false_and, dite_false, ite_false]
-      split_ifs <;> rfl
-
-def condFlipBitIndices (v : Vector α n) (i : ℕ) (c : Vector Bool l) :
-    Vector α n := v.condFlipBitIndicesAux i c (min l (n.testRes i))
-
-@[simp] theorem getElem_condFlipBitIndices {v : Vector α n} {c : Vector Bool l} {i k : ℕ}
-    (hk : k < n) :
-  (v.condFlipBitIndices i c)[k] = if hk : k.condFlipBit i c < n then
-    v[k.condFlipBit i c] else v[k] := by
-  refine (getElem_condFlipBitIndicesAux hk).trans ?_
-  simp_rw [lt_min_iff]
-  rcases lt_or_ge (k.testRes i) l with hkl | hkl
-  · simp_rw [hkl, true_and, Nat.condFlipBit_apply_of_testRes_lt hkl]
-    rcases (c[k.testRes i]).eq_false_or_eq_true with hkc | hkc
-    · simp_rw [hkc, cond_true]
-      simp_rw [Nat.testRes_lt_testRes_iff, hk, true_and, Bool.eq_not]
-      rcases eq_or_ne (k.testBit i) (n.testBit i) with hkn | hkn
-      · simp_rw [hkn, true_or, true_and]
-      · simp_rw [ne_eq, hkn, not_false_eq_true, false_or, and_true,
-          Nat.flipBit_lt_iff_lt_flipBit_of_testBit_eq_not_testBit hkn, and_self]
-    · simp_rw [hkc, cond_false]
-      split_ifs <;> rfl
-  · simp_rw [Nat.condFlipBit_apply_of_le_testRes hkl]
-    split_ifs <;> rfl
-
-@[simp] theorem condFlipBitIndices_condFlipBitIndices {v : Vector α n} :
-    (v.condFlipBitIndices i c).condFlipBitIndices i c = v := by
-  ext i hi
-  simp_rw [getElem_condFlipBitIndices, Nat.condFlipBit_condFlipBit_of_eq, hi, dite_true]
-  split_ifs <;> rfl
-
-def condFlipBitVals (v : Vector ℕ n) (i : ℕ) (c : Vector Bool l) : Vector ℕ n :=
-  v.map (fun k => if k.condFlipBit i c < n then k.condFlipBit i c else k)
-
-theorem getElem_condFlipBitVals {v : Vector ℕ n} {i : ℕ} {c : Vector Bool l} {k : ℕ}
-    (hk : k < n) : (condFlipBitVals v i c)[k] =
-    if v[k].condFlipBit i c < n then v[k].condFlipBit i c else v[k] := getElem_map _ _
-
-@[simp] theorem condFlipBitVals_condFlipBitVals_of_lt {v : Vector ℕ n}
-    (hv : ∀ i (hi : i < n), v[i] < n) :
-    (v.condFlipBitVals i c).condFlipBitVals i c = v := by
-  ext i hi
-  simp_rw [getElem_condFlipBitVals]
-  split_ifs with _ C
-  · simp_rw [Nat.condFlipBit_condFlipBit_of_eq]
-  · simp_rw [Nat.condFlipBit_condFlipBit_of_eq] at C
-    exact (C (hv _ _)).elim
-  · rfl
-
-end CondFlipBit
 
 end Vector
 
@@ -2037,11 +2013,13 @@ def condFlipBitVals (a : PermOf n) (i : ℕ) (c : Vector Bool l) : PermOf n :=
 
 variable {a b : PermOf n} {i k : ℕ} {c : Vector Bool l}
 
+@[grind =]
 theorem getElem_condFlipBitIndices {hk : k < n} :
     (a.condFlipBitIndices i c)[k] =
     if hk : k.condFlipBit i c < n then a[k.condFlipBit i c] else a[k] :=
   Vector.getElem_condFlipBitIndices _
 
+@[grind =]
 theorem getElem_condFlipBitVals {hk : k < n} :
     (a.condFlipBitVals i c)[k] =
     if a[k].condFlipBit i c < n then a[k].condFlipBit i c else a[k] :=
@@ -2057,17 +2035,11 @@ theorem getElem_inv_condFlipBitVals {hk : k < n} :
     if hk : k.condFlipBit i c < n then a⁻¹[k.condFlipBit i c] else a⁻¹[k] :=
 Vector.getElem_condFlipBitIndices _
 
-@[simp] theorem condFlipBitIndices_of_mkVector_false :
-    (a.condFlipBitIndices i (Vector.replicate l false)) = a := by
-  ext
-  simp_rw [getElem_condFlipBitIndices, Nat.condFlipBit_of_mkVector_false,
-    dite_eq_right_iff, implies_true]
+@[simp] theorem condFlipBitIndices_of_replicate_false :
+    (a.condFlipBitIndices i (Vector.replicate l false)) = a := by grind
 
-@[simp] theorem condFlipBitVals_of_mkVector_false :
-    (a.condFlipBitVals i (Vector.replicate l false)) = a := by
-  ext
-  simp_rw [getElem_condFlipBitVals, Nat.condFlipBit_of_mkVector_false, ite_self]
-
+@[simp] theorem condFlipBitVals_of_replicate_false :
+    (a.condFlipBitVals i (Vector.replicate l false)) = a := by grind
 
 def condFlipBit (i : ℕ) (c : Vector Bool l) : PermOf n :=
   (1 : PermOf n).condFlipBitIndices i c
@@ -2077,10 +2049,10 @@ theorem getElem_condFlipBit {hk : k < n} :
   unfold condFlipBit
   simp_rw [getElem_condFlipBitIndices, getElem_one, dite_eq_ite]
 
-@[simp] theorem condFlipBit_of_mkVector_false :
+@[simp] theorem condFlipBit_of_replicate_false :
     (condFlipBit i (Vector.replicate l false)) = (1 : PermOf n) := by
   ext
-  simp_rw [getElem_condFlipBit, Nat.condFlipBit_of_mkVector_false, ite_self, getElem_one]
+  simp_rw [getElem_condFlipBit, Nat.condFlipBit_of_replicate_false, ite_self, getElem_one]
 
 theorem getElem_inv_condFlipBit {hk : k < n} :
     (condFlipBit i c)⁻¹[k] = if k.condFlipBit i c < n then k.condFlipBit i c else k := by

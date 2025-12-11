@@ -15,6 +15,7 @@ theorem getD_of_lt (a : Vector α n) (x : α) (i : ℕ) (h : i < n) : a[i]?.getD
 theorem getD_of_ge (a : Vector α n) (x : α) (i : ℕ) (h : n ≤ i) : a[i]?.getD x = x := by
   rw [getElem?_neg a i h.not_gt, Option.getD_none]
 
+@[grind =]
 theorem getElem_swapIfInBounds {as : Vector α n} {i j k : ℕ} (hk : k < n) :
     (as.swapIfInBounds i j)[k] =
     if h : i < n ∧ j < n then (as.swap i j)[k] else as[k] := by
@@ -59,5 +60,87 @@ theorem cast_singleton_head_append_tail [NeZero n] (v : Vector α n) :
   cases v with | mk as has => _
   unfold back
   simp_rw [add_tsub_cancel_right]
+
+@[simp, grind =]
+theorem swap_same {xs : Vector α n} {i : Nat} {hi} : xs.swap i i hi hi = xs := by grind
+
+@[simp, grind =]
+theorem swapIfInBounds_same {xs : Vector α n} {i : Nat}: xs.swapIfInBounds i i = xs := by grind
+
+def bswap (xs : Vector α n) (b : Bool) (i j : Nat) (hi : i < n := by get_elem_tactic)
+    (hj : j < n := by get_elem_tactic) : Vector α n :=
+  ⟨xs.toArray.bswap b i j (by grind) (by grind), by grind⟩
+
+@[grind =] theorem getElem_bswap {xs : Vector α n} {b : Bool} {i j : Nat} {hi hj}
+    (hk : k < (xs.bswap b i j hi hj).size) :
+    (xs.bswap b i j hi hj)[k] = bif b then (xs.swap i j)[k]'(by grind) else xs[k]'(by grind) :=
+  Array.getElem_bswap _
+
+@[simp]
+theorem bswap_true {xs : Vector α n} {i j : Nat} {hi hj} :
+    xs.bswap true i j hi hj = xs.swap i j hi hj := by grind
+
+@[simp]
+theorem bswap_false {xs : Vector α n} {i j : Nat} {hi hj} :
+    xs.bswap false i j hi hj = xs := by grind
+
+def bswapIfInBounds (xs : Vector α n) (b : Bool) (i j : @& Nat) : Vector α n :=
+  ⟨xs.toArray.bswapIfInBounds b i j, by grind⟩
+
+@[grind =] theorem getElem_bswapIfInBounds {xs : Vector α n} {b : Bool} {i j : Nat}
+    (hk : k < (xs.bswapIfInBounds b i j).size) :
+    (xs.bswapIfInBounds b i j)[k] =
+    bif b then (xs.swapIfInBounds i j)[k]'(by grind) else xs[k]'(by grind) :=
+  Array.getElem_bswapIfInBounds _
+
+@[simp]
+theorem bswapIfInBounds_true {xs : Vector α n} {i j : Nat} :
+    xs.bswapIfInBounds true i j  = xs.swapIfInBounds i j := by grind
+
+@[simp]
+theorem bswapIfInBounds_false {xs : Vector α n} {i j : Nat} :
+    xs.bswapIfInBounds false i j = xs := by grind
+
+attribute [grind =] pop_push
+
+@[elab_as_elim, induction_eliminator, grind =]
+def induction {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
+    (push : ∀ (n : ℕ) (xs : Vector α n) (x : α), C xs → C (xs.push x)) :
+    {n : ℕ} → (xs : Vector α n) → C xs
+  | 0, xs => xs.eq_empty ▸ empty
+  | _ + 1, xs => xs.push_pop_back ▸ push _ _ _ (induction empty push _)
+
+@[simp]
+theorem induction_empty {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
+    (push : ∀ (n : ℕ) (xs : Vector α n) (x : α), C xs → C (xs.push x)) :
+  induction empty push #v[] = empty := by grind
+
+@[simp]
+theorem induction_push {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
+    (push : ∀ (n : ℕ) (xs : Vector α n) (x : α), C xs → C (xs.push x)) (xs : Vector α n) (x : α) :
+    induction empty push (xs.push x) = push ((n + 1) - 1) xs x (induction empty push xs) := by grind
+
+@[elab_as_elim, cases_eliminator, grind =]
+def cases {C : ∀ {n : ℕ}, Vector α n → Sort*}
+    (empty : C #v[])
+    (push : ∀ (n : ℕ) (xs : Vector α n) (x : α), C (xs.push x))
+    {n : ℕ} (v : Vector α n) : C v := v.induction empty (fun _ _ _ _ => push _ _ _)
+
+@[simp]
+theorem cases_empty {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
+    (push : ∀ (n : ℕ) (xs : Vector α n) (x : α), C (xs.push x)) :
+  cases empty push #v[] = empty := by grind
+
+@[simp]
+theorem cases_push {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
+    (push : ∀ (n : ℕ) (xs : Vector α n) (x : α), C (xs.push x)) (xs : Vector α n) (x : α) :
+    cases empty push (xs.push x) = push ((n + 1) - 1) xs x := by grind
+
+theorem exists_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Nat}  :
+    (∃ (hk : k < n + 1), f (c.push b)[k]) ↔ k = n ∧ f b ∨ ∃ (hk : k < n), f c[k] := by grind
+
+theorem forall_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Nat}  :
+    (∀ (hk : k < n + 1), f (c.push b)[k]) ↔ (k = n → f b) ∧ ∀ (hk : k < n), f c[k] := by grind
+
 
 end Vector

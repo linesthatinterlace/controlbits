@@ -146,8 +146,7 @@ def toFinVector (a : PermOf n) : Vector (Fin n) n := Vector.ofFn fun i => ⟨a[i
 theorem coe_getElem_toFinVector (h : i < n) : a.toFinVector[i] = a[i] :=
   congrArg Fin.val (Vector.getElem_ofFn _)
 
-
-@[ext]
+@[ext, grind ext]
 theorem ext (h : ∀ (i : ℕ) (hi : i < n), a[i] = b[i]) : a = b := by
   suffices h : a.toVector = b.toVector ∧ a.invVector = b.invVector by
     rcases a ; rcases b ; simp_rw [mk.injEq] ; exact h

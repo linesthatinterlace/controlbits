@@ -83,7 +83,7 @@ theorem getElem_leftPerm (hk : k < 2^(n + 1)) :
 theorem getElem_leftPerm_of_gt (hi : n < i) (hk : k < 2^(n + 1))  :
     (leftPerm a i)[k] = k := by
   unfold leftPerm
-  rw [leftLayer_eq_of_gt hi, condFlipBit_of_mkVector_false, getElem_one]
+  rw [leftLayer_eq_of_gt hi, condFlipBit_of_replicate_false, getElem_one]
 
 @[simp]
 theorem getElem_leftPerm_leftPerm (hk : k < 2^(n + 1)) :
@@ -112,11 +112,9 @@ theorem testBit_leftPerm {i : ℕ}
       getElem_leftLayer_of_le hi]
     rcases Bool.eq_false_or_eq_true (k.testBit i) with hkb | hkb
     · simp_rw [← Bool.not_true, ← hkb, ← flipBit_apply,
-      a.flipBit_getElem_cycleMinVector_flipBitCommutator_comm ha hk (Nat.lt_succ_of_le hi),
-      Bool.apply_cond (fun (k : ℕ) => k.testBit i), testBit_flipBit_of_eq, hkb,
-      Bool.not_true, Bool.cond_not, Bool.cond_false_right, Bool.and_true]
-    · simp_rw [← hkb, mergeBitRes_testBit_testRes_of_eq, Bool.apply_cond (fun (k : ℕ) => k.testBit i),
-      testBit_flipBit_of_eq, hkb, Bool.not_false, Bool.cond_false_right, Bool.and_true]
+      a.flipBit_getElem_cycleMinVector_flipBitCommutator_comm ha hk (Nat.lt_succ_of_le hi)]
+      grind
+    · grind
   · simp_rw [getElem_leftPerm_of_gt hi, Nat.sub_eq_zero_of_le hi.le, getElem_cycleMinVector_zero]
 
 end LeftPerm
@@ -182,7 +180,7 @@ theorem getElem_rightPerm (hk : k < 2^(n + 1)) :
 theorem getElem_rightPerm_of_gt (hi : n < i) (hk : k < 2^(n + 1))  :
     (rightPerm a i)[k] = k := by
   unfold rightPerm
-  rw [rightLayer_eq_of_gt hi, condFlipBit_of_mkVector_false, getElem_one]
+  rw [rightLayer_eq_of_gt hi, condFlipBit_of_replicate_false, getElem_one]
 
 @[simp]
 theorem getElem_rightPerm_rightPerm (hk : k < 2^(n + 1)) :
@@ -209,18 +207,17 @@ theorem testBit_rightPerm {i : ℕ}
     have hk' := (flipBit_lt_two_pow_iff_lt_two_pow (Nat.lt_succ_of_le hi)).mpr hk
     simp_rw [getElem_rightPerm, getElem_condFlipBit_of_div hin,
       condFlipBit_apply_of_testRes_lt ((testRes_lt_two_pow_iff_lt_two_pow hi).mpr hk),
-      getElem_rightLayer_of_le hi, Bool.apply_cond (fun (k : ℕ) => k.testBit i),
+      getElem_rightLayer_of_le hi, apply_ite (fun (k : ℕ) => k.testBit i),
       testBit_flipBit_of_eq]
     rcases (Bool.eq_false_or_eq_true (k.testBit i)) with hkb | hkb
-    · simp_rw [hkb, testBit_leftPerm ha, Bool.not_true, Bool.cond_true_right, Bool.or_false,
-        Bool.not_eq_eq_eq_not, ← testBit_flipBit_of_eq, ← Bool.not_true, ← hkb, ← flipBit_apply,
-        ← getElem_flipBitIndices_of_div hin (hk := hk),
+    · simp_rw [hkb, testBit_leftPerm ha, Bool.not_true, Bool.if_true_right, Bool.decide_eq_true,
+        Bool.or_false, Bool.not_eq_eq_eq_not, ← testBit_flipBit_of_eq, ← Bool.not_true, ← hkb,
+        ← flipBit_apply, ← getElem_flipBitIndices_of_div hin (hk := hk),
         a.flipBitCommutator_cycleMinVector_getElem_getElem_flipBit
         (period_le_two_pow_sub_of_bitInvariant_lt ha), getElem_flipBitVals_of_div hin,
         a.flipBit_getElem_cycleMinVector_flipBitCommutator_comm ha (a.getElem_lt _)
         (Nat.lt_succ_of_le hi)]
-    · simp_rw [hkb, Bool.not_false, Bool.cond_false_right, Bool.and_true,
-        ← hkb, mergeBitRes_testBit_testRes_of_eq]
+    · grind
   · simp_rw [getElem_leftPerm_of_gt hi, getElem_rightPerm_of_gt hi,
       (bitInvariant_of_ge (Nat.pow_le_pow_of_le one_lt_two hi)).testBit_getElem_eq_testBit]
 
@@ -251,7 +248,7 @@ section MiddlePerm
   simp_rw [condFlipBitVals_eq_condFlipBit_mul, condFlipBitIndices_eq_mul_condFlipBit]
   rcases le_or_gt i n with hi | hi
   · simp_rw [dif_pos hi, getElem_mul]
-  · simp_rw [dif_neg hi.not_ge,  condFlipBit_of_mkVector_false, getElem_one]
+  · simp_rw [dif_neg hi.not_ge,  condFlipBit_of_replicate_false, getElem_one]
 
 theorem middlePerm_eq_condFlipBitVals_condFlipBitIndices :
     a.middlePerm i =
@@ -467,7 +464,7 @@ theorem leftPermIth_inv : (leftPermIth a i)⁻¹ = (leftPermIth a i) := by
 
 theorem leftPermIth_eq_of_ge (hi : n ≤ i) :
     a.leftPermIth i = 1 := by
-  simp_rw [leftPermIth, leftLayerIth_eq_of_ge hi, condFlipBit_of_mkVector_false]
+  simp_rw [leftPermIth, leftLayerIth_eq_of_ge hi, condFlipBit_of_replicate_false]
 
 theorem leftPermIth_zero :
     a.leftPermIth 0 = a.leftPerm 0 := by
@@ -486,7 +483,7 @@ theorem rightPermIth_inv : (rightPermIth a i)⁻¹ = (rightPermIth a i) := by
 
 theorem rightPermIth_eq_of_gt (hi : n < i) :
     a.rightPermIth i = 1 := by
-  simp_rw [rightPermIth, rightLayerIth_eq_of_gt hi, condFlipBit_of_mkVector_false]
+  simp_rw [rightPermIth, rightLayerIth_eq_of_gt hi, condFlipBit_of_replicate_false]
 
 theorem rightPermIth_zero :
     a.rightPermIth 0 = a.rightPerm 0 := by
