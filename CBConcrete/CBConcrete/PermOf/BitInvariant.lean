@@ -40,7 +40,7 @@ theorem bitInvariant_lt_of_lt_iff_testBit_getElem_eq_testBit_of_lt : (∀ k < i,
 
 theorem bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow : (∀ k < i, a.BitInvariant k) ↔
     ∀ {x} (h : x < n), a[x] % 2^i = x % 2^i := by
-  simp_rw [Nat.testBit_ext_iff, testBit_mod_two_pow,
+  simp_rw [Nat.testBit_eq_iff, testBit_mod_two_pow,
     bitInvariant_lt_of_lt_iff_testBit_getElem_eq_testBit_of_lt,
     Bool.and_inj_left, decide_eq_false_iff_not, imp_iff_not_or]
 

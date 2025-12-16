@@ -46,7 +46,7 @@ theorem testBit_flipBit_of_ne {i j : ℕ} (hij : i ≠ j) :
 @[grind =]
 theorem flipBit_apply {i : ℕ} :
     q.flipBit i = (q.removeBit i).insertBit (!(testBit q i)) i := by
-  simp_rw [Nat.testBit_ext_iff]
+  simp_rw [Nat.testBit_eq_iff]
   intro j
   rcases lt_trichotomy i j with hij | rfl | hij
   · rw [testBit_flipBit_of_ne hij.ne', testBit_insertBit_of_gt hij, testBit_pred_removeBit_of_gt hij]
@@ -67,11 +67,11 @@ theorem flipBit_eq_cond {i : ℕ} : q.flipBit i = bif testBit q i then q - 2^i e
 -- flipBit equalities and inequalities
 
 theorem flipBit_div_two_pow_eq {i : ℕ} (h : i < k) : q.flipBit i / 2^k = q / 2^k := by
-  simp_rw [Nat.testBit_ext_iff, testBit_div_two_pow,
+  simp_rw [testBit_eq_iff, testBit_div_two_pow,
   testBit_flipBit_of_ne (h.trans_le (Nat.le_add_left _ _)).ne', implies_true]
 
 theorem flipBit_mod_two_pow_eq {i : ℕ} (h : k ≤ i) : q.flipBit i % 2^k = q % 2^k := by
-  simp_rw [Nat.testBit_ext_iff, testBit_mod_two_pow]
+  simp_rw [testBit_eq_iff, testBit_mod_two_pow]
   intro j
   rcases eq_or_ne j i with rfl | hji
   · simp_rw [h.not_gt, decide_false, Bool.false_and]
@@ -247,11 +247,11 @@ theorem insertBit_true_removeBit_lt_iff {r : ℕ} :
     (p.removeBit i).insertBit true i < r ↔ (p < r ∧ p.flipBit i < r) := by grind
 
 theorem flipBit_flipBit (i j) : (q.flipBit i).flipBit j = (q.flipBit j).flipBit i := by
-  simp_rw [Nat.testBit_ext_iff, testBit_flipBit, Bool.xor_assoc, Bool.xor_comm, implies_true]
+  simp_rw [testBit_eq_iff, testBit_flipBit, Bool.xor_assoc, Bool.xor_comm, implies_true]
 
 @[simp, grind .]
 theorem flipBit_ne_self : q.flipBit i ≠ q := by
-  simp_rw [ne_eq, Nat.testBit_ext_iff, not_forall]
+  simp_rw [ne_eq, testBit_eq_iff, not_forall]
   exact ⟨i, by simp_rw [testBit_flipBit_of_eq, Bool.not_eq_self, not_false_eq_true]⟩
 
 @[simp]
@@ -289,7 +289,7 @@ theorem testBit_eq_flipBit_testBit_of_le_of_flipBit_le_ge {r : ℕ} (hrq : r < q
 theorem eq_flipBit_of_lt_of_flipBit_ge_of_lt_testBit_eq {r : ℕ} (hrq : r < q)
     (hf : q.flipBit i ≤ r.flipBit i) (h : ∀ {k}, k < i → r.testBit k = q.testBit k) :
     r = q.flipBit i := by
-  rw [Nat.testBit_ext_iff]
+  rw [testBit_eq_iff]
   intros k
   rcases lt_or_ge k i with hik | hik
   · rw [testBit_flipBit_of_ne hik.ne, h hik]
@@ -314,7 +314,7 @@ theorem flipBitPerm_eq_permCongr (i : ℕ) :
   simp_rw [Equiv.ext_iff, flipBitPerm_apply,
     flipBit_apply, Equiv.permCongr_apply, insertBitEquiv_apply,
     Equiv.prodCongr_apply, Prod.map_fst, Prod.map_snd, Equiv.refl_apply, boolInversion_apply,
-    insertBitEquiv_symm_apply_fst, insertBitEquiv_symm_apply_snd, implies_true]
+    insertBitEquiv_symm_apply, implies_true]
 
 end FlipBit
 
@@ -481,7 +481,10 @@ theorem getElem_condFlipBitIndices {v : Vector α n} {c : Vector Bool l}
     {i k : ℕ} (hk : k < n) :
   (v.condFlipBitIndices i c)[k] =
   if h : k.condFlipBit i c < n then v[k.condFlipBit i c] else v[k] := by
-  induction c generalizing k <;> grind
+  induction c generalizing k
+  · grind
+  · simp only [condFlipBitIndices_push, Nat.condFlipBit_push]
+    grind
 
 @[simp] theorem condFlipBitIndices_condFlipBitIndices {v : Vector α n} :
     (v.condFlipBitIndices i c).condFlipBitIndices i c = v := by grind
