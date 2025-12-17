@@ -28,13 +28,13 @@ def equivBitMatchUnder {n i : ℕ} {x : Fin (2^n)}:
       refine (Nat.add_le_add_right (mul_le_mul_left _ (le_sub_one_of_lt b.isLt)) _).trans
         (?_ : _ = _).le; rw [Nat.mul_sub, ← Nat.pow_add]; grind
     · have H := mod_lt_of_lt x.isLt (b := 2^i); grind),
-    by grind [testBit_two_pow_mul_add, Nat.two_pow_pos]⟩⟩
+    by grind [Nat.two_pow_pos]⟩⟩
   left_inv  := fun ⟨a, ha⟩ => Subtype.ext <| testBit_ext <| by
     rw [mem_bitMatchUnder_iff] at ha
     have H : ∀ j < i, a.testBit j = x.1.testBit j := ha.2
     have H' : ∀ j ≥ n, a.testBit j = false :=
       fun j hj => testBit_eq_false_of_lt (ha.1.trans_le (by grind))
-    grind [testBit_two_pow_mul_add, Nat.two_pow_pos]
+    grind [Nat.two_pow_pos]
   right_inv b := Fin.ext <| by
     simp
     rw [Nat.mul_add_div (Nat.two_pow_pos _), Nat.mod_div_self, add_zero, Nat.mod_eq_of_lt b.isLt]
