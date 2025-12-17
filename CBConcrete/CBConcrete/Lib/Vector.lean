@@ -7,6 +7,8 @@ namespace Vector
 
 variable {α β γ : Type*} {n m k i j : ℕ}
 
+attribute [grind =] getElem_mk
+
 @[simp]
 theorem getD_of_lt (a : Vector α n) (x : α) (i : ℕ) (h : i < n) : a[i]?.getD x = a[i] := by
   simp_rw [getElem?_pos a i h, Option.getD_some]
@@ -19,9 +21,7 @@ theorem getD_of_ge (a : Vector α n) (x : α) (i : ℕ) (h : n ≤ i) : a[i]?.ge
 theorem getElem_swapIfInBounds {as : Vector α n} {i j k : ℕ} (hk : k < n) :
     (as.swapIfInBounds i j)[k] =
     if h : i < n ∧ j < n then (as.swap i j)[k] else as[k] := by
-  unfold swapIfInBounds swap
-  simp_rw [getElem_mk, Array.getElem_swapIfInBounds, Vector.size_toArray,
-    Vector.getElem_toArray]
+  grind [swapIfInBounds]
 
 theorem mem_def {a : α} (v : Vector α n) : a ∈ v ↔ a ∈ v.toArray :=
   ⟨fun | .mk h => h, Vector.Mem.mk⟩

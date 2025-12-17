@@ -178,6 +178,7 @@ theorem testBit_mod_two (x i : Nat) :
     (x % 2).testBit i = (decide (i = 0) && x.testBit 0) := by grind [mod_div_self, cases Nat]
 
 attribute [grind =] testBit_mod_two_pow testBit_div_two_pow testBit_succ testBit_div_two
+  testBit_two_pow_mul_add
 
 theorem testBit_ne_iff {q q' : ℕ} : q ≠ q' ↔ (∃ i : ℕ, q.testBit i ≠ q'.testBit i) := by
   simp_rw [ne_eq, testBit_eq_iff]
@@ -195,8 +196,13 @@ theorem testBit_ext_mod_two_pow_iff {q q' m : ℕ} : q % 2^m = q' % 2^m ↔
 
 theorem testBit_one_succ {k : ℕ} : testBit 1 (k + 1) = false := by grind
 
+@[grind =]
 theorem testBit_one {k : ℕ} : testBit 1 k = decide (k = 0) := by grind [cases Nat]
 
+@[grind =]
+theorem testBit_two {k : ℕ} : testBit 2 k = decide (k = 1) := by grind [cases Nat]
+
+@[grind =]
 theorem testBit_toNat_zero {b : Bool} : b.toNat.testBit 0 = b := by grind
 
 theorem testBit_toNat_succ {b : Bool} {k : ℕ} : b.toNat.testBit (k + 1) = false := by grind
@@ -213,12 +219,27 @@ theorem testBit_false_iff_mod_two_pow_succ_lt_two_pow {i k : ℕ} :
   simp_rw [lt_pow_two_iff, testBit_mod_two_pow]
   grind
 
+@[grind =]
+theorem testBit_two_mul (x : Nat) (j : Nat) :
+    (2 * x).testBit j = (decide (j ≥ 1) && x.testBit (j - 1)):= by
+  rw [← pow_one 2, testBit_two_pow_mul]
+
+theorem testBit_two_pow_mul_add' (a : Nat) {b i : Nat} (j : Nat) :
+    testBit (2 ^ i * a + b) j = if j < i then b.testBit j else  (a + b / 2^i).testBit (j - i) := by
+  trans ((2 ^ i * (a + b / 2 ^ i) + b % 2 ^ i).testBit j) <;> grind [div_add_mod]
+
+@[grind =]
+theorem testBit_two_mul_add (x y i : Nat) :
+    (2 * x + y).testBit i = if i = 0 then y.testBit 0 else (x + y / 2).testBit (i - 1) := by
+  rw [← pow_one 2, testBit_two_pow_mul_add']
+  grind
+
 theorem testBit_add_two_pow_eq (x : Nat) (i : Nat) :
     (x + 2^i).testBit i = !x.testBit i := by grind [testBit_two_pow_add_eq]
 
-theorem testBit_add_mul_two_pow (a : Nat) {b : Nat} {i : Nat} (b_lt : b < 2 ^ i) (j : Nat) :
-    (b + 2 ^ i * a).testBit j = if j < i then b.testBit j else a.testBit (j - i) := by
-  grind [testBit_two_pow_mul_add]
+theorem testBit_add_mul_two_pow (a : Nat) {b : Nat} {i : Nat} (j : Nat) :
+    (b + 2 ^ i * a).testBit j = if j < i then b.testBit j else  (b / 2^i + a).testBit (j - i) := by
+  simp_rw [b.add_comm, add_comm _ a, testBit_two_pow_mul_add']
 
 theorem testBit_add_mul_two_pow_eq (a : Nat) (b : Nat) (i : Nat) :
     (b + 2 ^ i * a).testBit i = (decide (a % 2 = 1)).xor (b.testBit i) := by
@@ -343,28 +364,40 @@ end Lxor
 
 section ShiftLeft
 
+attribute [grind =] shiftLeft_eq
+
 theorem shiftLeft_one {m : ℕ} : m <<< 1 = 2 * m := rfl
 
 end ShiftLeft
 
 section ShiftLeft'
 
+@[grind =]
 theorem shiftLeft'_zero {b : Bool} {m : ℕ}  : shiftLeft' b m 0 = m := rfl
+
+@[grind =]
 theorem shiftLeft'_succ {b : Bool} {m i: ℕ} :
     (shiftLeft' b m i.succ) = bit b (shiftLeft' b m i) := rfl
+
+theorem shiftLeft'_true {m : ℕ} (n : ℕ) :
+    shiftLeft' true m n = (m <<< n) ^^^ (1 <<< n - 1) := eq_of_testBit_eq <| by
+  induction n  <;> grind
+
+theorem shiftLeft'_eq_shiftLeft_xor_shiftLeft_sub_one {m : ℕ} {b : Bool} (n : ℕ) :
+    shiftLeft' b m n = (m <<< n) ^^^ (b.toNat <<< n - 1) := by
+  cases b
+  · rw [shiftLeft'_false, Bool.toNat_false, zero_shiftLeft, Nat.zero_sub, xor_zero]
+  · rw [shiftLeft'_true, Bool.toNat_true]
 
 theorem testBit_shiftLeft' {b : Bool} {m i j : ℕ}  :
     (shiftLeft' b m i).testBit j = bif j < i then b else m.testBit (j - i) := by
   induction i generalizing j with | zero | succ i IH
-  · simp_rw [shiftLeft'_zero, Nat.not_lt_zero, decide_false, cond_false, Nat.sub_zero]
+  · grind [shiftLeft']
   · simp_rw [shiftLeft'_succ, Nat.lt_succ_iff]
     cases b
     · simp_rw [bit_false]
-      rw [← pow_one 2, testBit_two_pow_mul, IH]
-      cases j
-      · simp_rw [Nat.zero_lt_one.not_ge, decide_false, Bool.false_and, zero_le, decide_true, cond_true]
-      · simp_rw [Nat.add_sub_cancel, Nat.add_sub_add_right, Nat.succ_le_iff, zero_lt_succ,
-          decide_true, Bool.true_and]
+      rw [← pow_one 2, testBit_two_pow_mul]
+      grind
     · simp_rw [bit_true, Bool.cond_true_left]
       rw [← pow_one 2, testBit_two_pow_mul_add _ Nat.one_lt_two, IH]
       simp only [Bool.cond_true_left]
@@ -388,23 +421,23 @@ theorem testBit_shiftLeft'_false {m i j : ℕ}  :
   · simp_rw [hji, decide_true, cond_true, Bool.not_true, Bool.false_and]
   · simp_rw [hji.not_gt, decide_false, cond_false, Bool.not_false, Bool.true_and]
 
-theorem shiftLeft'_true {m : ℕ} (n : ℕ) :
-    shiftLeft' true m n = (m <<< n) ^^^ (1 <<< n - 1) := by
-  simp_rw [testBit_eq_iff, testBit_shiftLeft'_true, testBit_xor, testBit_shiftLeft,
-  shiftLeft_eq_mul_pow, one_mul, testBit_two_pow_sub_one]
-  intro i
-  rcases lt_or_ge i n with hin | hin
-  · simp_rw [hin, hin.not_ge, decide_true, decide_false, Bool.false_and,
-    Bool.false_xor, Bool.true_or]
-  · simp_rw [hin.not_gt, hin, decide_true, decide_false, Bool.true_and,
-    Bool.xor_false, Bool.false_or]
 
-theorem shiftLeft'_eq_shiftLeft_xor_shiftLeft_sub_one {m : ℕ} {b : Bool} (n : ℕ) :
-    shiftLeft' b m n = (m <<< n) ^^^ (b.toNat <<< n - 1) := by
-  cases b
-  · rw [shiftLeft'_false, Bool.toNat_false, zero_shiftLeft, Nat.zero_sub, xor_zero]
-  · rw [shiftLeft'_true, Bool.toNat_true]
+
 
 end ShiftLeft'
+
+
+
+theorem testBit_shiftLeft_shiftRight {x n m j : ℕ} : (x <<< n >>> m).testBit j =
+    if n ≤ m + j then x.testBit (m + j - n) else false := by grind
+
+theorem testBit_shiftRight_shiftLeft {x n m j : ℕ} : (x >>> n <<< m).testBit j =
+    if m ≤ j then x.testBit (n + (j - m)) else false := by grind
+
+@[grind =]
+theorem testBit_shiftRight_shiftLeft_add {n j k : ℕ} (x : ℕ) : (x >>> n <<< (n + k)).testBit j =
+    (decide (n + k ≤ j) && x.testBit (j - k)) := by
+  rw [testBit_shiftRight_shiftLeft]
+  grind
 
 end Nat

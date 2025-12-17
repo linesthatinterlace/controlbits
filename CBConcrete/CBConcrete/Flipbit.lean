@@ -61,7 +61,7 @@ theorem flipBit_eq_of_testBit_true {i : ℕ} (hqi : q.testBit i = true) :
     q.flipBit i = (q.removeBit i).insertBit false i := by
   rw [flipBit_apply, hqi, Bool.not_true]
 
-theorem flipBit_eq_cond {i : ℕ} : q.flipBit i = bif testBit q i then q - 2^i else q + 2^i := by
+theorem flipBit_eq_cond {i : ℕ} : q.flipBit i = if testBit q i then q - 2^i else q + 2^i := by
   rw [flipBit_apply, insertBit_not_testBit_removeBit_of_eq]
 
 -- flipBit equalities and inequalities
@@ -260,14 +260,9 @@ theorem self_ne_flipBit : q ≠ q.flipBit i := flipBit_ne_self.symm
 theorem testBit_eq_false_true_of_lt_of_flipBit_ge {r : ℕ} (hrq : r < q)
     (hf : q.flipBit i ≤ r.flipBit i) : r.testBit i = false ∧ q.testBit i = true := by
   simp_rw [flipBit_eq_cond] at hf
-  rcases hr : r.testBit i <;> rcases hq : q.testBit i <;> simp_rw [hr, hq] at hf
-  · simp_rw [Bool.cond_false, add_le_add_iff_right] at hf
-    exact (hf.not_gt hrq).elim
-  · simp_rw [and_self]
-  · simp_rw [Bool.cond_true, Bool.cond_false] at hf
-    exact ((Nat.sub_le _ _).not_gt ((hrq.trans_le (Nat.le_add_right _ _)).trans_le hf)).elim
-  · simp_rw [Bool.cond_true, tsub_le_iff_right, Nat.sub_add_cancel (ge_two_pow_of_testBit hr)] at hf
-    exact (hf.not_gt hrq).elim
+  rcases hr : r.testBit i <;> rcases hq : q.testBit i <;> try grind
+  simp_rw [hq, hr, ite_true, tsub_le_iff_right, Nat.sub_add_cancel (ge_two_pow_of_testBit hr)] at hf
+  grind
 
 theorem testBit_eq_of_le_of_flipBit_lt_ge {r : ℕ} (hrq : r ≤ q)
     (hf : q.flipBit i ≤ r.flipBit i) (hik : i < k) : r.testBit k = q.testBit k := by

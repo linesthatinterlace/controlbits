@@ -34,43 +34,6 @@ theorem getElem_swapIfInBounds_of_ge_right {xs : Array α} {i j k : ℕ} (h : xs
   unfold swapIfInBounds
   simp_rw [h.not_gt, dite_false, dite_eq_ite, ite_self]
 
-@[simp]
-theorem getElem_swapIfInBounds_left {xs : Array α} {i j : ℕ} (hj : j < xs.size)
-    (hi : i < (xs.swapIfInBounds i j).size) :
-    (xs.swapIfInBounds i j)[i] = xs[j] := by
-  simp_rw [size_swapIfInBounds] at hi
-  unfold swapIfInBounds
-  simp_rw [hi, hj, dite_true]
-  exact getElem_swap_left
-
-@[simp]
-theorem getElem_swapIfInBounds_right {xs : Array α} {i j : ℕ} (hi : i < xs.size)
-    (hj : j < (xs.swapIfInBounds i j).size) :
-    (xs.swapIfInBounds i j)[j] = xs[i] := by
-  simp_rw [size_swapIfInBounds] at hj
-  unfold swapIfInBounds
-  simp_rw [hi, hj, dite_true]
-  exact getElem_swap_right
-
-theorem getElem_swapIfInBounds_of_ne_ne {xs : Array α} {i j k : ℕ} (hi : k ≠ i) (hj : k ≠ j)
-    (hk : k < (xs.swapIfInBounds i j).size) :
-    (xs.swapIfInBounds i j)[k] = xs[k]'(hk.trans_eq xs.size_swapIfInBounds) := by
-  simp_rw [size_swapIfInBounds] at hk
-  unfold swapIfInBounds
-  split_ifs <;> try {rfl}
-  exact Array.getElem_swap_of_ne _ hi hj
-
-@[grind =]
-theorem getElem_swapIfInBounds {xs : Array α} {i j k : ℕ} (hk : k < (xs.swapIfInBounds i j).size) :
-    (xs.swapIfInBounds i j)[k] =
-    if h : i < xs.size ∧ j < xs.size then (xs.swap i j)[k]'
-      (hk.trans_eq ((xs.size_swapIfInBounds).trans (xs.size_swap).symm))
-    else xs[k]'(hk.trans_eq xs.size_swapIfInBounds) := by
-  unfold swapIfInBounds
-  split
-  · split <;> simp_all
-  · simp_all
-
 theorem eraseIdx_eq_take_append_drop_succ {xs : Array α} (hi : i < xs.size) :
     xs.eraseIdx i = xs.take i ++ xs.extract (i + 1) xs.size := by
   cases xs with | mk l => _
