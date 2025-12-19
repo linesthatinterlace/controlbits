@@ -47,7 +47,7 @@ theorem bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow : (∀ k < 
 theorem forall_lt_bitInvariant_iff_eq_one_of_ge (hin : n ≤ 2^i) :
     (∀ k < i, a.BitInvariant k) ↔ a = 1 := by
   simp_rw [bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow,
-    PermOf.ext_iff, getElem_one, Nat.mod_eq_of_lt <| (a.getElem_lt _).trans_le hin]
+    PermOf.ext_iff, getElem_one, Nat.mod_eq_of_lt <| a.getElem_lt.trans_le hin]
   exact forall₂_congr (fun k hk => (Nat.mod_eq_of_lt <| hk.trans_le hin).congr_right)
 
 @[simp]

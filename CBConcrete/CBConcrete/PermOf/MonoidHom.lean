@@ -34,7 +34,8 @@ theorem apply_lt_of_lt_of_mem_fixGENat {e : Perm ℕ} (he : e ∈ FixGENat n) (h
     e i < n := by
   contrapose hi
   simp_rw [not_lt] at hi ⊢
-  exact hi.trans_eq <| (inv_apply_eq_of_ge_of_mem_fixGENat he hi).symm.trans (inv_apply_self _ _)
+  exact hi.trans_eq <| (inv_apply_eq_of_ge_of_mem_fixGENat he hi).symm.trans
+    (Equiv.symm_apply_apply _ _)
 
 theorem inv_apply_lt_of_lt_of_mem_fixGENat {e : Perm ℕ} (he : e ∈ FixGENat n) (hi : i < n) :
     e⁻¹ i < n := apply_lt_of_lt_of_mem_fixGENat (inv_mem he) hi
@@ -42,7 +43,7 @@ theorem inv_apply_lt_of_lt_of_mem_fixGENat {e : Perm ℕ} (he : e ∈ FixGENat n
 theorem lt_iff_apply_lt_of_mem_fixGENat {e : Perm ℕ} (he : e ∈ FixGENat n) :
     ∀ i, i < n ↔ e i < n :=
   fun _ => ⟨apply_lt_of_lt_of_mem_fixGENat he,
-    fun hi => (inv_apply_lt_of_lt_of_mem_fixGENat he hi).trans_eq' (inv_apply_self _ _).symm⟩
+    fun hi => (inv_apply_lt_of_lt_of_mem_fixGENat he hi).trans_eq' (Equiv.symm_apply_apply _ _)⟩
 
 theorem mem_fixGENat_of_ge_imp_apply_eq {e : Perm ℕ} (he : ∀ i, n ≤ i → e i = i) :
     e ∈ FixGENat n := by
@@ -210,10 +211,7 @@ variable {m n o : ℕ}
 @[inline] protected def cast (hnm : n = m) (a : PermOf n) : PermOf m where
   toVector := a.toVector.cast hnm
   invVector := a.invVector.cast hnm
-  getElem_toVector_lt := fun _ _ => by
-    simp_rw [Vector.getElem_cast, hnm.symm, getElem_toVector, getElem_lt]
-  getElem_invVector_getElem_toVector :=
-    fun i hi => a.getElem_inv_getElem (hi.trans_eq hnm.symm)
+  getElem_invVector_getElem_toVector := by simp_rw [Vector.getElem_cast]; grind
 
 @[simp]
 theorem getElem_cast (hnm : n = m) (a : PermOf n) {i : ℕ} (hi : i < m):
@@ -306,18 +304,7 @@ end Cast
 def castSucc {n : ℕ} (a : PermOf n) : PermOf (n + 1) where
   toVector := a.toVector.push n
   invVector := a.invVector.push n
-  getElem_toVector_lt := by
-    simp_rw [Nat.lt_succ_iff, le_iff_eq_or_lt]
-    rintro _ (rfl | hi)
-    · simp_rw [Vector.getElem_push_eq, true_or]
-    · simp_rw [Vector.getElem_push_lt hi, getElem_toVector, getElem_lt, or_true]
-  getElem_invVector_getElem_toVector := by
-    simp_rw [Nat.lt_succ_iff, le_iff_eq_or_lt]
-    rintro _ (rfl | hi)
-    · simp_rw [Vector.getElem_push_eq]
-    · simp_rw [Vector.getElem_push_lt hi, getElem_toVector,
-      Vector.getElem_push_lt a.getElem_lt, getElem_invVector,
-      getElem_inv_getElem]
+  getElem_invVector_getElem_toVector := by grind
 
 section CastSucc
 
@@ -388,21 +375,13 @@ def castSuccHom : PermOf n →* PermOf (n + 1) where
 theorem castSuccHom_injective :
     Function.Injective (castSuccHom (n := n)) := fun _ _ h => castSucc_injective h
 
+end CastSucc
+
+
 def castPred {n : ℕ} (a : PermOf (n + 1)) (ha : a[n] = n) : PermOf n where
   toVector := a.toVector.pop
   invVector := a.invVector.pop
-  getElem_toVector_lt := by
-    simp_rw [Vector.getElem_pop', getElem_toVector]
-    intro i hi
-    have H : a[i] ≠ n := by
-      intro hai
-      exact hi.ne (a.getElem_injective
-        (hi.trans (Nat.lt_succ_self _)) (Nat.lt_succ_self _) (hai.trans ha.symm))
-    simp_rw [← H.le_iff_lt]
-    exact Nat.le_of_lt_succ (a.getElem_lt _)
-  getElem_invVector_getElem_toVector := by
-    simp_rw [Vector.getElem_pop', getElem_toVector, getElem_invVector,
-      getElem_inv_getElem, implies_true]
+  getElem_invVector_getElem_toVector := by grind
 
 section CastPred
 
@@ -485,8 +464,6 @@ theorem coe_range_castSuccHom :
     (castSuccHom (n := n)).range = {a : PermOf (n + 1) | a[n] = n} := range_castSucc
 
 end CastPred
-
-end CastSucc
 
 def castAdd {n : ℕ} (a : PermOf n) : (k : ℕ) → PermOf (n + k)
   | 0 => a
@@ -678,7 +655,7 @@ end CastGE
 def ofFixGENat {n : ℕ} : FixGENat n →* PermOf n where
   toFun := fun ⟨e, he⟩ => ofFn (fun i => e i) (fun i => e⁻¹ i)
     (fun _ => apply_lt_of_lt_of_mem_fixGENat he (Fin.isLt _))
-    (fun _ => inv_apply_self _ _)
+    (fun _ => symm_apply_apply _ _)
   map_one' := PermOf.ext <| fun _ _ => by
     simp_rw [getElem_ofFn, getElem_one, one_apply]
   map_mul' := fun _ _ => PermOf.ext <| fun _ _ => by
@@ -880,9 +857,9 @@ theorem eq_one_of_minLen_eq_zero {a : PermOf n} (ha : a.minLen = 0) : a = 1 := b
   · simp_rw [minLen_zero]
   · by_cases ha : a[n] = n
     · simp_rw [minLen_succ_of_getElem_eq ha,
-        minLen_succ_of_getElem_eq (getElem_inv_eq_self_of_getElem_eq_self _ ha), castPred_inv, IH]
+        minLen_succ_of_getElem_eq (getElem_inv_eq_self_of_getElem_eq_self ha), castPred_inv, IH]
     · simp_rw [minLen_succ_of_getElem_ne ha,
-        minLen_succ_of_getElem_ne (getElem_inv_ne_self_of_getElem_ne_self _ ha)]
+        minLen_succ_of_getElem_ne (getElem_inv_ne_self_of_getElem_ne_self ha)]
 
 @[simp] theorem minLen_cast {m : ℕ} {a : PermOf n} {hnm : n = m} :
     (a.cast hnm).minLen = a.minLen := by

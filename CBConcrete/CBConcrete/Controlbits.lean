@@ -215,7 +215,7 @@ theorem testBit_rightPerm {i : ℕ}
         ← flipBit_apply, ← getElem_flipBitIndices_of_div hin (hk := hk),
         a.flipBitCommutator_cycleMinVector_getElem_getElem_flipBit
         (period_le_two_pow_sub_of_bitInvariant_lt ha), getElem_flipBitVals_of_div hin,
-        a.flipBit_getElem_cycleMinVector_flipBitCommutator_comm ha (a.getElem_lt _)
+        a.flipBit_getElem_cycleMinVector_flipBitCommutator_comm ha a.getElem_lt
         (Nat.lt_succ_of_le hi)]
     · grind
   · simp_rw [getElem_leftPerm_of_gt hi, getElem_rightPerm_of_gt hi,

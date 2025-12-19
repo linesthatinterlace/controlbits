@@ -548,15 +548,7 @@ variable {n : ℕ}
 def flipBitIndices (a : PermOf n) (i : ℕ) : PermOf n where
   toVector := a.toVector.flipBitIndices i
   invVector := a.invVector.flipBitVals i
-  getElem_toVector_lt := fun i hi => by
-    simp_rw [Vector.getElem_flipBitIndices, getElem_toVector]
-    split_ifs <;> exact getElem_lt _
-  getElem_invVector_getElem_toVector := fun {j} hk => by
-    simp_rw [Vector.getElem_flipBitIndices, Vector.getElem_flipBitVals,
-      getElem_toVector, getElem_invVector]
-    by_cases hj : j.flipBit i < n
-    · simp_rw [hj, dite_true, getElem_inv_getElem, Nat.flipBit_flipBit_of_eq, hk, ite_true]
-    · simp_rw [hj, dite_false, getElem_inv_getElem, hj, if_false]
+  getElem_invVector_getElem_toVector := by grind
 
 def flipBitVals (a : PermOf n) (i : ℕ) : PermOf n := (a⁻¹.flipBitIndices i)⁻¹
 
@@ -813,15 +805,7 @@ variable {n l i j : ℕ}
 def condFlipBitIndices (a : PermOf n) (i : ℕ) (c : Vector Bool l) : PermOf n where
   toVector := a.toVector.condFlipBitIndices i c
   invVector := a.invVector.condFlipBitVals i c
-  getElem_toVector_lt := fun i hi => by
-    simp_rw [Vector.getElem_condFlipBitIndices, getElem_toVector]
-    split_ifs <;> exact getElem_lt _
-  getElem_invVector_getElem_toVector := fun j hk => by
-    simp_rw [Vector.getElem_condFlipBitIndices, Vector.getElem_condFlipBitVals,
-      getElem_toVector, getElem_invVector]
-    by_cases hj : j.condFlipBit i c < n
-    · simp_rw [hj, dite_true, getElem_inv_getElem, Nat.condFlipBit_condFlipBit_of_eq, hk, ite_true]
-    · simp_rw [hj, dite_false, getElem_inv_getElem, hj, if_false]
+  getElem_invVector_getElem_toVector := by grind
 
 def condFlipBitVals (a : PermOf n) (i : ℕ) (c : Vector Bool l) : PermOf n :=
   (a⁻¹.condFlipBitIndices i c)⁻¹
@@ -1416,7 +1400,7 @@ theorem flipBitCommutator_cycleMinVector_getElem_getElem_flipBit (a : PermOf (2^
     (ha : ∀ {x : ℕ}, MulAction.period (a.flipBitCommutator i) x ≤ 2 ^ (n - i)) :
     ((a.flipBitCommutator i).CycleMinVector (n - i))[(a.flipBitIndices i)[k]] =
     ((a.flipBitCommutator i).CycleMinVector (n - i))[(a.flipBitVals i)[k]] := by
-  simp_rw [cycleMinVector_eq_apply_cycleMinVector _ _ ha ((a.flipBitVals i).getElem_lt _),
+  simp_rw [cycleMinVector_eq_apply_cycleMinVector _ _ ha (a.flipBitVals i).getElem_lt,
     ← getElem_mul, flipBitCommutator_eq_flipBitIndices_mul_flipBitVals_inv, inv_mul_cancel_right]
 
 theorem flipBit_getElem_cycleMinVector_flipBitCommutator_comm (a : PermOf (2^(n + 1)))
