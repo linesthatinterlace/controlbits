@@ -68,6 +68,13 @@ instance nodupDecidable [DecidableEq α] : Decidable v.Nodup :=
 
 end Nodup
 
+theorem getElem_getElem_flip {a b : Vector ℕ n}
+    (H : ∀ {i} {hi : i < n}, ∃ (hi' : a[i] < n), b[a[i]] = i) {i hi} :
+    (∃ (hi' : b[i] < n), a[b[i]'(hi : i < n)] = i) := by
+  have := (Finite.surjective_of_injective (α := Fin n) (f := (⟨a[·.val], by grind⟩)) <|
+    fun i j hij => by have := congrArg (b[·.val]) hij; grind) <| Fin.mk _ hi
+  grind
+
 end Vector
 
 /--
@@ -92,11 +99,8 @@ structure PermOf (n : ℕ) where
 namespace PermOf
 
 theorem getElem_toVector_getElem_invVector {n : ℕ} (a : PermOf n) {i : ℕ} {hi : i < n} :
-    ∃ (hi' : a.invVector[i] < n), a.toVector[a.invVector[i]] = i := by
-  have := fun i hi => a.getElem_invVector_getElem_toVector (i := i) (hi := hi)
-  have H := (Finite.surjective_of_injective (α := Fin n) (f := (⟨a.toVector[·.val], by grind⟩)) <|
-    fun i j hij => by have H := congrArg (a.invVector[·.val]) hij; grind) <| Fin.mk _ hi
-  grind
+    ∃ (hi' : a.invVector[i] < n), a.toVector[a.invVector[i]] = i :=
+  Vector.getElem_getElem_flip a.getElem_invVector_getElem_toVector
 
 open Function Equiv
 
@@ -109,25 +113,28 @@ section GetElem
 
 @[simp, grind =]
 theorem getElem_mk (a b : Vector ℕ n) {hab} {i : ℕ} (hi : i < n) :
-  (PermOf.mk a b hab)[i] = a[i] := rfl
+  (PermOf.mk a b hab)[i]'hi = a[i]'hi := rfl
 
 @[simp, grind =]
 theorem getElem_toVector {i : ℕ} {hi : i < n} :
   a.toVector[i] = a[i] := rfl
 
 @[simp]
-theorem getElem_lt (a : PermOf n) {i : ℕ} {hi : i < n} : a[i]'hi < n :=
+theorem getElem_lt (a : PermOf n) {i : ℕ} {hi : i < n} : a[i] < n :=
   a.getElem_invVector_getElem_toVector.1
 
-grind_pattern PermOf.getElem_lt => a[i]
+grind_pattern getElem_lt => a[i]
 
-@[grind =>]
+theorem getElem_ne (a : PermOf n) {i : ℕ} {hi : i < n} : a[i] ≠ n := by grind
+
+grind_pattern getElem_ne => a[i]
+
 theorem getElem_injective (hi : i < n) (hj : j < n)
     (hij : a[i] = a[j]) : i = j := by
   grind [=_ getElem_toVector, getElem_invVector_getElem_toVector]
 
 @[simp, grind =] theorem getElem_inj (hi : i < n) (hj : j < n) :
-    a[i] = a[j] ↔ i = j := by grind
+    a[i] = a[j] ↔ i = j := by grind [getElem_injective]
 
 theorem getElem_ne_iff {i : ℕ} (hi : i < n) {j : ℕ} (hj : j < n) :
     a[i] ≠ a[j] ↔ i ≠ j := by grind
@@ -144,8 +151,11 @@ instance : Inv (PermOf n) where
 section Inv
 
 @[simp, grind =]
+theorem inv_mk (a b : Vector ℕ n) {hab} :
+  (PermOf.mk a b hab)⁻¹ = PermOf.mk b a (a.getElem_getElem_flip hab) := rfl
+
 theorem getElem_inv_mk (a b : Vector ℕ n) {hab} (hi : i < n) :
-  (PermOf.mk a b hab)⁻¹[i] = b[i] := rfl
+  (PermOf.mk a b hab)⁻¹[i] = b[i] := by grind
 
 @[simp, grind =]
 theorem getElem_invVector (hi : i < n) : a.invVector[i] = a⁻¹[i] := rfl
@@ -156,7 +166,7 @@ theorem getElem_inv_getElem (hi : i < n) :
 
 @[simp, grind =]
 theorem getElem_getElem_inv (hi : i < n) :
-  a[a⁻¹[i]] = i := by grind
+  a[a⁻¹[i]] = i := a.getElem_toVector_getElem_invVector.2
 
 theorem eq_getElem_inv_iff (hi : i < n) (hj : j < n) :
     i = a⁻¹[j] ↔ a[i] = j := by grind
@@ -230,9 +240,16 @@ instance : Inhabited (PermOf n) := ⟨1⟩
 @[simp]
 theorem default_eq : (default : PermOf n) = 1 := rfl
 
+theorem unique_zero : ∀ a : PermOf 0, a = 1 := by grind
+
+theorem unique_one : ∀ a : PermOf 1, a = 1 := by grind
+
 instance : Unique (PermOf 0) := Unique.mk' _
 
 instance : Unique (PermOf 1) := Unique.mk' _
+
+def zeroEquivFinOne : PermOf 0 ≃ Fin 1 := Equiv.ofUnique _ _
+def oneEquivFinOne : PermOf 1 ≃ Fin 1 := Equiv.ofUnique _ _
 
 end One
 
@@ -251,10 +268,7 @@ theorem getElem_mul {i : ℕ} (hi : i < n) :
 
 end Mul
 
-instance : Group (PermOf n) := Group.ofLeftAxioms
-  (fun _ _ _ => ext <| fun i hi => by simp_rw [getElem_mul])
-  (fun _ => ext <| fun i hi => by simp_rw [getElem_mul, getElem_one])
-  (fun _ => ext <| fun i hi => by simp_rw [getElem_mul, getElem_one, getElem_inv_getElem])
+instance : Group (PermOf n) := Group.ofLeftAxioms (by grind) (by grind) (by grind)
 
 section Group
 
@@ -292,112 +306,71 @@ instance : SMul (PermOf n) ℕ where
 
 section SMul
 
-theorem smul_eq_dite (i : ℕ) :
-    a • i = if h : i < n then a[i]'h else i :=
-  apply_dite (fun (o : Option ℕ) => o.getD i) _ _ _
+@[grind =]
+theorem smul_def (i : ℕ) : a • i = a[i]?.getD i := rfl
 
-theorem smul_of_lt {i : ℕ} (h : i < n) : a • i = a[i] := by
-  simp_rw [smul_eq_dite, dif_pos h]
+instance : MulAction (PermOf n) ℕ where
+  one_smul := by grind
+  mul_smul := by grind
 
-theorem smul_of_ge {i : ℕ} (h : n ≤ i) : a • i = i := by
-  simp_rw [smul_eq_dite, dif_neg h.not_gt]
+theorem getElem_eq_of_smul_eq (hab : a • i = b • i) {hi : i < n} : a[i] = b[i] := by grind
 
-@[simp] theorem smul_fin {i : Fin n} : a • i = a[i.1] := a.smul_of_lt i.isLt
+instance : FaithfulSMul (PermOf n) ℕ where eq_of_smul_eq_smul := by grind [getElem_eq_of_smul_eq]
+
+theorem smul_eq_dite (i : ℕ) : a • i = if h : i < n then a[i]'h else i := by grind
+
+theorem smul_of_lt {i : ℕ} (h : i < n) : a • i = a[i] := by grind
+
+theorem smul_of_ge {i : ℕ} (h : n ≤ i) : a • i = i := by grind
+
+@[simp] theorem smul_fin {i : Fin n} : a • i = a[i.1] := by grind
 
 @[simp]
 theorem smul_getElem {i : ℕ} (h : i < n) : a • b[i] = a[b[i]] :=
   a.smul_of_lt _
 
 theorem smul_eq_iff {i j : ℕ} :
-    a • i = j ↔ (∀ (hi : i < n), a[i] = j) ∧ (n ≤ i → i = j) := by
-  rcases lt_or_ge i n with hi | hi
-  · simp_rw [a.smul_of_lt hi, hi, hi.not_ge, false_implies, forall_true_left, and_true]
-  · simp_rw [a.smul_of_ge hi, hi, hi.not_gt, IsEmpty.forall_iff, forall_true_left, true_and]
-
+    a • i = j ↔ (∀ (hi : i < n), a[i] = j) ∧ (n ≤ i → i = j) := by grind
 theorem eq_smul_iff {i j : ℕ} :
-    i = a • j ↔ (∀ (hj : j < n), i = a[j]) ∧ (n ≤ j → i = j) := by
-  simp_rw [eq_comm (a := i), smul_eq_iff]
+    i = a • j ↔ (∀ (hj : j < n), i = a[j]) ∧ (n ≤ j → i = j) := by grind
 
 theorem smul_eq_self_iff {i : ℕ} :
-    a • i = i ↔ ∀ (hi : i < n), a[i] = i := by
-  simp_rw [smul_eq_iff, implies_true, and_true]
+    a • i = i ↔ ∀ (hi : i < n), a[i] = i := by grind
 
 theorem self_eq_smul_iff {i : ℕ} :
-    i = a • i ↔ ∀ (hi : i < n), i = a[i] := by
-  simp_rw [eq_comm (a := i), smul_eq_self_iff]
+    i = a • i ↔ ∀ (hi : i < n), i = a[i] := by grind
 
 @[simp]
-theorem smul_lt_iff_lt {i : ℕ} : a • i < n ↔ i < n := by
-  rcases lt_or_ge i n with h | h
-  · simp_rw [h, iff_true, a.smul_of_lt h, getElem_lt]
-  · simp_rw [h.not_gt, iff_false, not_lt, a.smul_of_ge h, h]
+theorem smul_lt_iff_lt {i : ℕ} : a • i < n ↔ i < n := by grind
 
-theorem smul_lt_of_lt {i : ℕ} (h : i < n) : a • i < n := a.smul_lt_iff_lt.mpr h
+theorem smul_lt_of_lt {i : ℕ} (h : i < n) : a • i < n := by grind
 
-theorem lt_of_smul_lt {i : ℕ} (h : a • i < n) : i < n := a.smul_lt_iff_lt.mp h
+theorem lt_of_smul_lt {i : ℕ} (h : a • i < n) : i < n := by grind
 
-theorem smul_fin_lt {i : Fin n} : a • i < n := a.smul_lt_of_lt i.isLt
+theorem smul_fin_lt {i : Fin n} : a • i < n := by grind
+
 
 theorem smul_eq_smul_same_iff {i : ℕ} :
-  a • i = b • i ↔ {hi : i < n} → a[i] = b[i] := by
-  rcases lt_or_ge i n with hi | hi
-  · simp_rw [smul_of_lt hi, hi, forall_true_left]
-  · simp_rw [smul_of_ge hi, hi.not_gt, IsEmpty.forall_iff]
+  a • i = b • i ↔ ∀ {hi : i < n}, a[i] = b[i] := by grind
 
-theorem smul_right_inj {i j : ℕ} : a • i = a • j ↔ i = j := by
-  rcases lt_or_ge i n with hi | hi <;>
-  rcases lt_or_ge j n with hj | hj
-  · simp_rw [a.smul_of_lt hi, a.smul_of_lt hj, a.getElem_inj]
-  · simp_rw [a.smul_of_lt hi, a.smul_of_ge hj, (hi.trans_le hj).ne, iff_false]
-    exact ne_of_lt (hj.trans_lt' a.getElem_lt)
-  · simp_rw [a.smul_of_ge hi, a.smul_of_lt hj, (hj.trans_le hi).ne', iff_false]
-    exact ne_of_gt (hi.trans_lt' a.getElem_lt)
-  · simp_rw [a.smul_of_ge hi, a.smul_of_ge hj]
+theorem smul_right_inj {i j : ℕ} : a • i = a • j ↔ i = j := by grind
 
-theorem smul_right_surj {i : ℕ} : ∃ j, a • j = i := by
-  rcases lt_or_ge i n with hi | hi
-  · rcases a.getElem_surjective hi with ⟨j, hj, rfl⟩
-    exact ⟨j, smul_of_lt _⟩
-  · exact ⟨i, smul_of_ge hi⟩
+theorem smul_right_surj {i : ℕ} : ∃ j, a • j = i := ⟨a⁻¹ • i, by grind⟩
 
-theorem eq_iff_smul_eq_smul_lt : a = b ↔ ∀ {i : ℕ}, i < n → a • i = b • i := by
-  simp_rw [smul_eq_smul_same_iff, PermOf.ext_iff, imp_forall_iff_forall]
+theorem eq_iff_smul_eq_smul_lt : a = b ↔ ∀ {i : ℕ}, i < n → a • i = b • i := by grind
 
 theorem eq_iff_smul_eq_smul :
-    a = b ↔ ∀ {i : ℕ}, a • i = b • i := by
-  simp_rw [smul_eq_smul_same_iff, PermOf.ext_iff]
+    a = b ↔ ∀ {i : ℕ}, a • i = b • i := by grind [getElem_eq_of_smul_eq]
 
-instance : FaithfulSMul (PermOf n) ℕ where
-  eq_of_smul_eq_smul := by
-    simp_rw [eq_iff_smul_eq_smul, imp_self, implies_true]
-
-instance : MulAction (PermOf n) ℕ where
-  one_smul k := by
-    rcases lt_or_ge k n with hkn | hkn
-    · simp_rw [smul_of_lt hkn, getElem_one]
-    · simp_rw [smul_of_ge hkn]
-  mul_smul a b k := by
-    rcases lt_or_ge k n with hkn | hkn
-    · simp_rw [smul_of_lt hkn, smul_of_lt (getElem_lt _), getElem_mul]
-    · simp_rw [smul_of_ge hkn]
-
-section MulAction
-
-theorem smul_eq_iff_eq_one : (∀ {i : ℕ}, a • i = i) ↔ a = 1 := by
-  simp_rw [eq_iff_smul_eq_smul, one_smul]
+theorem smul_eq_iff_eq_one : (∀ {i : ℕ}, a • i = i) ↔ a = 1 := by grind [getElem_eq_of_smul_eq]
 
 theorem smul_eq_id_iff_eq_one : ((a • ·) : ℕ → ℕ) = id ↔ a = 1 := by
-  simp_rw [funext_iff, id_eq, smul_eq_iff_eq_one]
-
-end MulAction
+  grind [Function.id_def, getElem_eq_of_smul_eq]
 
 end SMul
 
-def ofFn (f g : Fin n → ℕ) (hf : ∀ i, f i < n)
-    (hfg : ∀ i, g ⟨f i, hf _⟩ = i) : PermOf n where
-  toVector := Vector.ofFn f
-  invVector := Vector.ofFn g
-  getElem_invVector_getElem_toVector := by grind
+def ofFn (f g : Fin n → ℕ) (hf : ∀ i, f i < n) (hfg : ∀ i, g ⟨f i, hf _⟩ = i) : PermOf n :=
+  PermOf.mk (Vector.ofFn f) (Vector.ofFn g) (by grind)
 
 section OfFn
 
@@ -435,106 +408,73 @@ def swap (a : PermOf n) (i j : ℕ)
     (hi : i < n := by get_elem_tactic) (hj : j < n := by get_elem_tactic) : PermOf n where
   toVector := a.toVector.swap i j
   invVector := a.invVector.swap a[i] a[j]
-  getElem_invVector_getElem_toVector := by
-    simp_rw [Vector.getElem_swap, getElem_toVector, getElem_invVector, getElem_inv_getElem]
-    intro i hi
-    split <;> split <;> grind
+  getElem_invVector_getElem_toVector := by grind
 
 section Swap
 
 variable {i j k : ℕ} (hi : i < n) (hj : j < n) (hk : k < n)
 
-@[simp]
-theorem getElem_swap :
-    (a.swap i j)[k] = a[Equiv.swap i j k]'(swap_prop_const (· < n) hk hi hj) :=
-  Vector.getElem_swap_eq_getElem_swap_apply hi hj _ _
+@[simp, grind =]
+theorem getElem_swap : (a.swap i j)[k] = if k = i then a[j] else if k = j then a[i] else a[k] := by
+  dsimp [swap]; grind
 
-@[simp]
+@[simp, grind =]
 theorem getElem_inv_swap :
-    (a.swap i j hi hj)⁻¹[k] = Equiv.swap i j a⁻¹[k] := by
-  unfold swap
-  simp only [getElem_inv_mk, Vector.getElem_swap, getElem_invVector]
-  grind
-  --grind
+    (a.swap i j hi hj)⁻¹[k] = if k = a[i] then j else if k = a[j] then i else a⁻¹[k] := by
+  dsimp [swap]; grind
 
 theorem swap_smul_eq_smul_swap :
-    (a.swap i j hi hj) • k = a • (Equiv.swap i j k) := by
-  rcases lt_or_ge k n with hk | hk
-  · simp_rw [smul_of_lt (swap_prop_const (· < n) hk hi hj), smul_of_lt hk, getElem_swap]
-  · simp_rw [Equiv.swap_apply_of_ne_of_ne (hk.trans_lt' hi).ne' (hk.trans_lt' hj).ne',
-      smul_of_ge hk]
+    (a.swap i j hi hj) • k = a • (Equiv.swap i j k) := by grind
 
 theorem swap_inv_eq_swap_apply_inv_smul :
-  (a.swap i j hi hj)⁻¹ • k = Equiv.swap i j (a⁻¹ • k) := by
-  simp_rw [inv_smul_eq_iff, swap_smul_eq_smul_swap,
-  ← swap_smul, smul_inv_smul, swap_apply_self]
+  (a.swap i j hi hj)⁻¹ • k = Equiv.swap i j (a⁻¹ • k) := by grind
 
 theorem swap_smul_eq_swap_apply_smul :
-    (a.swap i j hi hj) • k = Equiv.swap (a • i) (a • j) (a • k) := by
-  rw [swap_smul, swap_smul_eq_smul_swap]
+    (a.swap i j hi hj) • k = Equiv.swap (a • i) (a • j) (a • k) := by grind
 
 theorem swap_inv_smul_eq_inv_smul_swap : (a.swap i j hi hj)⁻¹ • k =
-    a⁻¹ • (Equiv.swap (a • i) (a • j) k) := by
-  simp_rw [swap_inv_eq_swap_apply_inv_smul, ← Equiv.swap_smul, inv_smul_smul]
+    a⁻¹ • (Equiv.swap (a • i) (a • j) k) := by grind
 
 theorem swap_smul_left :
-    (a.swap i j hi hj) • i = a • j := by rw [swap_smul_eq_smul_swap, swap_apply_left]
+    (a.swap i j hi hj) • i = a • j := by grind
 
 theorem swap_smul_right :
-  (a.swap i j hi hj) • j = a • i := by rw [swap_smul_eq_smul_swap, swap_apply_right]
+  (a.swap i j hi hj) • j = a • i := by grind
 
 theorem swap_smul_of_ne_of_ne {k} :
-  k ≠ i → k ≠ j → (a.swap i j hi hj) • k = a • k := by
-  rw [swap_smul_eq_smul_swap, smul_left_cancel_iff]
-  exact swap_apply_of_ne_of_ne
+  k ≠ i → k ≠ j → (a.swap i j hi hj) • k = a • k := by grind
 
 theorem swap_inv_smul_left :
-    (a.swap i j hi hj)⁻¹ • (a • i) = j := by
-  rw [swap_inv_smul_eq_inv_smul_swap, swap_apply_left, inv_smul_smul]
+    (a.swap i j hi hj)⁻¹ • (a • i) = j := by grind
 
 theorem swap_inv_smul_right :
-    (a.swap i j hi hj)⁻¹ • (a • j) = i := by
-  rw [swap_inv_smul_eq_inv_smul_swap, swap_apply_right, inv_smul_smul]
+    (a.swap i j hi hj)⁻¹ • (a • j) = i := by grind
 
 theorem swap_inv_smul_of_ne_of_ne {k} :
-  k ≠ a • i → k ≠ a • j → (a.swap i j hi hj)⁻¹ • k = a⁻¹ • k := by
-  rw [swap_inv_smul_eq_inv_smul_swap, smul_left_cancel_iff]
-  exact swap_apply_of_ne_of_ne
+  k ≠ a • i → k ≠ a • j → (a.swap i j hi hj)⁻¹ • k = a⁻¹ • k := by grind
 
 @[simp]
-theorem swap_self (i : ℕ) (hi hi' : i < n) : a.swap i i hi hi' = a := by
-  ext : 1
-  simp_rw [getElem_swap, Equiv.swap_self, Equiv.refl_apply]
+theorem swap_self (i : ℕ) (hi hi' : i < n) : a.swap i i hi hi' = a := by grind
 
 @[simp]
 theorem swap_swap (i j : ℕ) (hi hi' : i < n) (hj hj' : j < n) :
-    (a.swap i j hi hj).swap i j hi' hj' = a := by
-  ext : 1
-  simp_rw [getElem_swap, swap_apply_self]
+    (a.swap i j hi hj).swap i j hi' hj' = a := by grind
 
-theorem getElem_one_swap : (swap 1 i j hi hj)[k] = Equiv.swap i j k := by
-  rw [getElem_swap, getElem_one]
+theorem getElem_one_swap : (swap 1 i j hi hj)[k] = Equiv.swap i j k := by grind
 
-theorem getElem_inv_one_swap : (swap 1 i j hi hj)⁻¹[k] = Equiv.swap i j k := by
-  simp_rw [getElem_inv_swap, inv_one, getElem_one]
+theorem getElem_inv_one_swap : (swap 1 i j hi hj)⁻¹[k] = Equiv.swap i j k := by grind [inv_one]
 
-theorem one_swap_smul : (swap 1 i j hi hj) • k = Equiv.swap i j k := by
-  rw [swap_smul_eq_smul_swap, one_smul]
+theorem one_swap_smul : (swap 1 i j hi hj) • k = Equiv.swap i j k := by grind
 
-theorem one_swap_inv_smul : (swap 1 i j hi hj)⁻¹ • k = Equiv.swap i j k := by
-  simp_rw [swap_inv_smul_eq_inv_smul_swap, one_smul, inv_one, one_smul]
+theorem one_swap_inv_smul : (swap 1 i j hi hj)⁻¹ • k = Equiv.swap i j k := by grind [inv_one]
 
-theorem one_swap_mul_self : swap 1 i j hi hj * swap 1 i j hi hj = 1 := by
-  ext : 1
-  simp_rw [getElem_mul, getElem_one_swap, swap_apply_self, getElem_one]
+theorem one_swap_mul_self : swap 1 i j hi hj * swap 1 i j hi hj = 1 := by grind
 
 theorem one_swap_inverse : (swap 1 i j hi hj)⁻¹ = swap 1 i j hi hj := by
   ext : 1
   rw [getElem_one_swap, getElem_inv_one_swap]
 
-theorem swap_eq_mul_one_swap : a.swap i j hi hj = a * swap 1 i j hi hj := by
-  ext : 1
-  simp only [getElem_swap, getElem_mul, getElem_one]
+theorem swap_eq_mul_one_swap : a.swap i j hi hj = a * swap 1 i j hi hj := by grind
 
 theorem swap_eq_one_swap_mul (hi' : a • i < n := a.smul_lt_iff_lt.mpr hi)
     (hj' : a • j < n := a.smul_lt_iff_lt.mpr hj) :
@@ -561,28 +501,28 @@ variable {n : ℕ} {a b : PermOf n}
 
 open PermOf
 
-def ofVector (a : Vector ℕ n) (ha : ∀ x < n, x ∈ a := by decide) : PermOf n :=
+def toPermOf (a : Vector ℕ n) (ha : ∀ x < n, x ∈ a := by decide) : PermOf n :=
   ⟨(Vector.range n).map a.toList.idxOf, a, fun {i hi} => by
     have H : List.idxOf i a.toList < a.toList.length := by grind [Vector.mem_toArray_iff]
     have H2 := List.getElem_idxOf H; grind⟩⁻¹
 
-section OfVector
+section ToPermOf
 
 @[simp, grind =]
-theorem getElem_ofVector {a : Vector ℕ n} {ha : ∀ x < n, x ∈ a} {i : ℕ} (hi : i < n) :
-    (ofVector a ha)[i] = a[i] := rfl
+theorem getElem_toPermOf {a : Vector ℕ n} {ha : ∀ x < n, x ∈ a} {i : ℕ} (hi : i < n) :
+    (toPermOf a ha)[i] = a[i] := rfl
 
-@[simp] theorem ofVector_toVector : ofVector a.toVector (by grind) = a := by grind
+@[simp] theorem toPermOf_toVector : toPermOf a.toVector (by grind) = a := by grind
 
-@[simp] theorem ofVector_invVector : ofVector a.invVector (by grind) = a⁻¹ := by grind
+@[simp] theorem toPermOf_invVector : toPermOf a.invVector (by grind) = a⁻¹ := by grind
 
 def permOfEquiv : PermOf n ≃ Subtype (α := Vector ℕ n) (∀ x < n, x ∈ ·) where
   toFun a := ⟨a.toVector, mem_toVector_of_lt⟩
-  invFun a := ofVector a.1 a.2
-  left_inv _ := ofVector_toVector
+  invFun a := toPermOf a.1 a.2
+  left_inv _ := toPermOf_toVector
   right_inv _ := Subtype.ext rfl
 
-end OfVector
+end ToPermOf
 
 def shuffle {α : Type*} (a : PermOf n) (v : Vector α n) : Vector α n :=
   Vector.ofFn (fun i => v[a[i.1]])

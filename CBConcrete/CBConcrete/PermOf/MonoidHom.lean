@@ -301,173 +301,216 @@ def castMulEquiv (hnm : n = m) : PermOf n ≃* PermOf m where
 
 end Cast
 
-def castSucc {n : ℕ} (a : PermOf n) : PermOf (n + 1) where
+def pushEq {n : ℕ} (a : PermOf n) : PermOf (n + 1) where
   toVector := a.toVector.push n
   invVector := a.invVector.push n
   getElem_invVector_getElem_toVector := by grind
 
-section CastSucc
+section PushEq
 
 variable {n m k i : ℕ} {a : PermOf n}
 
-theorem getElem_castSucc {i : ℕ} {hi : i < n + 1} :
-    (a.castSucc)[i] = a • i := by
-  unfold castSucc
-  simp_rw [getElem_mk, Vector.getElem_push, getElem_toVector, smul_eq_dite]
-  exact dite_congr rfl (fun _ => rfl)
-    (fun hi' => (eq_of_le_of_not_lt' (Nat.le_of_lt_succ hi) hi'))
+@[grind =]
+theorem getElem_pushEq {i : ℕ} {hi : i < n + 1} :
+    (a.pushEq)[i] = if hi : i < n then a[i] else n := by grind [pushEq]
 
 @[simp]
-theorem getElem_castSucc_of_lt {i : ℕ} (hi : i < n) :
-    (a.castSucc)[i] = a[i] := by
-  simp_rw [getElem_castSucc, smul_of_lt hi]
+theorem getElem_pushEq_of_lt {i : ℕ} (hi : i < n) :
+    (a.pushEq)[i] = a[i] := by grind
 
 @[simp]
-theorem getElem_castSucc_of_eq : (a.castSucc)[n] = n := by
-  simp_rw [getElem_castSucc, smul_of_ge le_rfl]
+theorem getElem_pushEq_of_eq : (a.pushEq)[n] = n := by grind
 
 @[simp]
-theorem castSucc_inv :
-    a⁻¹.castSucc = (a.castSucc)⁻¹ := rfl
+theorem pushEq_inv :
+    a⁻¹.pushEq = (a.pushEq)⁻¹ := rfl
 
-theorem getElem_inv_castSucc {i : ℕ} {hi : i < n + 1} :
-    (a.castSucc)⁻¹[i] = a⁻¹ • i :=
-  a.castSucc_inv ▸ a⁻¹.getElem_castSucc
-
-@[simp]
-theorem castSucc_one : (1 : PermOf n).castSucc = 1 := by
-  ext _ hi
-  simp_rw [getElem_castSucc, getElem_one, one_smul]
+@[grind =]
+theorem getElem_inv_pushEq {i : ℕ} {hi : i < n + 1} :
+    (a.pushEq)⁻¹[i] = if hi : i < n then a⁻¹[i] else n := by grind [pushEq]
 
 @[simp]
-theorem castSucc_mul {a b : PermOf n} :
-    (a * b).castSucc = a.castSucc * b.castSucc := by
-  ext i hi
-  simp only [getElem_castSucc, getElem_mul, mul_smul]
+theorem pushEq_one : (1 : PermOf n).pushEq = 1 := by grind
 
 @[simp]
-theorem castSucc_inj {a b : PermOf n} : a.castSucc = b.castSucc ↔ a = b := by
-  unfold castSucc ; cases a ; cases b
-  simp_rw [mk.injEq, Vector.push_inj_left]
+theorem pushEq_mul {a b : PermOf n} :
+    (a * b).pushEq = a.pushEq * b.pushEq := by grind
 
-theorem castSucc_injective : Function.Injective (castSucc (n := n)) :=
-  fun _ _ => castSucc_inj.mp
+@[simp, grind =]
+theorem pushEq_smul {i : ℕ} :
+    a.pushEq • i = a • i := by grind
 
-@[simp]
-theorem castSucc_smul {i : ℕ} :
-    a.castSucc • i = a • i := by
-  simp_rw [a.castSucc.smul_eq_dite, getElem_castSucc, dite_eq_ite, ite_eq_left_iff, not_lt]
-  exact fun h => (smul_of_ge ((Nat.le_succ _).trans h)).symm
+theorem pushEq_injective : Function.Injective (pushEq (n := n)) := fun a b hab => by
+  simp_rw [PermOf.ext_iff, getElem_pushEq] at hab
+  grind
 
-@[simp] theorem castSucc_isCongr {b : PermOf m} :
-    a.castSucc.IsCongr b ↔ a.IsCongr b := by
-  simp_rw [isCongr_iff_smul_eq, castSucc_smul]
+@[simp, grind =]
+theorem pushEq_inj {a b : PermOf n} : a.pushEq = b.pushEq ↔ a = b := pushEq_injective.eq_iff
 
-@[simp] theorem isCongr_castSucc {b : PermOf m} : a.IsCongr b.castSucc ↔ a.IsCongr b := by
-  simp_rw [isCongr_comm (a := a), castSucc_isCongr]
+@[simp] theorem pushEq_isCongr {b : PermOf m} :
+    a.pushEq.IsCongr b ↔ a.IsCongr b := by
+  simp_rw [isCongr_iff_smul_eq, pushEq_smul]
+
+@[simp] theorem isCongr_pushEq {b : PermOf m} : a.IsCongr b.pushEq ↔ a.IsCongr b := by
+  simp_rw [isCongr_comm (a := a), pushEq_isCongr]
 
 @[simps! apply]
-def castSuccHom : PermOf n →* PermOf (n + 1) where
-  toFun a := a.castSucc
-  map_mul' _ _ := castSucc_mul
-  map_one' := castSucc_one
+def pushEqHom : PermOf n →* PermOf (n + 1) where
+  toFun a := a.pushEq
+  map_mul' _ _ := pushEq_mul
+  map_one' := pushEq_one
 
-theorem castSuccHom_injective :
-    Function.Injective (castSuccHom (n := n)) := fun _ _ h => castSucc_injective h
+theorem pushEqHom_injective :
+    Function.Injective (pushEqHom (n := n)) := fun _ _ h => pushEq_injective h
 
-end CastSucc
+end PushEq
 
-
-def castPred {n : ℕ} (a : PermOf (n + 1)) (ha : a[n] = n) : PermOf n where
+def popOfEq {n : ℕ} (a : PermOf (n + 1)) (ha : a[n] = n) : PermOf n where
   toVector := a.toVector.pop
   invVector := a.invVector.pop
   getElem_invVector_getElem_toVector := by grind
 
-section CastPred
+section PopOfEq
 
 variable {n m i k : ℕ} (a : PermOf (n + 1)) (ha : a[n] = n)
 
-@[simp] theorem getElem_castPred (him : i < n) :
-    (a.castPred ha)[i] = a[i] := Vector.getElem_pop _
+@[simp, grind =] theorem getElem_popOfEq (him : i < n) :
+    (a.popOfEq ha)[i] = a[i] := Vector.getElem_pop _
 
 @[simp]
-theorem castPred_smul : a.castPred ha • i = a • i := by
-  rcases lt_trichotomy i n with (hi | rfl | hi)
-  · simp_rw [smul_of_lt hi, getElem_castPred,
-    smul_of_lt (hi.trans (Nat.lt_succ_self _))]
-  · simp_rw [smul_of_ge le_rfl, smul_of_lt (Nat.lt_succ_self _), ha]
-  · simp_rw [smul_of_ge hi.le, smul_of_ge (Nat.succ_le_of_lt hi)]
+theorem popOfEq_smul : a.popOfEq ha • i = a • i := by grind
 
-@[simp] theorem castPred_inv {ha : a⁻¹[n] = n} : a⁻¹.castPred ha =
-    (a.castPred ((a.getElem_inv_eq_iff _ _).mp ha).symm)⁻¹ := rfl
+@[simp] theorem popOfEq_inv {ha : a⁻¹[n] = n} : a⁻¹.popOfEq ha =
+    (a.popOfEq ((a.getElem_inv_eq_iff _ _).mp ha).symm)⁻¹ := rfl
 
-theorem getElem_inv_castPred (hi : i < n) :
-    (a.castPred ha)⁻¹[i] = a⁻¹[i] := Vector.getElem_pop _
+@[simp, grind =]
+theorem getElem_inv_popOfEq (hi : i < n) :
+    (a.popOfEq ha)⁻¹[i] = a⁻¹[i] := Vector.getElem_pop _
 
 @[simp]
-theorem castPred_one :
-    ((1 : PermOf (n + 1)).castPred (getElem_one _)) = (1 : PermOf n) := by
+theorem popOfEq_one :
+    ((1 : PermOf (n + 1)).popOfEq (getElem_one _)) = (1 : PermOf n) := by
   ext
-  simp_rw [getElem_castPred, getElem_one]
+  simp_rw [getElem_popOfEq, getElem_one]
 
-theorem castPred_mul {a b : PermOf (n + 1)} (ha : a[n] = n) (hb : b[n] = n) :
-    (a * b).castPred (by simp_rw [getElem_mul, hb, ha]) = a.castPred ha * b.castPred hb := by
-  ext
-  simp only [getElem_castPred, getElem_mul]
+theorem popOfEq_mul {a b : PermOf (n + 1)} (ha : a[n] = n) (hb : b[n] = n) :
+    (a * b).popOfEq (by simp_rw [getElem_mul, hb, ha]) = a.popOfEq ha * b.popOfEq hb := by grind
 
-@[simp] theorem castPred_castSucc {a : PermOf n} :
-    a.castSucc.castPred getElem_castSucc_of_eq = a := by
-  simp_rw [eq_iff_smul_eq_smul, castPred_smul, castSucc_smul, implies_true]
+@[simp] theorem popOfEq_pushEq {a : PermOf n} :
+    a.pushEq.popOfEq getElem_pushEq_of_eq = a := by grind
 
 @[simp]
-theorem castSucc_castPred :
-    (a.castPred ha).castSucc = a := by
-  simp_rw [eq_iff_smul_eq_smul, castSucc_smul, castPred_smul, implies_true]
+theorem pushEq_popOfEq :
+    (a.popOfEq ha).pushEq = a := by grind
 
-theorem getElem_castSucc_castPred_of_lt (hi : i < n) :
-    ((a.castPred ha).castSucc)[i] = a[i] := by
-  simp only [getElem_castPred, hi, getElem_castSucc_of_lt]
+theorem getElem_pushEq_popOfEq_of_lt (hi : i < n) :
+    ((a.popOfEq ha).pushEq)[i] = a[i] := by grind
 
-@[simp]
-theorem castPred_inj {a b : PermOf (n + 1)} {ha hb} : a.castPred ha = b.castPred hb ↔ a = b := by
-  simp_rw [eq_iff_smul_eq_smul, castPred_smul]
+@[simp, grind =]
+theorem popOfEq_inj {a b : PermOf (n + 1)} {ha hb} : a.popOfEq ha = b.popOfEq hb ↔ a = b := by
+  simp_rw [eq_iff_smul_eq_smul, popOfEq_smul]
 
-theorem castPred_surjective (b : PermOf n) :
-    ∃ (a : PermOf (n + 1)), ∃ (ha : a[n] = n), a.castPred ha = b :=
-  ⟨_, _, b.castPred_castSucc⟩
+theorem popOfEq_surjective (b : PermOf n) :
+    ∃ (a : PermOf (n + 1)), ∃ (ha : a[n] = n), a.popOfEq ha = b :=
+  ⟨_, _, b.popOfEq_pushEq⟩
 
-@[simp] theorem castPred_isCongr {b : PermOf m} :
-    (a.castPred ha).IsCongr b ↔ a.IsCongr b := by
-  simp_rw [isCongr_iff_smul_eq, castPred_smul]
+@[simp] theorem popOfEq_isCongr {b : PermOf m} :
+    (a.popOfEq ha).IsCongr b ↔ a.IsCongr b := by
+  simp_rw [isCongr_iff_smul_eq, popOfEq_smul]
 
-@[simp] theorem isCongr_castPred {b : PermOf m} :
-    b.IsCongr (a.castPred ha) ↔ b.IsCongr a := by
-  simp_rw [isCongr_comm (a := b), castPred_isCongr]
+@[simp] theorem isCongr_popOfEq {b : PermOf m} :
+    b.IsCongr (a.popOfEq ha) ↔ b.IsCongr a := by
+  simp_rw [isCongr_comm (a := b), popOfEq_isCongr]
 
-theorem castPred_cast {hnm : n + 1 = m + 1} {ha : (a.cast hnm)[m] = m} :
-    (a.cast hnm).castPred ha =
-    (a.castPred (by rw [getElem_cast] at ha ; simp_rw [Nat.succ_injective hnm, ha])).cast
+theorem popOfEq_cast {hnm : n + 1 = m + 1} {ha : (a.cast hnm)[m] = m} :
+    (a.cast hnm).popOfEq ha =
+    (a.popOfEq (by rw [getElem_cast] at ha ; simp_rw [Nat.succ_injective hnm, ha])).cast
     (Nat.succ_injective hnm) := by
   ext
-  simp_rw [getElem_cast, getElem_castPred, getElem_cast]
+  simp_rw [getElem_cast, getElem_popOfEq, getElem_cast]
 
-theorem exists_castSucc_apply {a : PermOf (n + 1)} :
-    (∃ b : PermOf n, b.castSucc = a) ↔ a[n] = n :=
-  ⟨fun ⟨_, hb⟩ => hb ▸ getElem_castSucc_of_eq,
-    fun ha => ⟨a.castPred ha, a.castSucc_castPred ha⟩⟩
+theorem exists_pushEq_apply {a : PermOf (n + 1)} :
+    (∃ b : PermOf n, b.pushEq = a) ↔ a[n] = n :=
+  ⟨fun ⟨_, hb⟩ => hb ▸ getElem_pushEq_of_eq,
+    fun ha => ⟨a.popOfEq ha, a.pushEq_popOfEq ha⟩⟩
 
-theorem range_castSucc :
-    Set.range (castSucc (n := n)) = {a : PermOf (n + 1) | a[n] = n} := Set.ext <| fun _ => by
-  simp_rw [Set.mem_range, exists_castSucc_apply, Set.mem_setOf_eq]
+theorem range_pushEq :
+    Set.range (pushEq (n := n)) = {a : PermOf (n + 1) | a[n] = n} := Set.ext <| fun _ => by
+  simp_rw [Set.mem_range, exists_pushEq_apply, Set.mem_setOf_eq]
 
-theorem coe_range_castSuccHom :
-    (castSuccHom (n := n)).range = {a : PermOf (n + 1) | a[n] = n} := range_castSucc
+theorem coe_range_pushEqHom :
+    (pushEqHom (n := n)).range = {a : PermOf (n + 1) | a[n] = n} := range_pushEq
 
-end CastPred
+end PopOfEq
+
+def push {n : ℕ} (i : Fin (n + 1)) : PermOf n → PermOf (n + 1) :=
+  i.lastCases pushEq (fun i a => a.pushEq.swap a⁻¹[i.1] n (by grind))
+
+def pop {n : ℕ} (a : PermOf (n + 1)) : PermOf n := (a.swap a⁻¹[n] n).popOfEq (by grind)
+
+section PushPop
+
+variable {n : ℕ} {i : Fin (n + 1)}
+
+@[grind =]
+theorem getElem_push {a : PermOf n} {k} {hk : k < n + 1} :
+    (a.push i)[k] = if i < n then
+    if hk : k < n then if a[k] = i then n else a[k] else i
+    else if hk : k < n then a[k] else n := by
+  unfold push
+  cases i using Fin.lastCases <;>
+    simp only [Fin.lastCases_last, Fin.lastCases_castSucc] <;> grind
+
+@[grind =]
+theorem getElem_inv_push {a : PermOf n} {k} {hk : k < n + 1} :
+    (a.push i)⁻¹[k] = if hi : i < n then
+    (if hk : k < n then if k = i then n else a⁻¹[k] else a⁻¹[i])
+    else if hk : k < n then a⁻¹[k] else n := by
+  unfold push
+  cases i using Fin.lastCases <;>
+    simp only [Fin.lastCases_last, Fin.lastCases_castSucc] <;> grind
+
+@[grind =]
+theorem getElem_pop {a : PermOf (n + 1)} {k} {hk : k < n} :
+    (a.pop)[k] = if a[k] = n then a[a[k]] else if k = n then n else a[k] := by grind [pop]
+
+@[grind =]
+theorem getElem_inv_pop {a : PermOf (n + 1)} {k} {hk : k < n} :
+    (a.pop)⁻¹[k] = if a⁻¹[k] = n then a⁻¹[a⁻¹[k]] else if k = n then n else a⁻¹[k] := by
+  grind [pop]
+
+@[simp, grind =]
+theorem push_pop_getElem_last {a : PermOf (n + 1)} :
+    a.pop.push ⟨a[n], a.getElem_lt⟩ = a := by grind
+
+@[simp, grind =]
+theorem pop_push {a : PermOf n} : (a.push i).pop = a := by grind
+
+@[simp, grind =]
+theorem getElem_last_push {a : PermOf n} : (a.push i)[n] = i := by grind
+
+end PushPop
+
+def decomposeFin {n : ℕ} : PermOf (n + 1) ≃ Fin (n + 1) × PermOf n where
+  toFun a := (⟨a[n], a.getElem_lt⟩, a.pop)
+  invFun ia := ia.2.push ia.1
+  left_inv a := by grind
+  right_inv ia := by grind
+
+@[simp]
+theorem card_permOf {n : ℕ} : Nat.card (PermOf n) = n.factorial := by
+  induction n with | zero | succ n IH
+  · exact Nat.card_eq_of_equiv_fin zeroEquivFinOne
+  · rw [Nat.card_congr decomposeFin, Nat.card_prod, IH, Nat.card_fin, Nat.factorial_succ]
+
+@[simp]
+theorem card_permOf_of_fintype {n : ℕ} [Fintype (PermOf n)] :
+    Fintype.card (PermOf n) = n.factorial := by
+  rw [← Nat.card_eq_fintype_card, card_permOf]
 
 def castAdd {n : ℕ} (a : PermOf n) : (k : ℕ) → PermOf (n + k)
   | 0 => a
-  | k + 1 => (a.castAdd k).castSucc
+  | k + 1 => (a.castAdd k).pushEq
 
 section CastAdd
 
@@ -482,47 +525,47 @@ theorem castAdd_of_eq_zero (h : k = 0) : a.castAdd k = a.cast (h ▸ rfl) := by
   exact castAdd_zero
 
 @[simp]
-theorem one_castAdd : a.castAdd 1 = a.castSucc := rfl
+theorem one_castAdd : a.castAdd 1 = a.pushEq := rfl
 
 @[simp]
 theorem castAdd_succ :
-    a.castAdd (k + 1) = (a.castAdd k).castSucc := rfl
+    a.castAdd (k + 1) = (a.castAdd k).pushEq := rfl
 
 @[simp]
 theorem castAdd_smul {i : ℕ} :
     a.castAdd k • i = a • i := by
   induction k with | zero => _ | succ k IH => _
   · rfl
-  · simp_rw [castAdd_succ, castSucc_smul, IH]
+  · simp_rw [castAdd_succ, pushEq_smul, IH]
 
 @[simp]
-theorem castAdd_succ_eq_cast_castAdd_castSucc :
-    a.castAdd (k + 1) = (a.castSucc.castAdd k).cast (Nat.add_right_comm _ _ _) := by
-  simp_rw [eq_iff_smul_eq_smul, cast_smul, castAdd_smul, castSucc_smul, implies_true]
+theorem castAdd_succ_eq_cast_castAdd_pushEq :
+    a.castAdd (k + 1) = (a.pushEq.castAdd k).cast (Nat.add_right_comm _ _ _) := by
+  simp_rw [eq_iff_smul_eq_smul, cast_smul, castAdd_smul, pushEq_smul, implies_true]
 
 theorem castAdd_inv : a⁻¹.castAdd k = (a.castAdd k)⁻¹ := by
   induction k with | zero => _ | succ k IH => _
   · rfl
-  · simp_rw [castAdd_succ, IH, castSucc_inv]
+  · simp_rw [castAdd_succ, IH, pushEq_inv]
 
 @[simp]
 theorem castAdd_one : (1 : PermOf n).castAdd k = 1 := by
   induction k with | zero => _ | succ k IH => _
   · rfl
-  · simp_rw [castAdd_succ, IH, castSucc_one]
+  · simp_rw [castAdd_succ, IH, pushEq_one]
 
 @[simp]
 theorem castAdd_mul {a b : PermOf n} :
     (a * b).castAdd k = a.castAdd k * b.castAdd k := by
   induction k with | zero => _ | succ k IH => _
   · rfl
-  · simp_rw [castAdd_succ, IH, castSucc_mul]
+  · simp_rw [castAdd_succ, IH, pushEq_mul]
 
 @[simp]
 theorem castAdd_inj {a b : PermOf n} : a.castAdd k = b.castAdd k ↔ a = b := by
   induction k with | zero => _ | succ k IH => _
   · rfl
-  · simp_rw [castAdd_succ, castSucc_inj, IH]
+  · simp_rw [castAdd_succ, pushEq_inj, IH]
 
 theorem castAdd_injective : Function.Injective (castAdd (n := n) (k := k)) :=
   fun _ _ => castAdd_inj.mp
@@ -578,8 +621,8 @@ theorem castGE_of_eq (hnm : n = m) :
     a.castGE le_rfl = a := by simp_rw [castGE_of_eq rfl, cast_rfl]
 
 @[simp]
-theorem succ_self_castGE : a.castGE (Nat.le_succ _) = a.castSucc := by
-  simp_rw [eq_iff_smul_eq_smul, castGE_smul, castSucc_smul, implies_true]
+theorem succ_self_castGE : a.castGE (Nat.le_succ _) = a.pushEq := by
+  simp_rw [eq_iff_smul_eq_smul, castGE_smul, pushEq_smul, implies_true]
 
 theorem castGE_inv (hnm : n ≤ m) : a⁻¹.castGE hnm = (a.castGE hnm)⁻¹ := by
   unfold castGE
@@ -628,17 +671,17 @@ theorem isCongr_iff_eq_castGE_of_ge {b : PermOf m} (hmn : m ≤ n) :
     a.IsCongr b ↔ a = b.castGE hmn := by
   rw [isCongr_comm, isCongr_iff_eq_castGE_of_le hmn]
 
-@[simp] theorem castSucc_castSucc :
-    a.castSucc.castSucc = a.castGE (by omega) := by
-  simp_rw [eq_iff_smul_eq_smul, castGE_smul, castSucc_smul, implies_true]
+@[simp] theorem pushEq_pushEq :
+    a.pushEq.pushEq = a.castGE (by omega) := by
+  simp_rw [eq_iff_smul_eq_smul, castGE_smul, pushEq_smul, implies_true]
 
-@[simp] theorem castGE_castSucc (h : n ≤ m) :
-    (a.castGE h).castSucc = a.castGE (h.trans (Nat.le_succ _)) := by
-  simp_rw [eq_iff_smul_eq_smul, castSucc_smul, castGE_smul, implies_true]
+@[simp] theorem castGE_pushEq (h : n ≤ m) :
+    (a.castGE h).pushEq = a.castGE (h.trans (Nat.le_succ _)) := by
+  simp_rw [eq_iff_smul_eq_smul, pushEq_smul, castGE_smul, implies_true]
 
-@[simp] theorem castSucc_castGE (h : n + 1 ≤ m) :
-    a.castSucc.castGE h = a.castGE ((Nat.le_succ _).trans h) := by
-  simp_rw [eq_iff_smul_eq_smul, castGE_smul, castSucc_smul, implies_true]
+@[simp] theorem pushEq_castGE (h : n + 1 ≤ m) :
+    a.pushEq.castGE h = a.castGE ((Nat.le_succ _).trans h) := by
+  simp_rw [eq_iff_smul_eq_smul, castGE_smul, pushEq_smul, implies_true]
 
 @[simps! apply]
 def castGEHom (hnm : n ≤ m) : PermOf n →* PermOf m where
@@ -791,7 +834,7 @@ end NatPermEquiv
 
 def minLen {n : ℕ} (a : PermOf n) : ℕ := match n with
   | 0 => 0
-  | (n + 1) => if ha : a[n] = n then (a.castPred ha).minLen else n + 1
+  | (n + 1) => if ha : a[n] = n then (a.popOfEq ha).minLen else n + 1
 
 section MinLen
 
@@ -800,10 +843,10 @@ variable {n : ℕ}
 @[simp] theorem minLen_zero {a : PermOf 0} : a.minLen = 0 := rfl
 
 theorem minLen_succ {a : PermOf (n + 1)} :
-    a.minLen = if ha : a[n] = n then (a.castPred ha).minLen else n + 1 := rfl
+    a.minLen = if ha : a[n] = n then (a.popOfEq ha).minLen else n + 1 := rfl
 
 theorem minLen_succ_of_getElem_eq {a : PermOf (n + 1)} (ha : a[n] = n) :
-    a.minLen = (a.castPred ha).minLen := by
+    a.minLen = (a.popOfEq ha).minLen := by
   simp_rw [minLen_succ, ha, dite_true]
 
 theorem minLen_succ_of_getElem_ne {a : PermOf (n + 1)} (ha : a[n] ≠ n) :
@@ -836,7 +879,7 @@ theorem minLen_succ_of_getElem_ne {a : PermOf (n + 1)} (ha : a[n] ≠ n) :
 theorem minLen_one : (1 : PermOf n).minLen = 0 := by
   induction n with | zero => _ | succ n IH => _
   · simp_rw [minLen_zero]
-  · rw [minLen_succ_of_getElem_eq (getElem_one _), castPred_one, IH]
+  · rw [minLen_succ_of_getElem_eq (getElem_one _), popOfEq_one, IH]
 
 theorem eq_one_of_minLen_eq_zero {a : PermOf n} (ha : a.minLen = 0) : a = 1 := by
   induction n with | zero => _ | succ n IH => _
@@ -844,7 +887,7 @@ theorem eq_one_of_minLen_eq_zero {a : PermOf n} (ha : a.minLen = 0) : a = 1 := b
   · by_cases ha' : a[n] = n
     · simp_rw [minLen_succ_of_getElem_eq ha'] at ha
       have ha := IH ha
-      simp_rw [PermOf.ext_iff, getElem_one, getElem_castPred] at ha
+      simp_rw [PermOf.ext_iff, getElem_one, getElem_popOfEq] at ha
       simp_rw [PermOf.ext_iff, getElem_one, Nat.lt_succ_iff, le_iff_lt_or_eq]
       exact fun _ hi => hi.elim (ha _) (fun hi => hi ▸ ha')
     · simp_rw [minLen_succ_of_getElem_ne ha', Nat.succ_ne_zero] at ha
@@ -857,7 +900,7 @@ theorem eq_one_of_minLen_eq_zero {a : PermOf n} (ha : a.minLen = 0) : a = 1 := b
   · simp_rw [minLen_zero]
   · by_cases ha : a[n] = n
     · simp_rw [minLen_succ_of_getElem_eq ha,
-        minLen_succ_of_getElem_eq (getElem_inv_eq_self_of_getElem_eq_self ha), castPred_inv, IH]
+        minLen_succ_of_getElem_eq (getElem_inv_eq_self_of_getElem_eq_self ha), popOfEq_inv, IH]
     · simp_rw [minLen_succ_of_getElem_ne ha,
         minLen_succ_of_getElem_ne (getElem_inv_ne_self_of_getElem_ne_self ha)]
 
@@ -866,14 +909,14 @@ theorem eq_one_of_minLen_eq_zero {a : PermOf n} (ha : a.minLen = 0) : a = 1 := b
   cases hnm
   induction n with | zero => _ | succ n IH => _
   · simp_rw [minLen_zero]
-  · simp_rw [minLen_succ, getElem_cast, castPred_cast, IH]
+  · simp_rw [minLen_succ, getElem_cast, popOfEq_cast, IH]
 
-theorem minLen_castPred {a : PermOf (n + 1)} {ha : a[n] = n} :
-    (a.castPred ha).minLen = a.minLen := (minLen_succ_of_getElem_eq _).symm
+theorem minLen_popOfEq {a : PermOf (n + 1)} {ha : a[n] = n} :
+    (a.popOfEq ha).minLen = a.minLen := (minLen_succ_of_getElem_eq _).symm
 
-theorem minLen_castSucc {a : PermOf n} :
-    a.castSucc.minLen = a.minLen := by
-  rw [minLen_succ_of_getElem_eq (getElem_castSucc_of_eq), castPred_castSucc]
+theorem minLen_pushEq {a : PermOf n} :
+    a.pushEq.minLen = a.minLen := by
+  rw [minLen_succ_of_getElem_eq (getElem_pushEq_of_eq), popOfEq_pushEq]
 
 @[simp] theorem minLen_castGE {m : ℕ} {a : PermOf n} {hnm : n ≤ m} :
     (a.castGE hnm).minLen = a.minLen := by
@@ -884,7 +927,7 @@ theorem minLen_castSucc {a : PermOf n} :
   · rcases hnm.eq_or_lt with rfl | hnm
     · simp_rw [castGE_of_eq, minLen_cast]
     · simp_rw [Nat.lt_succ_iff] at hnm
-      simp_rw [← castGE_castSucc hnm, minLen_castSucc, IH]
+      simp_rw [← castGE_pushEq hnm, minLen_pushEq, IH]
 
 @[simp] theorem getElem_of_ge_minLen {a : PermOf n} {i : ℕ} (hi : a.minLen ≤ i) {hi' : i < n} :
     a[i] = i := by
@@ -894,7 +937,7 @@ theorem minLen_castSucc {a : PermOf n} :
     · simp_rw [minLen_succ_of_getElem_eq ha] at hi
       simp_rw [Nat.lt_succ_iff, le_iff_lt_or_eq] at hi'
       rcases hi' with hi' | rfl
-      · exact ((a.getElem_castPred ha hi').symm).trans (IH hi)
+      · exact ((a.getElem_popOfEq ha hi').symm).trans (IH hi)
       · exact ha
     · simp_rw [minLen_succ_of_getElem_ne ha] at hi
       exact (hi'.not_ge hi).elim
@@ -923,7 +966,7 @@ def minPerm {n : ℕ} (a : PermOf n) : PermOf a.minLen := match n with
   | 0 => 1
   | (n + 1) =>
     if ha : a[n] = n
-    then (a.castPred ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm
+    then (a.popOfEq ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm
     else a.cast (minLen_succ_of_getElem_ne ha).symm
 
 section MinPerm
@@ -934,11 +977,11 @@ variable {n m : ℕ}
 
 theorem minPerm_succ {a : PermOf (n + 1)} :
     a.minPerm = if ha : a[n] = n
-    then (a.castPred ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm
+    then (a.popOfEq ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm
     else a.cast (minLen_succ_of_getElem_ne ha).symm := rfl
 
 @[simp] theorem minPerm_succ_of_getElem_eq {a : PermOf (n + 1)}  (ha : a[n] = n) :
-    a.minPerm = (a.castPred ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm := by
+    a.minPerm = (a.popOfEq ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm := by
   simp_rw [minPerm_succ, ha, dite_true]
 
 @[simp] theorem minPerm_succ_of_getElem_ne {a : PermOf (n + 1)} (ha : a[n] ≠ n) :
@@ -950,7 +993,7 @@ theorem minPerm_smul {a : PermOf n} {i : ℕ} : a.minPerm • i = a • i := by
   · simp_rw [minPerm_zero, Unique.eq_default, default_eq]
   · simp_rw [minPerm_succ]
     split_ifs
-    · simp_rw [cast_smul, IH, castPred_smul]
+    · simp_rw [cast_smul, IH, popOfEq_smul]
     · simp_rw [cast_smul]
 
 @[simp] theorem getElem_minPerm {a : PermOf n} {i : ℕ} (hi : i < a.minLen) :
@@ -1015,14 +1058,14 @@ theorem isCongr_minPerm_inv_inv_minPerm {a : PermOf n} : a⁻¹.minPerm.IsCongr 
   ext
   simp_rw [getElem_minPerm, getElem_cast, getElem_minPerm]
 
-@[simp] theorem minPerm_castPred {a : PermOf (n + 1)} {ha : a[n] = n} :
-    (a.castPred ha).minPerm = a.minPerm.cast (minLen_succ_of_getElem_eq _) := by
+@[simp] theorem minPerm_popOfEq {a : PermOf (n + 1)} {ha : a[n] = n} :
+    (a.popOfEq ha).minPerm = a.minPerm.cast (minLen_succ_of_getElem_eq _) := by
   ext
-  simp_rw [getElem_minPerm, getElem_castPred, getElem_cast, getElem_minPerm]
+  simp_rw [getElem_minPerm, getElem_popOfEq, getElem_cast, getElem_minPerm]
 
-theorem minPerm_castSucc {a : PermOf n} :
-    a.castSucc.minPerm = a.minPerm.cast minLen_castSucc.symm := by
-  simp_rw [eq_iff_smul_eq_smul, cast_smul, minPerm_smul, castSucc_smul, implies_true]
+theorem minPerm_pushEq {a : PermOf n} :
+    a.pushEq.minPerm = a.minPerm.cast minLen_pushEq.symm := by
+  simp_rw [eq_iff_smul_eq_smul, cast_smul, minPerm_smul, pushEq_smul, implies_true]
 
 @[simp] theorem minPerm_castGE {m : ℕ} {a : PermOf n} (hnm : n ≤ m) :
     (a.castGE hnm).minPerm = a.minPerm.cast minLen_castGE.symm := by
@@ -1034,7 +1077,7 @@ theorem eq_one_of_minPerm_eq_one {a : PermOf n} (ha : a.minPerm = 1) : a = 1 := 
   · by_cases ha' : a[n] = n
     · simp_rw [minPerm_succ_of_getElem_eq ha', cast_eq_one_iff] at ha
       have ha := IH ha
-      simp_rw [PermOf.ext_iff, getElem_one, getElem_castPred] at ha
+      simp_rw [PermOf.ext_iff, getElem_one, getElem_popOfEq] at ha
       simp_rw [PermOf.ext_iff, getElem_one, Nat.lt_succ_iff, le_iff_lt_or_eq]
       exact fun _ hi => hi.elim (ha _) (fun hi => hi ▸ ha')
     · simp_rw [minPerm_succ_of_getElem_ne ha', cast_eq_one_iff] at ha
@@ -1048,7 +1091,7 @@ theorem minPerm_eq_one_iff_eq_one {a : PermOf n} : a.minPerm = 1 ↔ a = 1 :=
   induction n with | zero => _ | succ n IH => _
   · simp_rw [minPerm_zero, Unique.eq_default, Unique.default_eq (1 : PermOf 0)]
   · by_cases ha : a[n] = n
-    · simp_rw [minPerm_succ_of_getElem_eq ha, minLen_cast, IH, minLen_castPred]
+    · simp_rw [minPerm_succ_of_getElem_eq ha, minLen_cast, IH, minLen_popOfEq]
     · simp_rw [minPerm_succ_of_getElem_ne ha, minLen_cast]
 
 @[simp] theorem minPerm_minPerm {a : PermOf n} :
@@ -1284,34 +1327,5 @@ theorem mulEquivFinitePermNat_symm_apply_smul (e : FinitePermNat) {i : ℕ} :
       natPermEquiv_symm_apply_smul]
   simp_rw [H, Subtype.coe_eta, MulEquiv.symm_apply_apply, smul_ofPermOf,
     natPermEquiv_symm_apply_smul]
-
-def ofArray (a : Array ℕ) (hx : ∀ x (hx : x < a.size), a[x] < a.size := by decide)
-  (ha : a.toList.Nodup := by decide) : FinitePerm := (ofVector ⟨a, rfl⟩ hx ha).ofPermOf
-
-@[simp]
-theorem toPermOf_ofArray {a : Array ℕ} {hx : ∀ x
-    (hx : x < a.size), a[x] < a.size} {ha : a.toList.Nodup} :
-    (ofArray a hx ha).toPermOf = (ofVector ⟨a, rfl⟩ hx ha).minPerm := rfl
-
-@[simp]
-theorem len_ofArray {a : Array ℕ} {hx : ∀ x
-    (hx : x < a.size), a[x] < a.size} {ha : a.toList.Nodup} :
-    (ofArray a hx ha).len = (ofVector ⟨a, rfl⟩ hx ha).minLen := rfl
-
-theorem len_ofArray_le_size {a : Array ℕ} {hx : ∀ x
-    (hx : x < a.size), a[x] < a.size} {ha : a.toList.Nodup} :
-    (ofArray a hx ha).len ≤ a.size := minLen_le
-
-theorem smul_ofArray (a : Array ℕ) (hx : ∀ x
-    (hx : x < a.size), a[x] < a.size) (ha : a.toList.Nodup) {i : ℕ} :
-    (ofArray a hx ha) • i = if hi : i < a.size then a[i] else i := by
-  rcases lt_or_ge i (ofArray a hx ha).len with (hi | hi)
-  · simp_rw [smul_of_lt hi, dif_pos (hi.trans_le len_ofArray_le_size),
-      toPermOf_ofArray]
-    exact getElem_minPerm (hi.trans_eq len_ofArray)
-  · simp_rw [smul_of_ge hi]
-    split_ifs with hi'
-    · exact (getElem_of_ge_minLen (hi.trans_eq' len_ofArray) (hi' := hi')).symm
-    · rfl
 
 end FinitePerm
