@@ -101,7 +101,7 @@ theorem bswapIfInBounds_true {xs : Vector α n} {i j : Nat} :
 theorem bswapIfInBounds_false {xs : Vector α n} {i j : Nat} :
     xs.bswapIfInBounds false i j = xs := by grind
 
-attribute [grind =] pop_push
+theorem back_push {v : Vector α n} {a : α} : (v.push a).back = a := by grind
 
 @[elab_as_elim, induction_eliminator, grind =]
 def induction {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
@@ -118,7 +118,8 @@ theorem induction_empty {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v
 @[simp]
 theorem induction_push {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
     (push : ∀ (n : ℕ) (xs : Vector α n) (x : α), C xs → C (xs.push x)) (xs : Vector α n) (x : α) :
-    induction empty push (xs.push x) = push ((n + 1) - 1) xs x (induction empty push xs) := by grind
+    induction empty push (xs.push x) = push ((n + 1) - 1) xs x (induction empty push xs) := by
+  grind [pop_push]
 
 @[elab_as_elim, cases_eliminator, grind =]
 def cases {C : ∀ {n : ℕ}, Vector α n → Sort*}
@@ -134,7 +135,7 @@ theorem cases_empty {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
 @[simp]
 theorem cases_push {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
     (push : ∀ (n : ℕ) (xs : Vector α n) (x : α), C (xs.push x)) (xs : Vector α n) (x : α) :
-    cases empty push (xs.push x) = push ((n + 1) - 1) xs x := by grind
+    cases empty push (xs.push x) = push ((n + 1) - 1) xs x := by grind [pop_push]
 
 theorem exists_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Nat}  :
     (∃ (hk : k < n + 1), f (c.push b)[k]) ↔ k = n ∧ f b ∨ ∃ (hk : k < n), f c[k] := by grind
