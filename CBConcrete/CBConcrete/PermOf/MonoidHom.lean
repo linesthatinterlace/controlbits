@@ -91,42 +91,33 @@ namespace PermOf
 open Equiv Perm Function
 
 @[irreducible] def IsCongr {n m : ℕ} (a : PermOf n) (b : PermOf m) : Prop :=
-  ∀ {i}, i < max m n → a • i = b • i
+  (∀ i (hin : i < n) (him : i < m), a[i] = b[i]) ∧
+    (∀ i, ∀ (hi : i < n), m ≤ i → a[i] = i) ∧
+    (∀ i, ∀ (hi : i < m), n ≤ i → b[i] = i)
 
 section IsCongr
 
 variable {n m l i : ℕ} {a : PermOf n} {b : PermOf m} {c : PermOf l}
 
+@[grind =]
+theorem isCongr_def :
+    a.IsCongr b ↔ (∀ i (hin : i < n) (him : i < m), a[i] = b[i]) ∧
+    (∀ i, ∀ (hi : i < n), m ≤ i → a[i] = i) ∧
+    (∀ i, ∀ (hi : i < m), n ≤ i → b[i] = i) := by grind [IsCongr]
+
 theorem isCongr_iff_smul_eq_of_lt :
-    a.IsCongr b ↔ ∀ {i}, i < max m n → a • i = b • i := by
-  unfold IsCongr
-  exact Iff.rfl
+    a.IsCongr b ↔ ∀ {i}, i < max m n → a • i = b • i := by grind
 
 instance {a : PermOf n} {b : PermOf m} : Decidable (a.IsCongr b) :=
-  decidable_of_decidable_of_iff isCongr_iff_smul_eq_of_lt.symm
+  decidable_of_decidable_of_iff isCongr_def.symm
 
-theorem isCongr_iff_smul_eq : a.IsCongr b ↔ ∀ {i : ℕ}, a • i = b • i :=
-  ⟨fun h i => (lt_or_ge i (max m n)).elim (isCongr_iff_smul_eq_of_lt.mp h)
-    (fun hmn => (a.smul_of_ge (le_of_max_le_right hmn)).trans
-    (b.smul_of_ge (le_of_max_le_left hmn)).symm),
-    fun h => isCongr_iff_smul_eq_of_lt.mpr (fun _ => h)⟩
+theorem isCongr_iff_smul_eq : a.IsCongr b ↔ ∀ {i : ℕ}, a • i = b • i := by
+  simp_rw [isCongr_iff_smul_eq_of_lt]
+  grind
 
 theorem isCongr_iff_getElem_eq_getElem_and_getElem_eq_of_le (hnm : n ≤ m) :
     a.IsCongr b ↔ (∀ {i} (hi : i < n), a[i] = b[i]) ∧
-    (∀ {i}, n ≤ i → ∀ (hi' : i < m), b[i] = i) := by
-  simp_rw [isCongr_iff_smul_eq_of_lt, max_eq_left hnm, smul_eq_dite]
-  refine ⟨fun h => ⟨?_, ?_⟩, fun h => ?_⟩
-  · intro i hi
-    have H :=  dif_pos hi ▸ dif_pos (hi.trans_le hnm) ▸ h (hi.trans_le hnm)
-    exact H
-  · intro i hi hi'
-    have H := dif_neg hi.not_gt ▸ dif_pos hi' ▸ h hi'
-    exact H.symm
-  · intro i hi'
-    simp_rw [hi', dite_true]
-    split_ifs with hi
-    · exact h.1 _
-    · exact (h.2 (le_of_not_gt hi) _).symm
+    (∀ {i}, n ≤ i → ∀ (hi' : i < m), b[i] = i) := by grind
 
 theorem IsCongr.smul_eq (hab : a.IsCongr b) : ∀ {i : ℕ}, a • i = b • i :=
   isCongr_iff_smul_eq.mp hab

@@ -1,6 +1,7 @@
 import Batteries.Data.Vector.Lemmas
 import CBConcrete.Lib.Array
 import CBConcrete.Lib.Nat
+import CBConcrete.Lib.Fin
 import Mathlib.Algebra.Order.Star.Basic
 
 namespace Vector
@@ -143,5 +144,61 @@ theorem exists_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Na
 theorem forall_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Nat}  :
     (∀ (hk : k < n + 1), f (c.push b)[k]) ↔ (k = n → f b) ∧ ∀ (hk : k < n), f c[k] := by grind
 
+/-
+theorem getElem_swap_eq_getElem_swap_apply
+    (hi : i < n) (hj : j < n) (k : ℕ) (hk : k < n) :
+    (v.swap i j)[k] =
+    v[Equiv.swap i j k]'(Equiv.swap_prop_const (· < n) hk hi hj) := by
+  simp_rw [getElem_swap, Equiv.swap_apply_def]
+  split_ifs <;> rfl
+-/
+
+variable {v : Vector α n}
+
+open Function
+
+def Nodup (v : Vector α n) : Prop := ∀ {i} (hi : i < n) {j} (hj : j < n), v[i] = v[j] → i = j
+
+section Nodup
+
+@[grind =]
+theorem Nodup.getElem_inj_iff {i j : ℕ} {hi : i < n} {hj : j < n}
+    (hv : v.Nodup) : v[i] = v[j] ↔ i = j := ⟨hv _ _, fun h => h ▸ rfl⟩
+
+theorem Nodup.getElem_ne_iff {i j : ℕ} {hi : i < n} {hj : j < n}
+    (hv : v.Nodup) : v[i] ≠ v[j] ↔ i ≠ j := by simp_rw [ne_eq, hv.getElem_inj_iff]
+
+@[grind =]
+theorem nodup_iff_getElem_ne_getElem :
+    v.Nodup ↔ ∀ {i j}, (hij : i < j) → (hj : j < n) → v[i] ≠ v[j] :=
+  ⟨by grind, fun _ _ _ _ _ => Function.mtr <| by grind⟩
+
+theorem nodup_iff_injective_getElem : v.Nodup ↔ Injective (fun (i : Fin n) => v[(i : ℕ)]) := by
+  unfold Injective Nodup
+  simp_rw [Fin.ext_iff, Fin.forall_iff]
+
+theorem nodup_iff_injective_get : v.Nodup ↔ Injective v.get := by
+  simp_rw [nodup_iff_injective_getElem]
+  exact Iff.rfl
+
+theorem toList_nodup_iff_nodup : v.toList.Nodup ↔ v.Nodup := by
+  grind [List.pairwise_iff_getElem]
+
+theorem Nodup.nodup_toList (hv : v.Nodup) : v.toList.Nodup := toList_nodup_iff_nodup.mpr hv
+
+theorem _root_.List.Nodup.nodup_of_nodup_toList (hv : v.toList.Nodup) : v.Nodup :=
+  toList_nodup_iff_nodup.mp hv
+
+instance nodupDecidable [DecidableEq α] : Decidable v.Nodup :=
+  decidable_of_decidable_of_iff toList_nodup_iff_nodup
+
+end Nodup
+
+theorem getElem_getElem_flip {a b : Vector ℕ n}
+    (H : ∀ {i} {hi : i < n}, ∃ (hi' : a[i] < n), b[a[i]] = i) {i hi} :
+    (∃ (hi' : b[i] < n), a[b[i]'(hi : i < n)] = i) := by
+  have := (Fin.surj_of_inj (f := (⟨a[·.val], by grind⟩)) <|
+    fun i j hij => by have := congrArg (b[·.val]) hij; grind) <| Fin.mk _ hi
+  grind
 
 end Vector

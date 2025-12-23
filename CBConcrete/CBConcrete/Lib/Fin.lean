@@ -1,37 +1,50 @@
-import Mathlib.Data.Fin.SuccPred
-
 namespace Fin
 
-variable {n : ℕ}
+variable {n : Nat}
 
 @[simp, grind =]
 theorem coe_xor {i j : Fin n} : (i ^^^ j).val = (i.val ^^^ j.val) % n := rfl
 
+/-
 @[grind =]
 theorem coe_succAbove {i : Fin n} {p : Fin (n + 1)} :
     (p.succAbove i : ℕ) = if p.val ≤ i.val then i.val + 1 else i.val := by
-  grind [succAbove, coe_castSucc, val_succ]
+  grind [succAbove, val_castSucc]
 
 @[grind =]
 theorem coe_predAbove {p : Fin n} {i : Fin (n + 1)} :
     (p.predAbove i : ℕ) = if p.val < i.val then i.val - 1 else i.val := by
-  grind [predAbove, coe_castSucc, coe_pred, coe_castPred]
+  grind [predAbove, val_castSucc, coe_castPred]
+-/
 
-def newPredAbove (p i : Fin (n + 1)) (hip : i ≠ p) : Fin n :=
-  if h : p < i then i.pred <| p.ne_zero_of_lt h
-  else i.castPred <| i.ne_last_of_lt ((i.lt_or_lt_of_ne hip).resolve_right h)
+theorem surj_of_inj (f : Fin n → Fin n) (hf : ∀ x y, f x = f y → x = y) (y : Fin n) :
+     ∃ x, f x = y := by
+  induction n with | zero | succ n IH
+  · grind [cases Fin]
+  · have H (g : Fin (n + 1) → Fin (n + 1)) (hg' : g (last n) = last n)
+      (hg' : ∀ (x y : Fin (n + 1)), g x = g y → x = y) (y : Fin (n + 1)) : ∃ x, g x = y :=
+      y.lastCases (by grind)
+        fun i => have := IH (fun i => ⟨g ⟨i, by grind⟩, by grind⟩) (by grind) i; by grind
+    specialize H (fun i => if i = last n then last n else
+      if f i = last n then f (last n) else f i) (by grind) (by grind)
+      (if y = f (last n) then last n else if y = last n then f (last n) else y)
+    grind
 
-@[simp, grind =]
-theorem coe_newPredAbove {p i : Fin (n + 1)} {hip : i ≠ p} :
-    (p.newPredAbove i hip  : ℕ) = if p.val < i.val then i.val - 1 else i.val := by
-  grind [newPredAbove, coe_pred, coe_castPred]
+theorem inj_of_surj (g : Fin n → Fin n) (hg : ∀ y, ∃ x, g x = y) (x y : Fin n) :
+    g x = g y → x = y := by
+  have hf : ∀ x y, (hg ·|>.choose) x = (hg ·|>.choose) y → x = y :=
+    fun x y hxy => have := congrArg g hxy; by grind
+  have Hx := surj_of_inj _ hf x; have Hy := surj_of_inj _ hf y; grind
 
-theorem predAbove_eq_newPredAbove_succAbove (p : Fin n) (i : Fin (n + 1)) :
-    p.predAbove i = newPredAbove (i.succAbove p) i (ne_succAbove _ _) := Fin.ext <| by grind
+open Function in
+theorem surjective_of_injective (f : Fin n → Fin n) : Injective f → Surjective f := surj_of_inj f
 
-theorem newPredAbove_eq_dite_castPred_predAbove {p i : Fin (n + 1)} {hip : i ≠ p} :
-    p.newPredAbove i hip = if h : p = last n then
-    i.castPred (h ▸ hip) else (p.castPred h).predAbove i := Fin.ext <| by
-  grind [val_last, coe_castPred]
+open Function in
+theorem injective_of_surjective (f : Fin n → Fin n) : Surjective f → Injective f := inj_of_surj f
+
+open Function in
+theorem injective_iff_surjective (f : Fin n → Fin n) : Injective f ↔ Surjective f :=
+  ⟨surjective_of_injective f, injective_of_surjective f⟩
+
 
 end Fin

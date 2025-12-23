@@ -1,3 +1,4 @@
+import CBConcrete.Lib.Vector
 import Mathlib.Algebra.Group.Action.Basic
 import Mathlib.Algebra.Group.MinimalAxioms
 import Mathlib.Data.Finite.Prod
@@ -17,65 +18,6 @@ theorem swap_prop_const (p : α → Prop) {i j k : α} (hk : p k)
     (hi : p i) (hj : p j) : p (swap i j k) := by grind
 
 end Equiv
-
-namespace Vector
-
-open Function
-
-variable {α β γ : Type*} {n m k i j : ℕ} {v : Vector α n}
-
-theorem getElem_swap_eq_getElem_swap_apply
-    (hi : i < n) (hj : j < n) (k : ℕ) (hk : k < n) :
-    (v.swap i j)[k] =
-    v[Equiv.swap i j k]'(Equiv.swap_prop_const (· < n) hk hi hj) := by
-  simp_rw [getElem_swap, Equiv.swap_apply_def]
-  split_ifs <;> rfl
-
-def Nodup (v : Vector α n) : Prop := ∀ {i} (hi : i < n) {j} (hj : j < n), v[i] = v[j] → i = j
-
-section Nodup
-
-@[grind =]
-theorem Nodup.getElem_inj_iff {i j : ℕ} {hi : i < n} {hj : j < n}
-    (hv : v.Nodup) : v[i] = v[j] ↔ i = j := ⟨hv _ _, fun h => h ▸ rfl⟩
-
-theorem Nodup.getElem_ne_iff {i j : ℕ} {hi : i < n} {hj : j < n}
-    (hv : v.Nodup) : v[i] ≠ v[j] ↔ i ≠ j := by simp_rw [ne_eq, hv.getElem_inj_iff]
-
-@[grind =]
-theorem nodup_iff_getElem_ne_getElem :
-    v.Nodup ↔ ∀ {i j}, (hij : i < j) → (hj : j < n) → v[i] ≠ v[j] :=
-  ⟨by grind, fun _ _ _ _ _ => Function.mtr <| by grind⟩
-
-theorem nodup_iff_injective_getElem : v.Nodup ↔ Injective (fun (i : Fin n) => v[(i : ℕ)]) := by
-  unfold Injective Nodup
-  simp_rw [Fin.ext_iff, Fin.forall_iff]
-
-theorem nodup_iff_injective_get : v.Nodup ↔ Injective v.get := by
-  simp_rw [nodup_iff_injective_getElem]
-  exact Iff.rfl
-
-theorem toList_nodup_iff_nodup : v.toList.Nodup ↔ v.Nodup := by
-  grind [List.nodup_iff_getElem?_ne_getElem?]
-
-theorem Nodup.nodup_toList (hv : v.Nodup) : v.toList.Nodup := toList_nodup_iff_nodup.mpr hv
-
-theorem _root_.List.Nodup.nodup_of_nodup_toList (hv : v.toList.Nodup) : v.Nodup :=
-  toList_nodup_iff_nodup.mp hv
-
-instance nodupDecidable [DecidableEq α] : Decidable v.Nodup :=
-  decidable_of_decidable_of_iff toList_nodup_iff_nodup
-
-end Nodup
-
-theorem getElem_getElem_flip {a b : Vector ℕ n}
-    (H : ∀ {i} {hi : i < n}, ∃ (hi' : a[i] < n), b[a[i]] = i) {i hi} :
-    (∃ (hi' : b[i] < n), a[b[i]'(hi : i < n)] = i) := by
-  have := (Finite.surjective_of_injective (α := Fin n) (f := (⟨a[·.val], by grind⟩)) <|
-    fun i j hij => by have := congrArg (b[·.val]) hij; grind) <| Fin.mk _ hi
-  grind
-
-end Vector
 
 /--
 A `PermOf n` is a permutation on `n` elements represented by two vectors, which we can
@@ -302,22 +244,23 @@ theorem getElem_zpow_add {i : ℕ} {x y : ℤ} (hi : i < n) :
 end Group
 
 instance : SMul (PermOf n) ℕ where
-  smul a i := a[i]?.getD i
+  smul a i := if h : i < n then a[i]'h else i
 
 section SMul
 
 @[grind =]
-theorem smul_def (i : ℕ) : a • i = a[i]?.getD i := rfl
+theorem smul_def (i : ℕ) : a • i = if h : i < n then a[i]'h else i := rfl
 
-instance : MulAction (PermOf n) ℕ where
-  one_smul := by grind
-  mul_smul := by grind
+alias smul_eq_dite := smul_def
 
 theorem getElem_eq_of_smul_eq (hab : a • i = b • i) {hi : i < n} : a[i] = b[i] := by grind
 
 instance : FaithfulSMul (PermOf n) ℕ where eq_of_smul_eq_smul := by grind [getElem_eq_of_smul_eq]
 
-theorem smul_eq_dite (i : ℕ) : a • i = if h : i < n then a[i]'h else i := by grind
+
+instance : MulAction (PermOf n) ℕ where
+  one_smul := by grind
+  mul_smul := by grind
 
 theorem smul_of_lt {i : ℕ} (h : i < n) : a • i = a[i] := by grind
 
