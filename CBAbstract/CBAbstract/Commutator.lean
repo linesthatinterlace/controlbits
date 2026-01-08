@@ -20,7 +20,7 @@ lemma cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow {k : ℕ} : ((⁅x, y⁆)^k)⁻¹ * y
 
 lemma cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow {k : ℤ} : ((⁅x, y⁆)^k)⁻¹ * y = y * (⁅x, y⁻¹⁆)^k := by
   cases k
-  · simp only [Int.ofNat_eq_coe, zpow_natCast, cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow]
+  · simp only [Int.ofNat_eq_natCast, zpow_natCast, cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow]
   · simp_rw [zpow_negSucc, inv_inv, eq_mul_inv_iff_mul_eq, mul_assoc, ← eq_inv_mul_iff_mul_eq,
       cmtr_pow_inv_mul_eq_mul_inv_cmtr_pow, inv_mul_cancel_left]
 
@@ -76,7 +76,8 @@ lemma cmtr_pow_apply_ne_apply {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
 
 lemma cmtr_mul_unfix_of_unfix (hy : ∀ q : α, y q ≠ q) :
 ∀ q : α, (⁅x, y⁆ * y) q ≠ q:= by
-  simp_rw [Perm.mul_apply, cmtr_apply, Perm.inv_apply_self, ← Perm.eq_inv_iff_eq (f := x).not]
+  simp_rw [Perm.mul_apply, cmtr_apply, Perm.coe_inv, symm_apply_apply,
+    ← Perm.eq_inv_iff_eq (f := x).not]
   exact fun q => hy (x⁻¹ q)
 
 lemma cmtr_pow_mul_unfix {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
@@ -101,7 +102,7 @@ lemma cmtr_pow_inv_apply_ne_apply {k : ℕ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
 lemma cmtr_zpow_apply_ne_apply {k : ℤ} (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆)
   (hy : ∀ q : α, y q ≠ q) : ((⁅x, y⁆)^k) q ≠ y q := by
   cases k
-  · simp only [Int.ofNat_eq_coe, zpow_natCast, ne_eq]
+  · simp only [Int.ofNat_eq_natCast, zpow_natCast, ne_eq]
     exact cmtr_pow_apply_ne_apply hxy hy
   · simp only [zpow_negSucc, ne_eq]
     simp only [ne_eq, hxy, hy, not_false_eq_true, implies_true,
