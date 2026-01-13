@@ -1,10 +1,38 @@
 import Mathlib.Tactic.SimpRw
 import Mathlib.Data.Nat.Size
 import Mathlib.Data.Nat.Bitwise
+import CBConcrete.Lib.Bool
 
 namespace Nat
 
 universe u
+
+theorem forall_add_right {p : Nat → Prop} {n : Nat} :
+    (∀ (i : ℕ), p (i + n)) ↔ ∀ i ≥ n, p i := by grind [Nat.exists_eq_add_of_le]
+
+theorem forall_add_left {p : Nat → Prop} {n : Nat} :
+    (∀ (i : ℕ), p (n + i)) ↔ ∀ i ≥ n, p i := by simp only [add_comm n, forall_add_right]
+
+theorem forall_sub {p : Nat → Prop} {n : Nat} :
+    (∀ (i : ℕ), p (n - i)) ↔ ∀ i ≤ n, p i :=
+  ⟨fun h i => by convert h (n - i); grind, by grind⟩
+
+theorem exists_add_right {p : Nat → Prop} {n : Nat} :
+    (∃ (i : ℕ), p (i + n)) ↔ (∃ i ≥ n, p i) := by symm; grind [Nat.exists_eq_add_of_le]
+
+theorem exists_add_left {p : Nat → Prop} {n : Nat} :
+    (∃ (i : ℕ), p (n + i)) ↔ (∃ i ≥ n, p i) := by simp only [add_comm n, exists_add_right]
+
+theorem exists_sub {p : Nat → Prop} {n : Nat} :
+    (∃ (i : ℕ), p (n - i)) ↔ ∃ i ≤ n, p i := ⟨by grind, fun h => ⟨n - h.choose, by grind⟩⟩
+
+theorem mod_div_injective {a b n : Nat} (meq : a % n = b % n)
+    (deq : a / n = b / n) :
+    a = b := by grind [Nat.div_add_mod]
+
+theorem mod_div_inj (a b n : Nat) : a = b ↔ a % n = b % n ∧ a / n = b / n := by grind [Nat.div_add_mod]
+
+section Fold
 
 theorem fold_succ_zero {α : Type u} (n : Nat)
     (f : (i : Nat) → i < n + 1 → α → α) (init : α) :
@@ -82,6 +110,7 @@ theorem foldRecOn_succ (f : (i : Nat) → i < n + 1 → α → α)
 
 end FoldRecOn
 
+end Fold
 
 section Size
 
@@ -114,6 +143,39 @@ section TestBit
 
 @[grind =]
 theorem toNat_testBit_zero {x : ℕ} : (x.testBit 0).toNat = x % 2 := by grind
+
+theorem mod_two_eq_mod_two_iff {x y : ℕ} :
+    x % 2 = y % 2 ↔ x.testBit 0 = y.testBit 0 := by
+  grind only [testBit_zero, Nat.mod_two_eq_zero_or_one]
+
+theorem testBit_eq_iff {x y : ℕ} : x = y ↔ ∀ (i : ℕ), x.testBit i = y.testBit i := by
+  by_cases hxy : x = 0 ∧ y = 0
+  · grind
+  · simp_rw [mod_div_inj x y 2, testBit_eq_iff (x := x / 2) (y := y / 2),
+      mod_two_eq_mod_two_iff, testBit_div_two]
+    exact Nat.and_forall_add_one (p := fun i => x.testBit i = y.testBit i)
+  termination_by x + y
+
+theorem testBit_ne_iff {x y : ℕ} : x ≠ y ↔ ∃ (i : ℕ), x.testBit i ≠ y.testBit i := by
+  simp [testBit_eq_iff]
+
+theorem eq_zero_iff_forall_testBit_false {x : ℕ} : x = 0 ↔ ∀ (i : ℕ), x.testBit i = false := by
+  simp_rw [testBit_eq_iff, zero_testBit]
+
+theorem ne_zero_iff_exists_testBit_true {x : ℕ} : x ≠ 0 ↔ ∃ (i : ℕ), x.testBit i := by
+  simp_rw [testBit_ne_iff, zero_testBit, Bool.ne_false_iff]
+
+@[grind =]
+theorem lt_pow_two_iff {n : Nat} {x : Nat} :
+    x < 2 ^ n ↔ ∀ (i : Nat), i ≥ n → x.testBit i = false := by
+  simp_rw [← Nat.div_lt_one_iff (Nat.two_pow_pos n), Nat.lt_one_iff,
+    eq_zero_iff_forall_testBit_false, testBit_div_two_pow, ← forall_add_right]
+
+@[grind =]
+theorem ge_pow_two_iff {n : Nat} {x : Nat} :
+    2 ^ n ≤ x ↔ ∃ i ≥ n, x.testBit i := by
+  simp_rw [← Nat.one_le_div_iff (Nat.two_pow_pos n), Nat.one_le_iff_ne_zero,
+    ne_zero_iff_exists_testBit_true, testBit_div_two_pow, ← exists_add_right]
 
 theorem testBit_eq_bool {x i : ℕ} {b} : x.testBit i = b ↔ x / 2^i % 2 = b.toNat := by grind
 
@@ -156,33 +218,14 @@ theorem testBit_pred_size_self {x : ℕ} : x ≠ 0 → x.testBit (x.size - 1) = 
     · simp_rw [size_succ, if_false]
       exact IH (succ_ne_zero _)
 
-@[grind =]
-theorem lt_pow_two_iff {n : Nat} {x : Nat} :
-    x < 2 ^ n ↔ ∀ (i : Nat), i ≥ n → x.testBit i = false :=
-  ⟨fun h _ hin => testBit_lt_two_pow (h.trans_le (Nat.pow_le_pow_of_le Nat.one_lt_two hin)),
-    lt_pow_two_of_testBit _⟩
-
-@[grind =]
-theorem ge_pow_two_iff {n : Nat} {x : Nat} :
-    2 ^ n ≤ x ↔ ∃ i ≥ n, x.testBit i :=
-  ⟨exists_ge_and_testBit_of_ge_two_pow,
-    Function.mtr <| by simp [lt_pow_two_iff]⟩
-
 alias testBit_ext := Nat.eq_of_testBit_eq
-
-theorem testBit_eq_iff {x y : ℕ} : x = y ↔ ∀ (i : ℕ), x.testBit i = y.testBit i :=
-  ⟨by grind, testBit_ext⟩
 
 @[grind =]
 theorem testBit_mod_two (x i : Nat) :
     (x % 2).testBit i = (decide (i = 0) && x.testBit 0) := by grind [mod_div_self, cases Nat]
 
-attribute [grind =] testBit_mod_two_pow testBit_div_two_pow testBit_succ testBit_div_two
+attribute [grind =] testBit_mod_two_pow testBit_div_two_pow testBit_succ
   testBit_two_pow_mul_add
-
-theorem testBit_ne_iff {q q' : ℕ} : q ≠ q' ↔ (∃ i : ℕ, q.testBit i ≠ q'.testBit i) := by
-  simp_rw [ne_eq, testBit_eq_iff]
-  grind
 
 theorem testBit_ext_div_two_pow_iff {q q' m : ℕ} : q / 2^m = q' / 2^m ↔
   (∀ i ≥ m, q.testBit i = q'.testBit i) := by

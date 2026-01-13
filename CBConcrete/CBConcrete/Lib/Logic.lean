@@ -1,30 +1,30 @@
 @[simp, grind =]
 theorem getElem_dite {coll idx elem valid} [GetElem coll idx elem valid] (P : Prop)
-    [Decidable P] (f : P → coll) (g : ¬ P → coll)
-    {k : idx} {hk : valid (if h : P then f h else g h) k} :
-    (if h : P then f h else g h)[k] =
-    if h : P then (f h)[k]'(by grind) else (g h)[k]'(by grind) := by grind
+    [Decidable P] (a : P → coll) (b : ¬ P → coll)
+    {k : idx} {hk : valid (if h : P then a h else b h) k} :
+    (if h : P then a h else b h)[k] =
+    if h : P then (a h)[k]'(by grind) else (b h)[k]'(by grind) := by grind
 
 @[simp, grind =]
 theorem getElem_ite {coll idx elem valid} [GetElem coll idx elem valid] (P : Prop)
-    [Decidable P] (f g : coll)
-    {k : idx} {hk : valid (if P then f else g) k} :
-    (if P then f else g)[k] =
-    if h : P then f[k]'(by grind) else g[k]'(by grind) := getElem_dite _ _ _
+    [Decidable P] (a b : coll)
+    {k : idx} {hk : valid (if P then a else b) k} :
+    (if P then a else b)[k] =
+    if h : P then a[k]'(by grind) else b[k]'(by grind) := getElem_dite _ _ _
 
 @[simp, grind =]
 theorem dite_getElem {coll idx elem valid} [GetElem coll idx elem valid] (P : Prop)
-    [Decidable P] (f : P → idx) (g : ¬ P → idx)
-    {v : coll} {hk : valid v (if h : P then f h else g h)} :
-    v[if h : P then f h else g h] =
-    if h : P then v[f h]'(by grind) else v[g h]'(by grind) := by grind
+    [Decidable P] (i : P → idx) (j : ¬ P → idx)
+    {v : coll} {hk : valid v (if h : P then i h else j h)} :
+    v[if h : P then i h else j h] =
+    if h : P then v[i h]'(by grind) else v[j h]'(by grind) := by grind
 
 @[simp, grind =]
 theorem ite_getElem {coll idx elem valid} [GetElem coll idx elem valid] (P : Prop)
-    [Decidable P] (f g : idx)
-    {v : coll} {hk : valid v (if P then f  else g)} :
-    v[if P then f else g] =
-    if h : P then v[f]'(by grind) else v[g]'(by grind) := dite_getElem _ _ _
+    [Decidable P] (i j : idx)
+    {v : coll} {hk : valid v (if P then i else j)} :
+    v[if P then i else j] =
+    if h : P then v[i]'(by grind) else v[j]'(by grind) := dite_getElem _ _ _
 
 @[simp]
 theorem exists_or_index (P Q : Prop) (f : P ∨ Q → Prop) :
