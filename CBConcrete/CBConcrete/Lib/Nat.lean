@@ -7,24 +7,30 @@ namespace Nat
 
 universe u
 
+example {p : Nat → Prop} : p 0 ∧ (∀ n, p (n + 1)) ↔ ∀ n, p n := by grind [cases Nat]
+
+example {p : Nat → Prop} : p 0 ∨ (Exists fun n => p (n + 1)) ↔ Exists p := by grind [cases Nat]
+
 theorem forall_add_right {p : Nat → Prop} {n : Nat} :
-    (∀ (i : ℕ), p (i + n)) ↔ ∀ i ≥ n, p i := by grind [Nat.exists_eq_add_of_le]
+    (∀ (i : ℕ), p (i + n)) ↔ ∀ i ≥ n, p i := by grind [Nat.add_sub_of_le]
 
 theorem forall_add_left {p : Nat → Prop} {n : Nat} :
-    (∀ (i : ℕ), p (n + i)) ↔ ∀ i ≥ n, p i := by simp only [add_comm n, forall_add_right]
+    (∀ (i : ℕ), p (n + i)) ↔ ∀ i ≥ n, p i := by grind [Nat.add_sub_of_le]
 
 theorem forall_sub {p : Nat → Prop} {n : Nat} :
-    (∀ (i : ℕ), p (n - i)) ↔ ∀ i ≤ n, p i :=
-  ⟨fun h i => by convert h (n - i); grind, by grind⟩
+    (∀ (i : ℕ), p (n - i)) ↔ ∀ i ≤ n, p i := by grind [Nat.sub_sub_self]
 
 theorem exists_add_right {p : Nat → Prop} {n : Nat} :
-    (∃ (i : ℕ), p (i + n)) ↔ (∃ i ≥ n, p i) := by symm; grind [Nat.exists_eq_add_of_le]
+    (∃ (i : ℕ), p (i + n)) ↔ ∃ i ≥ n, p i := by
+  convert (forall_add_right (p := (¬ p ·)) (n := n)).not <;> grind
 
 theorem exists_add_left {p : Nat → Prop} {n : Nat} :
-    (∃ (i : ℕ), p (n + i)) ↔ (∃ i ≥ n, p i) := by simp only [add_comm n, exists_add_right]
+    (∃ (i : ℕ), p (n + i)) ↔ ∃ i ≥ n, p i := by
+  convert (forall_add_left (p := (¬ p ·)) (n := n)).not <;> grind
 
 theorem exists_sub {p : Nat → Prop} {n : Nat} :
-    (∃ (i : ℕ), p (n - i)) ↔ ∃ i ≤ n, p i := ⟨by grind, fun h => ⟨n - h.choose, by grind⟩⟩
+    (∃ (i : ℕ), p (n - i)) ↔ ∃ i ≤ n, p i := by
+  convert (forall_sub (p := (¬ p ·)) (n := n)).not <;> grind
 
 theorem mod_div_injective {a b n : Nat} (meq : a % n = b % n)
     (deq : a / n = b / n) :
