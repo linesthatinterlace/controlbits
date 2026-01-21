@@ -1,3 +1,10 @@
+import Batteries.Data.Fin.Lemmas
+
+@[grind =]
+theorem Option.getD_eq_dite {α} {o : Option α} {a : α} :
+    o.getD a = if h : o.isSome then o.get h else a := by grind [cases Option]
+
+
 namespace Fin
 
 variable {n : Nat}
