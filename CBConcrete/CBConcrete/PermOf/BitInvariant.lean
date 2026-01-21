@@ -8,7 +8,7 @@ section BitInvariant
 
 variable {n i k x l : ℕ}
 
-theorem getElem_testBit_of_ge (a : PermOf n) {k : ℕ} (h : n ≤ 2^k) {i : ℕ} (hi : i < n) :
+theorem getElem_testBit_of_ge (a : PermOf n) {k : ℕ} (h : n ≤ 2 ^ k) {i : ℕ} (hi : i < n) :
     a[i].testBit k = false :=
   Nat.testBit_lt_two_pow <| a.getElem_lt.trans_le h
 
@@ -26,11 +26,11 @@ theorem bitInvariant_iff_testBit_getElem_eq_testBit : a.BitInvariant i ↔
   unfold BitInvariant
   simp_rw [Vector.ext_iff, Vector.getElem_map, getElem_toVector, Vector.getElem_range]
 
-theorem bitInvariant_of_ge (h : n ≤ 2^i) : a.BitInvariant i := by
+theorem bitInvariant_of_ge (h : n ≤ 2 ^ i) : a.BitInvariant i := by
   simp_rw [bitInvariant_iff_testBit_getElem_eq_testBit, a.getElem_testBit_of_ge h]
   exact fun (hx : _ < n) => (Nat.testBit_lt_two_pow (hx.trans_le h)).symm
 
-theorem bitInvariant_of_ge_of_ge (h : n ≤ 2^i) (hk : i ≤ k) : a.BitInvariant k :=
+theorem bitInvariant_of_ge_of_ge (h : n ≤ 2 ^ i) (hk : i ≤ k) : a.BitInvariant k :=
   bitInvariant_of_ge (h.trans (Nat.pow_le_pow_right Nat.zero_lt_two hk))
 
 theorem bitInvariant_lt_of_lt_iff_testBit_getElem_eq_testBit_of_lt : (∀ k < i, a.BitInvariant k) ↔
@@ -39,12 +39,12 @@ theorem bitInvariant_lt_of_lt_iff_testBit_getElem_eq_testBit_of_lt : (∀ k < i,
   exact forall₂_swap
 
 theorem bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow : (∀ k < i, a.BitInvariant k) ↔
-    ∀ {x} (h : x < n), a[x] % 2^i = x % 2^i := by
+    ∀ {x} (h : x < n), a[x] % 2 ^ i = x % 2 ^ i := by
   simp_rw [Nat.testBit_eq_iff, testBit_mod_two_pow,
     bitInvariant_lt_of_lt_iff_testBit_getElem_eq_testBit_of_lt,
     Bool.and_inj_left, decide_eq_false_iff_not, imp_iff_not_or]
 
-theorem forall_lt_bitInvariant_iff_eq_one_of_ge (hin : n ≤ 2^i) :
+theorem forall_lt_bitInvariant_iff_eq_one_of_ge (hin : n ≤ 2 ^ i) :
     (∀ k < i, a.BitInvariant k) ↔ a = 1 := by
   simp_rw [bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow,
     PermOf.ext_iff, getElem_one, Nat.mod_eq_of_lt <| a.getElem_lt.trans_le hin]
@@ -88,10 +88,10 @@ theorem BitInvariant.zpow (ha : a.BitInvariant i) (p : ℤ) : (a ^ p).BitInvaria
     exact (ha.pow _).inv
 
 theorem self_le_getElem_of_forall_bitInvariant_lt_of_lt (ha : ∀ k < i, a.BitInvariant k)
-    (hx : x < 2^i) (hin : 2^i ≤ n) : ∀ k, x ≤ (a^k)[x] := fun k =>
+    (hx : x < 2 ^ i) (hin : 2 ^ i ≤ n) : ∀ k, x ≤ (a ^ k)[x] := fun k =>
   ((Nat.mod_eq_of_lt hx).symm.trans
   ((bitInvariant_lt_of_lt_iff_getElem_mod_two_pow_eq_mod_two_pow.mp
-    (fun _ hk => (ha _ hk).pow k) _).symm)).trans_le (Nat.mod_le _ (2^i))
+    (fun _ hk => (ha _ hk).pow k) _).symm)).trans_le (Nat.mod_le _ (2 ^ i))
 
 end BitInvariant
 

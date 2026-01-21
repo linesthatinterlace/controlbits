@@ -62,7 +62,7 @@ theorem getElem_eraseIdx_right {xs : Array α} (hi : i < xs.size) (hki : i ≤ k
 theorem swap_same {xs : Array α} {i : Nat} {hi} : xs.swap i i hi hi = xs := by grind
 
 @[simp, grind =]
-theorem swapIfInBounds_same {xs : Array α} {i : Nat}: xs.swapIfInBounds i i = xs := by grind
+theorem swapIfInBounds_same {xs : Array α} {i : Nat} : xs.swapIfInBounds i i = xs := by grind
 
 def bswap (xs : Array α) (b : Bool) (i j : Nat) (hi : i < xs.size := by get_elem_tactic)
     (hj : j < xs.size := by get_elem_tactic) : Array α := bif b then xs.swap i j else xs
@@ -113,7 +113,7 @@ theorem bswapIfInBounds_true {xs : Array α} {i j : Nat} :
 theorem bswapIfInBounds_false {xs : Array α} {i j : Nat} :
     xs.bswapIfInBounds false i j = xs := by grind
 
-def bswapIfInBoundsImpl (xs : Array α) (b : Bool) (i j : @& Nat): Array α :=
+def bswapIfInBoundsImpl (xs : Array α) (b : Bool) (i j : @& Nat) : Array α :=
   if hi : i < xs.size then if hj : j < xs.size then xs.bswap b i j else xs else xs
 
 @[csimp] theorem bswapIfInBounds_eq_bswapIfInBoundsImpl :
@@ -162,11 +162,11 @@ theorem cases_push {C : Array α → Sort*} (empty : C #[])
     (push : ∀ (xs : Array α) (x : α), C (xs.push x)) (xs : Array α) (x : α) :
     cases empty push (xs.push x) = push xs x := by grind [pop_push]
 
-theorem exists_getElem_push (p : α → Prop) {c : Array α} (b : α) {k : Nat}  :
+theorem exists_getElem_push (p : α → Prop) {c : Array α} (b : α) {k : Nat} :
     (∃ (hk : k < (c.push b).size), p (c.push b)[k]) ↔
     k = c.size ∧ p b ∨ ∃ (hk : k < c.size), p c[k] := by grind
 
-theorem forall_getElem_push (p : α → Prop) {c : Array α} (b : α) {k : Nat}  :
+theorem forall_getElem_push (p : α → Prop) {c : Array α} (b : α) {k : Nat} :
     (∀ (hk : k < (c.push b).size), p (c.push b)[k]) ↔
     (k = c.size → p b) ∧ ∀ (hk : k < c.size), p c[k] := by grind
 

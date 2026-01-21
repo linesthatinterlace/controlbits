@@ -13,19 +13,18 @@ section RemoveInsert
 variable {p q i j k m n : ℕ} {b b' : Bool}
 
 /-- `removeBit q i` returns the number that remains if the
-  `(i+1)` least significant bit is erased from `q`.-/
-def removeBit (q i : ℕ) := ((q >>> (i + 1)) <<< i) ||| q &&& (2^i - 1)
+  `(i+1)` least significant bit is erased from `q`. -/
+def removeBit (q i : ℕ) := ((q >>> (i + 1)) <<< i) ||| q &&& (2 ^ i - 1)
 
 /-- `insertBit b p i` returns the number that arises if the bit `b` is
-inserted into `p` such that it is the `(i+1)` least significant bit in the result.-/
-
+inserted into `p` such that it is the `(i+1)` least significant bit in the result. -/
 def insertBit (b : Bool) (p : ℕ) (i : ℕ) :=
-  ((p >>> i) <<< (i + 1)) ||| (b.toNat <<< i) ||| p &&& (2^i - 1)
+  ((p >>> i) <<< (i + 1)) ||| (b.toNat <<< i) ||| p &&& (2 ^ i - 1)
 
-theorem removeBit_def : q.removeBit i = (q >>> (i + 1)) <<< i ||| q &&& (2^i - 1) := rfl
+theorem removeBit_def : q.removeBit i = (q >>> (i + 1)) <<< i ||| q &&& (2 ^ i - 1) := rfl
 
 theorem insertBit_def : p.insertBit b i =
-    ((p >>> i) <<< (i + 1)) ||| (b.toNat <<< i) ||| p &&& (2^i - 1) := rfl
+    ((p >>> i) <<< (i + 1)) ||| (b.toNat <<< i) ||| p &&& (2 ^ i - 1) := rfl
 
 -- testBit theorems
 
@@ -42,14 +41,14 @@ theorem testBit_insertBit {i j p : ℕ} : (p.insertBit b j).testBit i =
 
 -- basic application theorems
 
-theorem insertBit_apply : p.insertBit b i = p + 2^i * ((p / 2^i) + b.toNat) :=
+theorem insertBit_apply : p.insertBit b i = p + 2 ^ i * ((p / 2 ^ i) + b.toNat) :=
     eq_of_testBit_eq <| by
   simp_rw [testBit_add_mul_two_pow, testBit_insertBit, ← add_assoc, ← Nat.two_mul,
     Nat.testBit_two_mul_add, testBit_toNat_zero, div_eq_of_lt b.toNat_lt,
     Nat.sub_eq_zero_iff_le, add_zero, testBit_div_two_pow]
   grind
 
-theorem removeBit_apply : q.removeBit i = 2^i * (q / 2^(i + 1)) + q % 2^i :=
+theorem removeBit_apply : q.removeBit i = 2 ^ i * (q / 2 ^ (i + 1)) + q % 2 ^ i :=
   eq_of_testBit_eq <| by grind
 
 -- basic reduction theorems
@@ -90,7 +89,7 @@ section InsertBitEquiv
 
 open Equiv
 
-@[pp_nodot, simps! symm_apply  apply]
+@[pp_nodot, simps! symm_apply apply]
 def insertBitEquiv (i : ℕ) : Bool × ℕ ≃ ℕ where
   toFun bp := bp.2.insertBit bp.1 i
   invFun n := (n.testBit i, n.removeBit i)
@@ -116,26 +115,27 @@ end InsertBitEquiv
 
 -- apply lemmas
 
-theorem insertBit_apply_false {p : ℕ} : p.insertBit false i = p + (2^i) * (p / 2^i) := by
+theorem insertBit_apply_false {p : ℕ} : p.insertBit false i = p + (2 ^ i) * (p / 2 ^ i) := by
   simp_rw [insertBit_apply, Bool.toNat_false, add_zero]
 
-theorem insertBit_apply_false_of_lt_two_pow {p : ℕ} (hp : p < 2^i) :
+theorem insertBit_apply_false_of_lt_two_pow {p : ℕ} (hp : p < 2 ^ i) :
     p.insertBit false i = p := by
   simp_rw [insertBit_apply_false, Nat.div_eq_of_lt hp, mul_zero, add_zero]
 
-theorem insertBit_apply_true {p : ℕ} : p.insertBit true i = p + (2^i) * (p / 2^i) + (2^i) := by
+theorem insertBit_apply_true {p : ℕ} :
+    p.insertBit true i = p + (2 ^ i) * (p / 2 ^ i) + (2 ^ i) := by
   simp_rw [insertBit_apply, Bool.toNat_true, mul_add, mul_one, add_assoc]
 
 theorem insertBit_apply_false_add_pow_two {p : ℕ} :
-    p.insertBit false i + 2^i = p.insertBit true i := by
+    p.insertBit false i + 2 ^ i = p.insertBit true i := by
   simp_rw [insertBit_apply_false, insertBit_apply_true]
 
 theorem insertBit_apply_true_sub_pow_two {p : ℕ} :
-    p.insertBit true i - 2^i = p.insertBit false i := by
+    p.insertBit true i - 2 ^ i = p.insertBit false i := by
   simp_rw [insertBit_apply_false, insertBit_apply_true, Nat.add_sub_cancel]
 
 theorem insertBit_apply_not {p : ℕ} : p.insertBit (!b) i =
-    (if b then p.insertBit b i - 2^i else p.insertBit b i + 2^i) := by
+    (if b then p.insertBit b i - 2 ^ i else p.insertBit b i + 2 ^ i) := by
   cases b
   · grind [insertBit_apply_false_add_pow_two]
   · grind [insertBit_apply_true_sub_pow_two]
@@ -175,35 +175,36 @@ theorem testBit_succ_insertBit_of_ge {i j p : ℕ} (hij : j ≤ i) :
 
 -- removeBit equalities and inequalities
 
-theorem removeBit_div_two_pow_eq (h : i ≤ k) : q.removeBit i / 2^k = q / 2^(k + 1) := by
+theorem removeBit_div_two_pow_eq (h : i ≤ k) : q.removeBit i / 2 ^ k = q / 2 ^ (k + 1) := by
   simp_rw [testBit_eq_iff, testBit_div_two_pow,
   testBit_removeBit_of_ge (h.trans (Nat.le_add_left _ _)), Nat.add_assoc, implies_true]
 
-theorem removeBit_mod_two_pow_eq (h : k ≤ i) : q.removeBit i % 2^k = q % 2^k := by
+theorem removeBit_mod_two_pow_eq (h : k ≤ i) : q.removeBit i % 2 ^ k = q % 2 ^ k := by
   simp_rw [testBit_eq_iff, testBit_mod_two_pow]
   intro j
   rcases lt_or_ge j k with hjk | hjk
   · simp_rw [hjk, testBit_removeBit_of_lt (hjk.trans_le h)]
   · simp_rw [hjk.not_gt, decide_false, Bool.false_and]
 
-theorem removeBit_modEq_two_pow (h : k ≤ i) : q.removeBit i ≡ q [MOD 2^k] :=
+theorem removeBit_modEq_two_pow (h : k ≤ i) : q.removeBit i ≡ q [MOD 2 ^ k] :=
   removeBit_mod_two_pow_eq h
 
-theorem removeBit_lt_iff_lt_two_mul (hin : 2^i ∣ n) : q.removeBit i < n ↔ q < 2 * n := by
+theorem removeBit_lt_iff_lt_two_mul (hin : 2 ^ i ∣ n) : q.removeBit i < n ↔ q < 2 * n := by
   rcases hin with ⟨k, rfl⟩
   simp_rw [← mul_assoc, ← pow_succ', mul_comm _ k,
   ← Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _), removeBit_div_two_pow_eq le_rfl]
 
-theorem removeBit_lt_div_two_iff_lt (hin : 2^(i + 1) ∣ n) : q.removeBit i < n / 2 ↔ q < n := by
+theorem removeBit_lt_div_two_iff_lt (hin : 2 ^ (i + 1) ∣ n) : q.removeBit i < n / 2 ↔ q < n := by
   rcases hin with ⟨k, rfl⟩
   rw [pow_succ', mul_assoc, Nat.mul_div_cancel_left _ (zero_lt_two),
     ← removeBit_lt_iff_lt_two_mul (dvd_mul_right _ _)]
 
 theorem removeBit_lt_two_pow_mul_iff_lt_two_pow_mul (h : i ≤ k) (n : ℕ) :
-    q.removeBit i < 2^k * n ↔ q < 2^(k + 1) * n := by
+    q.removeBit i < 2 ^ k * n ↔ q < 2 ^ (k + 1) * n := by
   rw [removeBit_lt_iff_lt_two_mul (dvd_mul_of_dvd_left (pow_dvd_pow _ h) _), pow_succ', mul_assoc]
 
-theorem removeBit_lt_two_pow_iff_lt_two_pow (h : i ≤ m) : q.removeBit i < 2^m ↔ q < 2^(m + 1) := by
+theorem removeBit_lt_two_pow_iff_lt_two_pow (h : i ≤ m) :
+    q.removeBit i < 2 ^ m ↔ q < 2 ^ (m + 1) := by
   have H := removeBit_lt_two_pow_mul_iff_lt_two_pow_mul h 1 (q := q)
   simp_rw [mul_one] at H
   exact H
@@ -343,19 +344,19 @@ theorem insertBit_removeBit_of_ne {q : ℕ} (hij : i ≠ j) :
 
 theorem insertBit_not_testBit_removeBit_of_eq {q : ℕ} :
     (q.removeBit i).insertBit (!q.testBit i) i =
-  (if q.testBit i then q - 2^i else q + 2^i) := by
+  (if q.testBit i then q - 2 ^ i else q + 2 ^ i) := by
   rw [insertBit_apply_not, insertBit_testBit_removeBit_of_eq]
 
 @[grind =]
 theorem insertBit_removeBit_of_eq {i q : ℕ} : (q.removeBit i).insertBit b i =
-    if q.testBit i = b then q else if q.testBit i then q - 2^i else q + 2^i := by
+    if q.testBit i = b then q else if q.testBit i then q - 2 ^ i else q + 2 ^ i := by
   rcases Bool.eq_or_eq_not b (q.testBit i) with rfl | rfl
   · simp_rw [insertBit_testBit_removeBit_of_eq, ite_true]
   · simp_rw [Bool.eq_not_self, ite_false, insertBit_not_testBit_removeBit_of_eq]
 
 @[grind =]
 theorem insertBit_removeBit {i j : ℕ} : (q.removeBit j).insertBit b i =
-    bif i = j then if q.testBit i = b then q else if q.testBit i then q - 2^i else q + 2^i
+    bif i = j then if q.testBit i = b then q else if q.testBit i then q - 2 ^ i else q + 2 ^ i
     else if j < i then
     (q.insertBit b (i + 1)).removeBit j
     else (q.insertBit b i).removeBit (j + 1) := by grind
@@ -413,45 +414,45 @@ theorem insertBit_insertBit_pred_of_lt {i j p : ℕ} {b b' : Bool} (h : i < j) :
 
 -- insertBit equalities and inequalities
 
-theorem insertBit_div_two_pow_eq (h : i ≤ k) : q.insertBit b i / 2^(k + 1) = q / 2^k := by
+theorem insertBit_div_two_pow_eq (h : i ≤ k) : q.insertBit b i / 2 ^ (k + 1) = q / 2 ^ k := by
   simp_rw [testBit_eq_iff, testBit_div_two_pow, ← Nat.add_assoc,
   testBit_succ_insertBit_of_ge ((h.trans (Nat.le_add_left _ _))), implies_true]
 
-theorem insertBit_mod_two_pow_eq (h : k ≤ i) : q.insertBit b i % 2^k = q % 2^k := by
+theorem insertBit_mod_two_pow_eq (h : k ≤ i) : q.insertBit b i % 2 ^ k = q % 2 ^ k := by
   simp_rw [testBit_eq_iff, testBit_mod_two_pow]
   intro j
   rcases lt_or_ge j k with hjk | hjk
   · simp_rw [hjk, testBit_insertBit_of_lt (hjk.trans_le h)]
   · simp_rw [hjk.not_gt, decide_false, Bool.false_and]
 
-theorem insertBit_modEq_two_pow (h : k ≤ i) : q.insertBit b i ≡ q [MOD 2^k] :=
+theorem insertBit_modEq_two_pow (h : k ≤ i) : q.insertBit b i ≡ q [MOD 2 ^ k] :=
   insertBit_mod_two_pow_eq h
 
-theorem insertBit_lt_iff_lt_div_two (hin : 2^(i + 1) ∣ n) :
+theorem insertBit_lt_iff_lt_div_two (hin : 2 ^ (i + 1) ∣ n) :
     q.insertBit b i < n ↔ q < n / 2 := by
   rw [← removeBit_lt_div_two_iff_lt hin, removeBit_insertBit_of_eq]
 
-theorem insertBit_lt_two_mul_iff_lt (hin : 2^i ∣ n) :
+theorem insertBit_lt_two_mul_iff_lt (hin : 2 ^ i ∣ n) :
     q.insertBit b i < 2 * n ↔ q < n := by
   rw [← removeBit_lt_iff_lt_two_mul hin, removeBit_insertBit_of_eq]
 
 theorem insertBit_lt_two_pow_mul_iff_lt_two_pow_mul (h : i ≤ k) (n : ℕ) :
-    q.insertBit b i < 2^(k + 1) * n ↔ q < 2^k * n := by
+    q.insertBit b i < 2 ^ (k + 1) * n ↔ q < 2 ^ k * n := by
   simp_rw [← removeBit_lt_two_pow_mul_iff_lt_two_pow_mul h, removeBit_insertBit_of_eq]
 
 theorem insertBit_lt_two_pow_iff_lt_two_pow (h : i ≤ k) :
-    q.insertBit b i < 2^(k + 1) ↔ q < 2^k := by
+    q.insertBit b i < 2 ^ (k + 1) ↔ q < 2 ^ k := by
   simp_rw [← removeBit_lt_two_pow_iff_lt_two_pow h, removeBit_insertBit_of_eq]
 
-theorem insertBit_removeBit_lt_iff_lt (hin : 2^(i + 1) ∣ n) :
+theorem insertBit_removeBit_lt_iff_lt (hin : 2 ^ (i + 1) ∣ n) :
     (q.removeBit i).insertBit b i < n ↔ q < n := by
   rw [insertBit_lt_iff_lt_div_two hin, removeBit_lt_div_two_iff_lt hin]
 
 theorem zero_removeBit : (0 : ℕ).removeBit i = 0 := eq_of_testBit_eq <| by grind
 
-theorem zero_insertBit : (0 : ℕ).insertBit b i = b.toNat * 2^i := eq_of_testBit_eq <| by grind
+theorem zero_insertBit : (0 : ℕ).insertBit b i = b.toNat * 2 ^ i := eq_of_testBit_eq <| by grind
 
-theorem zero_insertBit_true : (0 : ℕ).insertBit true i = 2^i := eq_of_testBit_eq <| by grind
+theorem zero_insertBit_true : (0 : ℕ).insertBit true i = 2 ^ i := eq_of_testBit_eq <| by grind
 
 theorem zero_insertBit_false : (0 : ℕ).insertBit false i = 0 := eq_of_testBit_eq <| by grind
 
@@ -464,13 +465,13 @@ theorem two_pow_removeBit_of_lt (hij : i < j) : (2 ^ i).removeBit j = 2 ^ i :=
 theorem two_pow_removeBit_of_gt (hij : j < i) : (2 ^ i).removeBit j = 2 ^ (i - 1) :=
   eq_of_testBit_eq <| by grind
 
-theorem removeBit_eq_mod_of_lt (hq : q < 2^(i + 1)) : q.removeBit i = q % 2^i :=
+theorem removeBit_eq_mod_of_lt (hq : q < 2 ^ (i + 1)) : q.removeBit i = q % 2 ^ i :=
   eq_of_testBit_eq <| by grind
 
-theorem removeBit_eq_of_lt (hq : q < 2^i) : q.removeBit i = q :=
+theorem removeBit_eq_of_lt (hq : q < 2 ^ i) : q.removeBit i = q :=
   eq_of_testBit_eq <| by grind
 
-theorem two_pow_insertBit_false (hq : q < 2^j) : q.insertBit false j = q :=
+theorem two_pow_insertBit_false (hq : q < 2 ^ j) : q.insertBit false j = q :=
   eq_of_testBit_eq <| by grind
 
 end RemoveInsert

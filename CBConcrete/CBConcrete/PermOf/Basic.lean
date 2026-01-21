@@ -223,7 +223,7 @@ theorem getElem_pow_eq_self_of_getElem_eq_self {k : ℕ} {hi : i < n}
 theorem getElem_inv_eq_self_of_getElem_eq_self {hi : i < n} :
   a[i] = i → (a⁻¹)[i] = i := by simp_rw [getElem_inv_eq_iff _ hi, eq_comm, imp_self]
 
-theorem getElem_inv_ne_self_of_getElem_ne_self {hi : i < n}:
+theorem getElem_inv_ne_self_of_getElem_ne_self {hi : i < n} :
   a[i] ≠ i → (a⁻¹)[i] ≠ i := by simp_rw [ne_eq, getElem_inv_eq_iff _ hi, eq_comm, imp_self]
 
 theorem getElem_zpow_eq_self_of_getElem_eq_self {k : ℤ} {hi : i < n}

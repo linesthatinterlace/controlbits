@@ -66,7 +66,7 @@ theorem cast_singleton_head_append_tail [NeZero n] (v : Vector α n) :
 theorem swap_same {xs : Vector α n} {i : Nat} {hi} : xs.swap i i hi hi = xs := by grind
 
 @[simp, grind =]
-theorem swapIfInBounds_same {xs : Vector α n} {i : Nat}: xs.swapIfInBounds i i = xs := by grind
+theorem swapIfInBounds_same {xs : Vector α n} {i : Nat} : xs.swapIfInBounds i i = xs := by grind
 
 def bswap (xs : Vector α n) (b : Bool) (i j : Nat) (hi : i < n := by get_elem_tactic)
     (hj : j < n := by get_elem_tactic) : Vector α n :=
@@ -138,10 +138,10 @@ theorem cases_push {C : ∀ {n : ℕ}, Vector α n → Sort*} (empty : C #v[])
     (push : ∀ (n : ℕ) (xs : Vector α n) (x : α), C (xs.push x)) (xs : Vector α n) (x : α) :
     cases empty push (xs.push x) = push ((n + 1) - 1) xs x := by grind [pop_push]
 
-theorem exists_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Nat}  :
+theorem exists_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Nat} :
     (∃ (hk : k < n + 1), f (c.push b)[k]) ↔ k = n ∧ f b ∨ ∃ (hk : k < n), f c[k] := by grind
 
-theorem forall_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Nat}  :
+theorem forall_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Nat} :
     (∀ (hk : k < n + 1), f (c.push b)[k]) ↔ (k = n → f b) ∧ ∀ (hk : k < n), f c[k] := by grind
 
 variable {v : Vector α n}
