@@ -78,7 +78,7 @@ lemma le_fastCycleMin : ∀ z, (∀ k < 2^i, z ≤ (π ^ k) x) → z ≤ FastCyc
     · rw [pow_succ', two_mul] at hz
       refine IH _ (fun _ hk => ?_)
       simp_rw [← Perm.mul_apply, ← pow_add]
-      exact hz _ (add_lt_add_right hk _)
+      exact hz _ (add_lt_add_left hk _)
 
 lemma fastCycleMin_le_iff :
     ∀ z, FastCycleMin i π x ≤ z ↔ (∀ y, (∀ k < 2^i, y ≤ (π ^ k) x) → y ≤ z) :=
@@ -179,7 +179,7 @@ lemma cycleMin_eq_cycleMin_apply : CycleMin π x = CycleMin π (π x) := by
   rw [sameCycle_apply_left]
 
 lemma cycleMin_eq_cycleMin_apply_inv : CycleMin π x = CycleMin π (π⁻¹ x) := by
-rw [cycleMin_eq_cycleMin_apply (x := (π⁻¹ x)), Equiv.Perm.apply_inv_self]
+rw [cycleMin_eq_cycleMin_apply (x := (π⁻¹ x)), coe_inv, apply_symm_apply]
 
 end InfSet
 

@@ -51,11 +51,11 @@ theorem succAbove_eq_castSucc_or_succ (p : Fin (n + 1)) (i : Fin n) :
 
 theorem castSucc_le_succAbove (p : Fin (n + 1)) (i : Fin n) : castSucc i ≤ p.succAbove i := by
   obtain h | h := succAbove_eq_castSucc_or_succ p i <;> rw [h]
-  exact (castSucc_lt_succ _).le
+  exact castSucc_lt_succ.le
 
 theorem succAbove_le_succ (p : Fin (n + 1)) (i : Fin n) : p.succAbove i ≤ succ i := by
   obtain h | h := succAbove_eq_castSucc_or_succ p i <;> rw [h]
-  exact (castSucc_lt_succ _).le
+  exact castSucc_lt_succ.le
 
 lemma succAbove_succAbove_predAbove_succAbove {k : Fin m} {i : Fin (m + 1)} {j : Fin (m + 2)} :
 (j.succAbove i).succAbove ((i.predAbove j).succAbove k) = j.succAbove (i.succAbove k) := by

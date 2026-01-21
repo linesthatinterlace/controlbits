@@ -70,7 +70,7 @@ lemma getBitRes_apply_two_pow {i : Fin (m + 1)} : getBitRes i ⟨2^(i : ℕ),
   · simp only [getBitRes_apply, finFunctionFinEquiv_apply_val, finFunctionFinEquiv_symm_apply_val,
     Fin.val_zero, Finset.sum_eq_zero_iff, Finset.mem_univ, mul_eq_zero, forall_true_left]
     refine fun x => Or.inl ?_
-    rcases (Fin.succAbove_ne i x).lt_or_gt with h | h <;> rw [Fin.lt_iff_val_lt_val] at h
+    rcases (Fin.succAbove_ne i x).lt_or_gt with h | h <;> rw [Fin.lt_def] at h
     · rw [Nat.pow_div h.le zero_lt_two, Nat.pow_mod, Nat.mod_self,
         Nat.zero_pow (Nat.sub_pos_of_lt h), Nat.zero_mod]
     · rw [Nat.div_eq_of_lt (pow_lt_pow_right₀ one_lt_two h), Nat.zero_mod]
@@ -773,7 +773,7 @@ lemma eq_flipBit_of_lt_of_flipBit_gt {r : BV (m + 1)} (h : r < q)
   rcases mergeBitRes_surj 0 q with ⟨bq, pq, rfl⟩
   rcases mergeBitRes_surj 0 r with ⟨br, pr, rfl⟩
   simp_rw [flipBit_mergeBitRes,
-    Fin.lt_iff_val_lt_val, mergeBitRes_eq_iff, getBit_mergeBitRes, getRes_mergeBitRes,
+    Fin.lt_def, mergeBitRes_eq_iff, getBit_mergeBitRes, getRes_mergeBitRes,
     mergeBitRes_zero, finProdFinEquiv_apply_val, Bool.cond_not, add_comm,
     Bool.apply_cond (Fin.val), Fin.val_one, Fin.val_zero, Fin.ext_iff] at hf h ⊢
   cases bq <;> cases br <;>

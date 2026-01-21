@@ -12,7 +12,7 @@ variable {α : Type u}  {x y : Perm α} {q : α}
 lemma cycleMin_cmtr_apply_comm [ConditionallyCompleteLinearOrder α] :
 CycleMin ⁅x, y⁆ (x (y q)) = CycleMin ⁅x, y⁆ (y (x q)):= by
 simp_rw [cycleMin_eq_cycleMin_apply (x := y (x q)), commutatorElement_def,
-  Perm.mul_apply, inv_apply_self]
+  Perm.mul_apply, coe_inv, symm_apply_apply]
 
 lemma cycleAt_cmtr_disjoint_image [DecidableRel (⁅x, y⁆).SameCycle]
   [DecidableEq α] (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) (q : α) (s t : Finset α):

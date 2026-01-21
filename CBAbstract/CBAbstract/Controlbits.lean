@@ -223,7 +223,7 @@ lemma toPermPartial_succ_castSucc {n : Fin (m + 1)} {cb} :
     bitInvarMulEquiv_zero_apply_condFlipBits, succ_last]
   · simp_rw [← succ_castSucc, toPermPartial_succ,  IH, ← Pi.mul_def,
     map_mul, Subgroup.coe_mul, bitInvarMulEquiv_zero_apply_condFlipBits,
-    rev_castSucc,  succ_castSucc, coe_castSucc]
+    rev_castSucc, succ_castSucc, val_castSucc]
 
 lemma toPermPartial_succ_last {cb : PartialControlBits (m + 1) (m + 1)} :
     toPermPartial (last _) cb =
@@ -254,7 +254,7 @@ lemma bitInvar_toPermPartial {n t : Fin (m + 1)} (htn : t < n.rev) {cb} :
     simp_rw [toPermPartial_succ]
     have H := fun {c} => (condFlipBit_bitInvar_of_ne (c := c) htn.ne)
     refine bitInvar_mulPerm_of_bitInvar (bitInvar_mulPerm_of_bitInvar H (IH ?_)) H
-    exact htn.trans (castSucc_lt_succ _)
+    exact htn.trans castSucc_lt_succ
 
 end PartialControlBits
 

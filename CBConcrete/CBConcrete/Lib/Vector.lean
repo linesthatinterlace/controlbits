@@ -21,7 +21,7 @@ theorem getD_of_ge (a : Vector α n) (x : α) (i : ℕ) (h : n ≤ i) : a[i]?.ge
 @[grind =]
 theorem getElem_swapIfInBounds {as : Vector α n} {i j k : ℕ} (hk : k < n) :
     (as.swapIfInBounds i j)[k] =
-    if h : i < n ∧ j < n then (as.swap i j)[k] else as[k] := by
+    if h₁ : k = i ∧ j < n then as[j] else if h₂ : k = j ∧ i < n then as[i] else as[k] := by
   grind [swapIfInBounds]
 
 theorem mem_def {a : α} (v : Vector α n) : a ∈ v ↔ a ∈ v.toArray :=
@@ -143,15 +143,6 @@ theorem exists_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Na
 
 theorem forall_getElem_push (f : α → Prop) {c : Vector α n} (b : α) {k : Nat}  :
     (∀ (hk : k < n + 1), f (c.push b)[k]) ↔ (k = n → f b) ∧ ∀ (hk : k < n), f c[k] := by grind
-
-/-
-theorem getElem_swap_eq_getElem_swap_apply
-    (hi : i < n) (hj : j < n) (k : ℕ) (hk : k < n) :
-    (v.swap i j)[k] =
-    v[Equiv.swap i j k]'(Equiv.swap_prop_const (· < n) hk hi hj) := by
-  simp_rw [getElem_swap, Equiv.swap_apply_def]
-  split_ifs <;> rfl
--/
 
 variable {v : Vector α n}
 
