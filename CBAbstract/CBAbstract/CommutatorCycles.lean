@@ -7,7 +7,7 @@ universe u
 
 open Equiv Equiv.Perm
 
-variable {α : Type u}  {x y : Perm α} {q : α}
+variable {α : Type u} {x y : Perm α} {q : α}
 
 lemma cycleMin_cmtr_apply_comm [ConditionallyCompleteLinearOrder α] :
 CycleMin ⁅x, y⁆ (x (y q)) = CycleMin ⁅x, y⁆ (y (x q)):= by
@@ -15,7 +15,7 @@ simp_rw [cycleMin_eq_cycleMin_apply (x := y (x q)), commutatorElement_def,
   Perm.mul_apply, coe_inv, symm_apply_apply]
 
 lemma cycleAt_cmtr_disjoint_image [DecidableRel (⁅x, y⁆).SameCycle]
-  [DecidableEq α] (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) (q : α) (s t : Finset α):
+  [DecidableEq α] (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q) (q : α) (s t : Finset α) :
   Disjoint (s.filter (fun q' => (⁅x, y⁆).SameCycle q q'))
     ((t.filter (fun q' => (⁅x, y⁆).SameCycle q q')).image y) := by
   simp_rw [Finset.disjoint_iff_ne, Finset.mem_image, Finset.mem_filter]
@@ -35,12 +35,11 @@ lemma two_mul_filter_sameCycle_card_le_card [DecidableRel (⁅x, y⁆).SameCycle
       (Finset.image_subset_iff.mpr (fun q' hq' => hsy _ (Finset.mem_of_mem_filter _ hq'))))
 
 lemma cycleMin_cmtr_right_apply_eq_apply_cycleMin_cmtr [ConditionallyCompleteLinearOrderBot α]
-    [IsWellOrder α (· < ·)](hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q)
+    [IsWellOrder α (· < ·)] (hxy : ⁅x, y⁻¹⁆ = ⁅x, y⁆) (hy : ∀ q : α, y q ≠ q)
     (hy₂ : ∀ {r q}, r < q → y q < y r → r = y q) :
 CycleMin ⁅x, y⁆ (y q) = y (CycleMin ⁅x, y⁆ q) := by
   rcases (⁅x, y⁆).cycleMin_exists_zpow_apply q with ⟨j, hjq₂⟩
   refine eq_of_le_of_not_lt ?_ (fun h => ?_)
-  let H : OrderBot α := inferInstance
   · refine (⁅x, y⁆).cycleMin_le  ⟨-j, ?_⟩
     simp_rw [zpow_neg, ← Perm.mul_apply, cmtr_zpow_inv_mul_eq_mul_inv_cmtr_zpow, hxy,
       Perm.mul_apply, hjq₂]

@@ -5,7 +5,7 @@ variable {n m : ℕ}
 
 namespace Fin
 
-lemma modNat_two_eq_zero_or_one (q : Fin (m*2)): modNat q = 0 ∨ modNat q = 1 :=
+lemma modNat_two_eq_zero_or_one (q : Fin (m * 2)) : modNat q = 0 ∨ modNat q = 1 :=
 (exists_fin_two ).mp ⟨_, rfl⟩
 
 lemma rev_eq_zero_iff_last {i : Fin (m + 1)} : i.rev = 0 ↔ i = last m := by
@@ -28,13 +28,13 @@ lemma ne_zero_iff_rev_ne_last {i : Fin (m + 1)} : i ≠ 0 ↔ i.rev ≠ last m :
 lemma pos_iff_rev_lt_last {i : Fin (m + 1)} : 0 < i ↔ i.rev < last m := by
   convert rev_rev i ▸ rev_pos_iff_lt_last
 
-lemma rev_castSucc_succ {i : Fin m}: i.castSucc.succ.rev = i.rev.castSucc.succ := by
+lemma rev_castSucc_succ {i : Fin m} : i.castSucc.succ.rev = i.rev.castSucc.succ := by
   simp_rw [rev_succ, rev_castSucc, succ_castSucc]
 
-lemma rev_succ_castSucc {i : Fin m}: i.succ.castSucc.rev = i.rev.succ.castSucc := by
+lemma rev_succ_castSucc {i : Fin m} : i.succ.castSucc.rev = i.rev.succ.castSucc := by
   simp_rw [← succ_castSucc, rev_castSucc_succ]
 
-lemma castSucc_rev_castSucc {i : Fin m}: i.castSucc.rev.castSucc = i.succ.rev.succ := by
+lemma castSucc_rev_castSucc {i : Fin m} : i.castSucc.rev.castSucc = i.succ.rev.succ := by
   simp_rw [rev_succ, rev_castSucc, succ_castSucc]
 
 lemma last_one : last 1 = 1 := rfl

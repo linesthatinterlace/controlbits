@@ -58,7 +58,7 @@ lemma firstLayer_apply_zero {π : Perm (BV (m + 1))} :
   simp_rw [firstLayer_apply, mergeBitRes_apply_false_zero,
     Fin.cycleMin_zero, getBit_apply_zero]
 
-lemma firstLayer_base  {π : Perm (BV 1)} : FirstLayer (m := 0) π = ![false] := by
+lemma firstLayer_base {π : Perm (BV 1)} : FirstLayer (m := 0) π = ![false] := by
   ext
   simp_rw [eq_zero, firstLayer_apply_zero, Matrix.cons_val_fin_one]
 
@@ -71,7 +71,7 @@ lemma firstLayerPerm_apply {q : BV (m + 1)} : FirstLayerPerm π q =
   bif getBit 0 ((XBackXForth π).CycleMin (mergeBitRes 0 false (getRes 0 q)))
   then flipBit 0 q else q := firstLayer_apply ▸ condFlipBit_apply
 
-lemma firstLayerPerm_base  {π : Perm (BV 1)} : FirstLayerPerm (m := 0) π = 1 := by
+lemma firstLayerPerm_base {π : Perm (BV 1)} : FirstLayerPerm (m := 0) π = 1 := by
   ext
   simp_rw [FirstLayerPerm, firstLayer_base, condFlipBit_apply, Matrix.cons_val_fin_one,
     cond_false, Perm.coe_one, id_eq]
@@ -144,7 +144,8 @@ lemma lastLayerPerm_symm : (LastLayerPerm π).symm = LastLayerPerm π := rfl
 lemma lastLayerPerm_inv : (LastLayerPerm π)⁻¹ = LastLayerPerm π := rfl
 
 @[simp]
-lemma lastLayerPerm_lastLayerPerm : LastLayerPerm π (LastLayerPerm π q) = q := condFlipBit_condFlipBit
+lemma lastLayerPerm_lastLayerPerm : LastLayerPerm π (LastLayerPerm π q) = q :=
+  condFlipBit_condFlipBit
 
 @[simp]
 lemma lastLayerPerm_mul_self : (LastLayerPerm π) * (LastLayerPerm π) = 1 := condFlipBit_mul_self
@@ -305,9 +306,9 @@ match m with
 lemma fromPerm_zero : fromPerm (m := 0) = fun π _ => LastLayer π := rfl
 
 lemma fromPerm_succ {π : Perm (BV (m + 2))} : fromPerm π =
-  piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π), (fun p =>
+    piFinSuccCastSucc.symm ((FirstLayer π, LastLayer π), (fun p =>
     fromPerm ((bitInvarMulEquiv 0).symm (MiddlePerm π) (getBit 0 p)) · (getRes 0 p))) := by
-  simp [fromPerm]
+  simp only [fromPerm, Nat.mul_eq]
   congr
   ext k p
   rcases (getBit 0 p) <;> rfl
@@ -373,7 +374,7 @@ def controlBits1_perm : Perm (BV 2) where
   left_inv s := by
     fin_cases s <;> rfl
   right_inv s := by fin_cases s <;> rfl
-def controlBits1_normal  : ControlBits 1 := ![![false, true], ![false, true], ![true, true]]
+def controlBits1_normal : ControlBits 1 := ![![false, true], ![false, true], ![true, true]]
 --#eval (List.finRange _).map <| ControlBits.toPerm controlBits1
 --#eval ControlBits.fromPerm controlBits1_perm
 --#eval (List.finRange _).map <| ControlBits.toPerm controlBits1_normal

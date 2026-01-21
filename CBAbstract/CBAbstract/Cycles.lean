@@ -220,7 +220,7 @@ lemma cycleMin_le_pow_apply_of_bddBelow_sameCycle (n : ℕ) : CycleMin π x ≤ 
 lemma cycleMin_le_self_of_bddBelow_sameCycle : CycleMin π x ≤ x :=
   cycleMin_le_zpow_apply_of_bddBelow_sameCycle hsb 0
 
-lemma le_cycleMin_iff_of_bddBelow_sameCycle {z : α}:
+lemma le_cycleMin_iff_of_bddBelow_sameCycle {z : α} :
   z ≤ CycleMin π x ↔ ∀ y, π.SameCycle x y → z ≤ y := le_csInf_iff hsb π.sameCycle_nonempty
 
 end BddBelow
@@ -262,10 +262,10 @@ lemma sameCycle_cycleMin [IsWellOrder α (· < ·)] (π : Perm α) (x : α) :
   π.SameCycle x (CycleMin π x) := csInf_mem π.sameCycle_nonempty
 
 lemma cycleMin_exists_zpow_apply [IsWellOrder α (· < ·)] (x : α) :
-    ∃ k : ℤ, (π^k) x = CycleMin π x := π.sameCycle_cycleMin x
+    ∃ k : ℤ, (π ^ k) x = CycleMin π x := π.sameCycle_cycleMin x
 
 lemma cycleMin_exists_pow_apply_of_finite_order [IsWellOrder α (· < ·)] (hn : n > 0)
-    (hnx : (π^n) x = x) : ∃ k < n, (π^k) x = CycleMin π x := by
+    (hnx : (π ^ n) x = x) : ∃ k < n, (π^k) x = CycleMin π x := by
   suffices h : ∃ k, (π ^ k) x = π.CycleMin x by
     rcases h with ⟨k, hk⟩
     refine ⟨k % n, Nat.mod_lt _ hn, (hk.symm.trans ?_).symm⟩
@@ -304,7 +304,7 @@ lemma cycleMin_le_fastCycleMin : CycleMin π x ≤ FastCycleMin i π x := by
   exact cycleMin_le ⟨k, rfl⟩
 
 lemma fastCycleMin_eq_cycleMin_of_zpow_apply_mem_finset [IsWellOrder α (· < ·)]
-    {x : α} (s : Finset α) (hs : s.card ≤ 2^i)
+    {x : α} (s : Finset α) (hs : s.card ≤ 2 ^ i)
     (hxs : ∀ i : ℤ, (π ^ i) x ∈ s) : FastCycleMin i π x = CycleMin π x := by
   refine le_antisymm ?_ cycleMin_le_fastCycleMin
   obtain ⟨k, hk, hkx⟩ := (π.sameCycle_cycleMin x).exists_pow_lt_finset_card_of_apply_zpow_mem s hxs

@@ -319,7 +319,7 @@ lemma getBit_mergeBitRes : getBit i (mergeBitRes i b p) = b := by
 simp_rw [getBit_apply, mergeBitRes_apply, Equiv.apply_symm_apply]
 
 @[simp]
-lemma getRes_mergeBitRes  : getRes i (mergeBitRes i b p) = p := by
+lemma getRes_mergeBitRes : getRes i (mergeBitRes i b p) = p := by
 simp_rw [getRes_apply, mergeBitRes_apply, Equiv.apply_symm_apply]
 
 @[simp]
@@ -509,7 +509,7 @@ lemma bitInvar_mulPerm_of_bitInvar {π ρ : Equiv.Perm (BV (m + 1))} (hπ : bitI
   Equiv.Perm.coe_mul _ _ ▸ bitInvar_mul_of_bitInvar hπ hρ
 
 lemma bitInvar_of_mulPerm_bitInvar_bitInvar {π ρ : Equiv.Perm (BV (m + 1))}
-  (hfg : bitInvar i ⇑(π*ρ : Equiv.Perm (BV (m + 1)))) (h : bitInvar i ⇑π) : bitInvar i ⇑ρ :=
+  (hfg : bitInvar i ⇑(π * ρ : Equiv.Perm (BV (m + 1)))) (h : bitInvar i ⇑π) : bitInvar i ⇑ρ :=
   bitInvar_of_mul_bitInvar_bitInvar hfg h
 
 lemma onePerm_bitInvar {i : Fin (m + 1)} : bitInvar i ⇑(1 : Equiv.Perm (BV (m + 1))) :=
@@ -556,7 +556,7 @@ lemma mem_bitInvarSubgroup_of_coe_mem_bitInvarSubmonoid {i : Fin (m + 1)}
 lemma coe_mem_bitInvarSubmonoid_of_mem_bitInvarSubgroup {i : Fin (m + 1)}
   {π : Equiv.Perm (BV (m + 1))} (h : π ∈ bitInvarSubgroup i) : ⇑π ∈ bitInvarSubmonoid i := h
 
-lemma mem_bitInvarSubgroup_iff_coe_unit_mem {i : Fin (m + 1)}: ∀ π, π ∈ bitInvarSubgroup i ↔
+lemma mem_bitInvarSubgroup_iff_coe_unit_mem {i : Fin (m + 1)} : ∀ π, π ∈ bitInvarSubgroup i ↔
     (Equiv.Perm.equivUnitsEnd π).val ∈ bitInvarSubmonoid i :=
   fun _ => Iff.rfl
 
@@ -605,11 +605,11 @@ lemma bitInvarMulEquiv_apply_val_symm_apply (i : Fin (m + 1))
   mergeBitRes i (getBit i q) (πeo⁻¹ (getBit i q) (getRes i q)) := rfl
 
 @[simp]
-lemma bitInvarMulEquiv_symm_apply_apply (i : Fin (m + 1)) (π : ↥(bitInvarSubgroup i)):
+lemma bitInvarMulEquiv_symm_apply_apply (i : Fin (m + 1)) (π : ↥(bitInvarSubgroup i)) :
   ((bitInvarMulEquiv i).symm) π b p = getRes i (π.1 (mergeBitRes i b p)) := rfl
 
 @[simp]
-lemma bitInvarMulEquiv_symm_apply_symm_apply (i : Fin (m + 1)) (π : ↥(bitInvarSubgroup i)):
+lemma bitInvarMulEquiv_symm_apply_symm_apply (i : Fin (m + 1)) (π : ↥(bitInvarSubgroup i)) :
   (((bitInvarMulEquiv i).symm) π b).symm p = getRes i (π⁻¹.1 (mergeBitRes i b p)) := rfl
 
 end Equivs
@@ -896,7 +896,7 @@ bif c (getRes i q) then !(getBit i q) else getBit i q := by
 rcases (c (getRes i q)).dichotomy with hc | hc <;>
 simp only [condFlipBit_apply, cond_false, hc, cond_true, getBit_flipBit_of_eq]
 
-lemma getBit_condFlipBit_of_ne {i j : Fin (m + 1)} (hij: i ≠ j):
+lemma getBit_condFlipBit_of_ne {i j : Fin (m + 1)} (hij : i ≠ j) :
   getBit i ((condFlipBit j c) q) = getBit i q := by
   rw [condFlipBit_apply]
   rcases (c (getRes j q)).dichotomy with (h | h) <;> simp_rw [h]
@@ -931,7 +931,7 @@ lemma condFlipBit_zero_mergeBitRes :
 condFlipBit 0 c (mergeBitRes 0 b p) = finProdFinEquiv (p, bif xor (c p) b then 1 else 0) := by
   simp_rw [condFlipBit_mergeBitRes, mergeBitRes_zero]
 
-lemma condFlipBit_zero_mergeBitRes_true  :
+lemma condFlipBit_zero_mergeBitRes_true :
 condFlipBit 0 c (mergeBitRes 0 true p) = finProdFinEquiv (p, bif c p then 0 else 1) := by
   simp_rw [condFlipBit_zero_mergeBitRes, Bool.xor_true, Bool.cond_not]
 
