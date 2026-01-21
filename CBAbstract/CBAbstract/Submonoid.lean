@@ -1,13 +1,7 @@
 import Mathlib.Algebra.Group.Submonoid.Units
+import Mathlib.Algebra.Group.Pi.Units
 
 namespace MulEquiv
-
-def piUnits {α : Type*} {β : α → Type*} [∀ a, Monoid (β a)] : (∀ a, β a)ˣ ≃* (∀ a, (β a)ˣ) where
-  toFun f a := ⟨f.val a, f.inv a, congr_fun f.mul_inv a, congr_fun f.inv_mul a⟩
-  invFun f := ⟨(f ·), (f⁻¹ ·), funext (f · |>.mul_inv), funext (f · |>.inv_mul)⟩
-  left_inv _ := Units.ext <| funext fun _ => rfl
-  right_inv _ := funext fun _ => Units.ext rfl
-  map_mul' _ _ := funext fun _ => Units.ext rfl
 
 def subtypeMulEquiv {M₁ M₂ : Type*} [Monoid M₁] [Monoid M₂] (e : M₁ ≃* M₂)
   {S : Submonoid M₁} {T : Submonoid M₂} (h : ∀ s, s ∈ S ↔ (e s) ∈ T) : S ≃* T where
