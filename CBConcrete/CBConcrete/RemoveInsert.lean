@@ -1,5 +1,3 @@
-import CBConcrete.Lib.Bool
-import CBConcrete.Lib.Equiv
 import CBConcrete.Lib.Finset
 import CBConcrete.PermOf.MulAction
 

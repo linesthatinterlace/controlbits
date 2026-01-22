@@ -78,11 +78,9 @@ theorem period_le_of_lt (a : PermOf n) {i : ℕ} (hi : i < n) : MulAction.period
     (Finset.card_range _)
   simp_rw [Finset.card_range, Finset.mem_range, getElem_lt, implies_true]
 
-theorem period_le_of_ne_zero [NeZero n] (a : PermOf n) {i : ℕ} : MulAction.period a i ≤ n := by
-  rcases lt_or_ge i n with hi | hi
-  · exact a.period_le_of_lt hi
-  · rw [a.period_eq_one_of_ge hi]
-    exact NeZero.pos n
+theorem period_le_of_neZero [NeZero n] (a : PermOf n) {i : ℕ} : MulAction.period a i ≤ n :=
+  (lt_or_ge i n).by_cases
+  a.period_le_of_lt <| NeZero.one_le.trans_eq' ∘ Eq.symm ∘ a.period_eq_one_of_ge
 
 theorem exists_pos_le_pow_getElem_eq (a : PermOf n) {i : ℕ} (hi : i < n) :
     ∃ k, 0 < k ∧ k ≤ n ∧ (a ^ k)[i] = i :=
