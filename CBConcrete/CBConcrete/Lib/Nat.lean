@@ -1,7 +1,6 @@
 import Mathlib.Tactic.SimpRw
 import Mathlib.Data.Nat.Size
 import Mathlib.Data.Nat.Bitwise
-import CBConcrete.Lib.Bool
 
 namespace Nat
 

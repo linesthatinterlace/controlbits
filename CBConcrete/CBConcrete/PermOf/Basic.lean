@@ -3,22 +3,6 @@ import Mathlib.Algebra.Group.Action.Basic
 import Mathlib.Algebra.Group.MinimalAxioms
 import Mathlib.Data.Finite.Prod
 
-namespace Equiv
-
-variable {α β : Type*} [DecidableEq α]
-
-theorem swap_smul {R : Type*} [Group R] [MulAction R α] {i j k : α} {r : R} :
-    swap (r • i) (r • j) (r • k) = r • swap i j k :=
-  (MulAction.injective r).swap_apply _ _ _
-
-theorem swap_prop (p : α → Prop) {i j k : α} (hk : k ≠ i → k ≠ j → p k)
-    (hi : k = j → p i) (hj : k = i → p j) : p (swap i j k) := by grind
-
-theorem swap_prop_const (p : α → Prop) {i j k : α} (hk : p k)
-    (hi : p i) (hj : p j) : p (swap i j k) := by grind
-
-end Equiv
-
 /--
 A `PermOf n` is a permutation on `n` elements represented by two vectors, which we can
 think of as an array of values and a corresponding array of indexes which are inverse to
@@ -366,16 +350,18 @@ theorem getElem_inv_swap :
     (a.swap i j hi hj)⁻¹[k] = if k = a[i] then j else if k = a[j] then i else a⁻¹[k] := by
   dsimp [swap]; grind
 
+theorem inv_swap : (a.swap i j hi hj)⁻¹ = a⁻¹.swap a[i] a[j] := by grind
+
 theorem swap_smul_eq_smul_swap :
     (a.swap i j hi hj) • k = a • (Equiv.swap i j k) := by grind
 
-theorem swap_inv_eq_swap_apply_inv_smul :
+theorem inv_swap_eq_swap_apply_inv_smul :
   (a.swap i j hi hj)⁻¹ • k = Equiv.swap i j (a⁻¹ • k) := by grind
 
 theorem swap_smul_eq_swap_apply_smul :
     (a.swap i j hi hj) • k = Equiv.swap (a • i) (a • j) (a • k) := by grind
 
-theorem swap_inv_smul_eq_inv_smul_swap : (a.swap i j hi hj)⁻¹ • k =
+theorem inv_swap_smul_eq_inv_smul_swap : (a.swap i j hi hj)⁻¹ • k =
     a⁻¹ • (Equiv.swap (a • i) (a • j) k) := by grind
 
 theorem swap_smul_left :
@@ -387,13 +373,13 @@ theorem swap_smul_right :
 theorem swap_smul_of_ne_of_ne {k} :
   k ≠ i → k ≠ j → (a.swap i j hi hj) • k = a • k := by grind
 
-theorem swap_inv_smul_left :
+theorem inv_swap_smul_left :
     (a.swap i j hi hj)⁻¹ • (a • i) = j := by grind
 
-theorem swap_inv_smul_right :
+theorem inv_swap_smul_right :
     (a.swap i j hi hj)⁻¹ • (a • j) = i := by grind
 
-theorem swap_inv_smul_of_ne_of_ne {k} :
+theorem inv_swap_smul_of_ne_of_ne {k} :
   k ≠ a • i → k ≠ a • j → (a.swap i j hi hj)⁻¹ • k = a⁻¹ • k := by grind
 
 @[simp]
@@ -409,30 +395,22 @@ theorem getElem_inv_one_swap : (swap 1 i j hi hj)⁻¹[k] = Equiv.swap i j k := 
 
 theorem one_swap_smul : (swap 1 i j hi hj) • k = Equiv.swap i j k := by grind
 
-theorem one_swap_inv_smul : (swap 1 i j hi hj)⁻¹ • k = Equiv.swap i j k := by grind [inv_one]
+theorem inv_one_swap_smul : (swap 1 i j hi hj)⁻¹ • k = Equiv.swap i j k := by grind [inv_one]
 
 theorem one_swap_mul_self : swap 1 i j hi hj * swap 1 i j hi hj = 1 := by grind
 
-theorem one_swap_inverse : (swap 1 i j hi hj)⁻¹ = swap 1 i j hi hj := by
-  ext : 1
-  rw [getElem_one_swap, getElem_inv_one_swap]
+theorem inv_one_swap : (swap 1 i j hi hj)⁻¹ = swap 1 i j hi hj := by grind
 
 theorem swap_eq_mul_one_swap : a.swap i j hi hj = a * swap 1 i j hi hj := by grind
 
-theorem swap_eq_one_swap_mul (hi' : a • i < n := a.smul_lt_iff_lt.mpr hi)
-    (hj' : a • j < n := a.smul_lt_iff_lt.mpr hj) :
-    a.swap i j hi hj = swap 1 _ _ hi' hj' * a := by
-  rw [eq_iff_smul_eq_smul_lt]
-  simp_rw [mul_smul, one_swap_smul, swap_smul_eq_smul_swap, swap_smul, implies_true]
+theorem swap_eq_one_swap_mul : a.swap i j hi hj = swap 1 a[i] a[j] (by grind) (by grind) * a := by
+  grind
 
-theorem swap_inv_eq_one_swap_mul :
-    (a.swap i j hi hj)⁻¹ = swap 1 i j hi hj * a⁻¹ := by
-  rw [swap_eq_mul_one_swap, mul_inv_rev, one_swap_inverse]
+theorem inv_swap_eq_one_swap_mul :
+    (a.swap i j hi hj)⁻¹ = swap 1 i j hi hj * a⁻¹ := by grind
 
-theorem swap_inv_eq_mul_one_swap (hi' : a • i < n := a.smul_lt_iff_lt.mpr hi)
-    (hj' : a • j < n := a.smul_lt_iff_lt.mpr hj) :
-    (a.swap i j hi hj)⁻¹ = a⁻¹ * swap 1 _ _ hi' hj' := by
-  rw [swap_eq_one_swap_mul, mul_inv_rev, mul_right_inj, one_swap_inverse]
+theorem inv_swap_eq_mul_one_swap :
+    (a.swap i j hi hj)⁻¹ = a⁻¹ * swap 1 a[i] a[j] (by grind) (by grind) := by grind
 
 end Swap
 
