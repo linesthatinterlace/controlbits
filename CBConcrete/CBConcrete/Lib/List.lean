@@ -53,4 +53,9 @@ theorem forall_getElem_push (p : α → Prop) {c : List α} (b : α) {k : Nat}  
     (∀ (hk : k < (c ++ [b]).length), p (c ++ [b])[k]) ↔
     (k = c.length → p b) ∧ ∀ (hk : k < c.length), p c[k] := by grind
 
+/-
+theorem forall_mem_of_lt_length_iff_nodup_lt_length_of_mem {xs : List Nat} :
+    (∀ x < xs.length, x ∈ xs) ↔ xs.Nodup ∧ ∀ x ∈ xs, x < xs.length := sorry
+-/
+
 end List

@@ -1,4 +1,5 @@
 import Batteries.Data.Vector.Lemmas
+import Batteries.Data.List.Lemmas
 import CBConcrete.Lib.Array
 import CBConcrete.Lib.Nat
 import CBConcrete.Lib.Fin
@@ -152,17 +153,22 @@ def Nodup (v : Vector α n) : Prop := ∀ {i} (hi : i < n) {j} (hj : j < n), v[i
 
 section Nodup
 
-@[grind =]
 theorem Nodup.getElem_inj_iff {i j : ℕ} {hi : i < n} {hj : j < n}
     (hv : v.Nodup) : v[i] = v[j] ↔ i = j := ⟨hv _ _, fun h => h ▸ rfl⟩
 
 theorem Nodup.getElem_ne_iff {i j : ℕ} {hi : i < n} {hj : j < n}
     (hv : v.Nodup) : v[i] ≠ v[j] ↔ i ≠ j := by simp_rw [ne_eq, hv.getElem_inj_iff]
 
+
+@[grind =]
+theorem nodup_iff_getElem_inj :
+    v.Nodup ↔ ∀ {i} {hi : i < n} {j} {hj : j < n}, v[i]'hi = v[j]'hj → i = j := by grind [Nodup]
+
+theorem nodup_empty : Nodup (#v[] : Vector α 0) := by grind
+
 @[grind =]
 theorem nodup_iff_getElem_ne_getElem :
-    v.Nodup ↔ ∀ {i j}, (hij : i < j) → (hj : j < n) → v[i] ≠ v[j] :=
-  ⟨by grind, fun _ _ _ _ _ => Function.mtr <| by grind⟩
+    v.Nodup ↔ ∀ {i j}, (hij : i < j) → (hj : j < n) → v[i] ≠ v[j] := by grind [Nodup]
 
 theorem nodup_iff_injective_getElem : v.Nodup ↔ Injective (fun (i : Fin n) => v[(i : ℕ)]) := by
   unfold Injective Nodup
@@ -175,6 +181,11 @@ theorem nodup_iff_injective_get : v.Nodup ↔ Injective v.get := by
 theorem toList_nodup_iff_nodup : v.toList.Nodup ↔ v.Nodup := by
   grind [List.pairwise_iff_getElem]
 
+@[simp, grind =]
+theorem nodup_push {v : Vector α n} {x : α} : Nodup (v.push x) ↔ v.Nodup ∧ ¬ x ∈ v := by
+  grind [toList_nodup_iff_nodup, Vector.toList_push, mem_toList_iff]
+
+@[grind =>]
 theorem Nodup.nodup_toList (hv : v.Nodup) : v.toList.Nodup := toList_nodup_iff_nodup.mpr hv
 
 theorem _root_.List.Nodup.nodup_of_nodup_toList (hv : v.toList.Nodup) : v.Nodup :=
