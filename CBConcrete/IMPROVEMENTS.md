@@ -61,6 +61,8 @@ These names don't convey the mathematical content. `pushEq` embeds `PermOf n` in
 
 `MonoidHom.lean` is large and contains several logically distinct sections: `IsCongr`, `Cast`, `pushEq`/`popOfEq`, `push`/`pop`, `decomposeFin`, `castAdd`, `castGE`, `natPerm`/`natPermEquiv`, `finPermEquiv`, `minLen`/`minPerm`, `FinitePerm`, and `ofPermOf`. Splitting into separate files (e.g., `PermOf/Congr.lean`, `PermOf/Embed.lean`, `PermOf/MinPerm.lean`, `PermOf/FinitePerm.lean`) would make navigation easier and reduce build times when only part of the API changes.
 
+**Plan:** [plans/09-split-monoidhom.md](plans/09-split-monoidhom.md)
+
 ## 10. `CycleMinVectorAux` naming
 
 The `Aux` suffix is a Lean convention for helper definitions, but `CycleMinVectorAux` returns a `PermOf n × Vector ℕ n` where the first component tracks `a^(2^i)`. The pairing is an implementation detail of the doubling algorithm. Consider making it `private` or `protected` if it's not meant to be part of the public API.
