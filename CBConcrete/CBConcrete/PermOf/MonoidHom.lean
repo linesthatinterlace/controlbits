@@ -1,6 +1,9 @@
 import CBConcrete.PermOf.Basic
 import Mathlib.Algebra.Group.Action.End
-import Mathlib
+import Mathlib.Algebra.Group.Subgroup.Ker
+import Mathlib.Data.Nat.Lattice
+import Mathlib.Order.CompletePartialOrder
+import Mathlib.SetTheory.Cardinal.Finite
 namespace Equiv
 
 variable {α β : Type*}
@@ -205,11 +208,11 @@ variable {m n o : ℕ}
   getElem_invVector_getElem_toVector := by simp_rw [Vector.getElem_cast]; grind
 
 @[simp]
-theorem getElem_cast (hnm : n = m) (a : PermOf n) {i : ℕ} (hi : i < m):
+theorem getElem_cast (hnm : n = m) (a : PermOf n) {i : ℕ} (hi : i < m) :
     (a.cast hnm)[i] = a[i] := rfl
 
 @[simp]
-theorem getElem_inv_cast (hnm : n = m) (a : PermOf n) {i : ℕ} (hi : i < m):
+theorem getElem_inv_cast (hnm : n = m) (a : PermOf n) {i : ℕ} (hi : i < m) :
     (a.cast hnm)⁻¹[i] = a⁻¹[i] := rfl
 
 @[simp] theorem cast_rfl (a : PermOf n) : a.cast rfl = a := rfl
@@ -274,14 +277,13 @@ theorem cast_isCongr_cast_iff_isCongr {n' m' : ℕ} {a : PermOf n}
     (a.cast hnm).IsCongr (b.cast hnm') ↔ a.IsCongr b := by
   simp_rw [cast_left_isCongr, cast_right_isCongr]
 
-theorem cast_isCongr_cast {k : ℕ}  {a : PermOf n} {hnm : n = m} {hnk : n = k} :
+theorem cast_isCongr_cast {k : ℕ} {a : PermOf n} {hnm : n = m} {hnk : n = k} :
     (a.cast hnk).IsCongr (a.cast hnm) := by
   simp_rw [cast_isCongr_cast_iff_isCongr, isCongr_iff_eq]
 
 /--
 When `n = m`, `PermOf n` is multiplicatively congruent to `PermOf m`.
 -/
-
 @[simps! apply symm_apply]
 def castMulEquiv (hnm : n = m) : PermOf n ≃* PermOf m where
   toFun := PermOf.cast hnm
@@ -426,18 +428,25 @@ theorem exists_pushEq_apply {a : PermOf (n + 1)} :
     fun ha => ⟨a.popOfEq ha, a.pushEq_popOfEq ha⟩⟩
 
 theorem range_pushEq :
-    Set.range (pushEq (n := n)) = {a : PermOf (n + 1) | a[n] = n} := Set.ext <| fun _ => by
-  simp_rw [Set.mem_range, exists_pushEq_apply, Set.mem_setOf_eq]
+    Set.range (pushEq (n := n)) = {a : PermOf (n + 1) | a[n] = n} := by
+  ext x
+  exact ⟨fun ⟨_, ha⟩ => ha ▸ getElem_pushEq_of_eq,
+    fun hx => ⟨x.popOfEq hx, pushEq_popOfEq x hx⟩⟩
 
 theorem coe_range_pushEqHom :
-    (pushEqHom (n := n)).range = {a : PermOf (n + 1) | a[n] = n} := range_pushEq
+    (pushEqHom (n := n)).range = {a : PermOf (n + 1) | a[n] = n} := by
+  ext x
+  refine ⟨fun ⟨_, ha⟩ => ?_, fun hx => ⟨x.popOfEq hx, ?_⟩⟩
+  · rw [← ha]; simp [pushEqHom_apply]
+  · simp [pushEqHom_apply]
 
 end PopOfEq
 
 def push {n : ℕ} (i : Fin (n + 1)) : PermOf n → PermOf (n + 1) :=
   i.lastCases pushEq (fun i a => a.pushEq.swap a⁻¹[i.1] n (by grind))
 
-def pop {n : ℕ} (a : PermOf (n + 1)) : PermOf n := (a.swap a⁻¹[n] n).popOfEq (by grind)
+def pop {n : ℕ} (a : PermOf (n + 1)) : PermOf n :=
+  (a.swap a⁻¹[n] n (getElem_lt _)).popOfEq (by grind)
 
 section PushPop
 
@@ -463,11 +472,13 @@ theorem getElem_inv_push {a : PermOf n} {k} {hk : k < n + 1} :
 
 @[grind =]
 theorem getElem_pop {a : PermOf (n + 1)} {k} {hk : k < n} :
-    (a.pop)[k] = if a[k] = n then a[a[k]] else if k = n then n else a[k] := by grind [pop]
+    (a.pop)[k] = if a[k] = n then a[a[k]]'(getElem_lt _)
+      else if k = n then n else a[k] := by grind [pop]
 
 @[grind =]
 theorem getElem_inv_pop {a : PermOf (n + 1)} {k} {hk : k < n} :
-    (a.pop)⁻¹[k] = if a⁻¹[k] = n then a⁻¹[a⁻¹[k]] else if k = n then n else a⁻¹[k] := by
+    (a.pop)⁻¹[k] = if a⁻¹[k] = n then a⁻¹[a⁻¹[k]]'(getElem_lt _)
+      else if k = n then n else a⁻¹[k] := by
   grind [pop]
 
 @[simp, grind =]
@@ -608,7 +619,7 @@ theorem castGE_of_eq (hnm : n = m) :
     a.castGE hnm.le = a.cast hnm := by
   simp_rw [eq_iff_smul_eq_smul, castGE_smul, cast_smul, implies_true]
 
-@[simp] theorem castGE_rfl  :
+@[simp] theorem castGE_rfl :
     a.castGE le_rfl = a := by simp_rw [castGE_of_eq rfl, cast_rfl]
 
 @[simp]
@@ -704,7 +715,7 @@ theorem getElem_ofFixGENat_apply (e : FixGENat n)
   unfold ofFixGENat
   simp_rw [MonoidHom.coe_mk, OneHom.coe_mk, getElem_ofFn]
 
-theorem getElem_inv_ofFixGENat_apply_mk  (e : FixGENat n)
+theorem getElem_inv_ofFixGENat_apply_mk (e : FixGENat n)
     {i : ℕ} (hi : i < n) : (ofFixGENat e)⁻¹[i] = e⁻¹.1 i := by
   unfold ofFixGENat
   simp_rw [MonoidHom.coe_mk, OneHom.coe_mk, InvMemClass.coe_inv, getElem_inv_ofFn]
@@ -726,7 +737,6 @@ end OfFixGENat
 /--
 `natPerm` is the monoid homomorphism from `PermOf n` to `Perm ℕ`.
 -/
-
 @[simps!]
 def natPerm {n : ℕ} : PermOf n →* Perm ℕ := MulAction.toPermHom (PermOf n) ℕ
 
@@ -822,6 +832,95 @@ theorem natPermEquiv_castGE {a : PermOf n} (hnm : n ≤ m) :
   simp_rw [Subgroup.coe_inclusion, natPermEquiv_apply_coe_apply, castGE_smul]
 
 end NatPermEquiv
+
+/--
+`finPerm` is the monoid homomorphism from `PermOf n` to `Perm (Fin n)`.
+-/
+@[simps!]
+def finPerm {n : ℕ} : PermOf n →* Perm (Fin n) where
+  toFun a := ⟨fun i => ⟨a[i.1], a.getElem_lt⟩, fun i => ⟨a⁻¹[i.1], getElem_lt _⟩,
+    fun _ => by ext; simp, fun _ => by ext; simp⟩
+  map_one' := by ext ⟨_, _⟩; simp [getElem_one]
+  map_mul' _ _ := by ext ⟨_, _⟩; simp [getElem_mul]
+
+section FinPerm
+
+variable {n : ℕ}
+
+@[simp]
+theorem finPerm_apply_val {a : PermOf n} {i : Fin n} :
+    (finPerm a i).val = a[i.1] := rfl
+
+@[simp]
+theorem finPerm_apply_symm_val {a : PermOf n} {i : Fin n} :
+    ((finPerm a).symm i).val = a⁻¹[i.1] := rfl
+
+theorem finPerm_injective : Function.Injective (finPerm (n := n)) := by
+  intro a b hab
+  ext i hi
+  have := congr_arg (fun e => (e ⟨i, hi⟩).val) hab
+  simpa using this
+
+theorem finPerm_inj {a b : PermOf n} : finPerm a = finPerm b ↔ a = b :=
+  finPerm_injective.eq_iff
+
+end FinPerm
+
+/--
+`ofFinPerm` is the monoid homomorphism from `Perm (Fin n)` to `PermOf n`.
+-/
+def ofFinPerm {n : ℕ} : Perm (Fin n) →* PermOf n where
+  toFun e := ofFn (fun i => (e i).val) (fun i => (e⁻¹ i).val)
+    (fun i => (e i).isLt)
+    (fun i => by simp)
+  map_one' := PermOf.ext <| fun _ _ => by simp [getElem_ofFn]
+  map_mul' _ _ := PermOf.ext <| fun _ _ => by simp [getElem_ofFn, getElem_mul]
+
+section OfFinPerm
+
+variable {n : ℕ}
+
+@[simp]
+theorem ofFinPerm_getElem {e : Perm (Fin n)} {i : ℕ} (hi : i < n) :
+    (ofFinPerm e)[i] = (e ⟨i, hi⟩).val := by
+  unfold ofFinPerm
+  simp_rw [MonoidHom.coe_mk, OneHom.coe_mk, getElem_ofFn]
+
+@[simp]
+theorem ofFinPerm_smul {e : Perm (Fin n)} {i : ℕ} :
+    (ofFinPerm e) • i = if h : i < n then (e ⟨i, h⟩).val else i := by
+  simp_rw [smul_eq_dite, ofFinPerm_getElem]
+
+@[simp]
+theorem finPerm_ofFinPerm {e : Perm (Fin n)} : finPerm (ofFinPerm e) = e := by
+  ext ⟨i, hi⟩
+  simp [ofFinPerm_getElem]
+
+@[simp]
+theorem ofFinPerm_finPerm {a : PermOf n} : ofFinPerm (finPerm a) = a := by
+  ext i hi
+  simp [ofFinPerm_getElem]
+
+end OfFinPerm
+
+/--
+`finPermEquiv` is the multiplicative equivalence between `PermOf n` and `Perm (Fin n)`.
+-/
+@[simps! apply symm_apply]
+def finPermEquiv {n : ℕ} : PermOf n ≃* Perm (Fin n) :=
+  MonoidHom.toMulEquiv finPerm ofFinPerm
+    (MonoidHom.ext <| fun _ => ofFinPerm_finPerm)
+    (MonoidHom.ext <| fun _ => finPerm_ofFinPerm)
+
+section FinPermEquiv
+
+variable {n : ℕ}
+
+@[simp]
+theorem finPermEquiv_symm_apply_getElem {e : Perm (Fin n)} {i : ℕ} (hi : i < n) :
+    (finPermEquiv.symm e)[i] = (e ⟨i, hi⟩).val := ofFinPerm_getElem _
+
+end FinPermEquiv
 
 def minLen {n : ℕ} (a : PermOf n) : ℕ := match n with
   | 0 => 0
@@ -971,7 +1070,7 @@ theorem minPerm_succ {a : PermOf (n + 1)} :
     then (a.popOfEq ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm
     else a.cast (minLen_succ_of_getElem_ne ha).symm := rfl
 
-@[simp] theorem minPerm_succ_of_getElem_eq {a : PermOf (n + 1)}  (ha : a[n] = n) :
+@[simp] theorem minPerm_succ_of_getElem_eq {a : PermOf (n + 1)} (ha : a[n] = n) :
     a.minPerm = (a.popOfEq ha).minPerm.cast (minLen_succ_of_getElem_eq _).symm := by
   simp_rw [minPerm_succ, ha, dite_true]
 
@@ -1153,18 +1252,18 @@ instance mul : Mul FinitePerm where
     (b.toPermOf.castGE (le_max_right a.len b.len)))
   ⟨ab.minLen, ab.minPerm, minLen_minPerm⟩
 
-theorem mul_len (b : FinitePerm): (a * b).len =
+theorem mul_len (b : FinitePerm) : (a * b).len =
       (a.toPermOf.castGE (le_max_left a.len b.len) * b.toPermOf.castGE
       (le_max_right a.len b.len)).minLen := rfl
 
-theorem mul_toPermOf (b : FinitePerm): (a * b).toPermOf =
-      ( a.toPermOf.castGE (le_max_left a.len b.len) * b.toPermOf.castGE
+theorem mul_toPermOf (b : FinitePerm) : (a * b).toPermOf =
+      (a.toPermOf.castGE (le_max_left a.len b.len) * b.toPermOf.castGE
       (le_max_right a.len b.len)).minPerm := rfl
 
 instance : Inv FinitePerm where
   inv a := ⟨a.len, a.toPermOf⁻¹, minLen_inv.trans a.toPermOf_minLen⟩
 
-theorem inv_len (a : FinitePerm): (a⁻¹).len = a.len := rfl
+theorem inv_len (a : FinitePerm) : (a⁻¹).len = a.len := rfl
 
 theorem inv_toPermOf : (a⁻¹).toPermOf = a.toPermOf⁻¹ := rfl
 
