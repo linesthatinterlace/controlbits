@@ -428,17 +428,11 @@ theorem exists_pushEq_apply {a : PermOf (n + 1)} :
     fun ha => ⟨a.popOfEq ha, a.pushEq_popOfEq ha⟩⟩
 
 theorem range_pushEq :
-    Set.range (pushEq (n := n)) = {a : PermOf (n + 1) | a[n] = n} := by
-  ext x
-  exact ⟨fun ⟨_, ha⟩ => ha ▸ getElem_pushEq_of_eq,
-    fun hx => ⟨x.popOfEq hx, pushEq_popOfEq x hx⟩⟩
+    Set.range (pushEq (n := n)) = {a : PermOf (n + 1) | a[n] = n} := Set.ext <| fun a =>
+  ⟨fun ⟨_, ha⟩ => ha ▸ getElem_pushEq_of_eq, fun ha => ⟨a.popOfEq ha, pushEq_popOfEq _ _⟩⟩
 
 theorem coe_range_pushEqHom :
-    (pushEqHom (n := n)).range = {a : PermOf (n + 1) | a[n] = n} := by
-  ext x
-  refine ⟨fun ⟨_, ha⟩ => ?_, fun hx => ⟨x.popOfEq hx, ?_⟩⟩
-  · rw [← ha]; simp [pushEqHom_apply]
-  · simp [pushEqHom_apply]
+    (pushEqHom (n := n)).range = {a : PermOf (n + 1) | a[n] = n} := a.range_pushEq
 
 end PopOfEq
 
@@ -855,15 +849,6 @@ theorem finPerm_apply_val {a : PermOf n} {i : Fin n} :
 theorem finPerm_apply_symm_val {a : PermOf n} {i : Fin n} :
     ((finPerm a).symm i).val = a⁻¹[i.1] := rfl
 
-theorem finPerm_injective : Function.Injective (finPerm (n := n)) := by
-  intro a b hab
-  ext i hi
-  have := congr_arg (fun e => (e ⟨i, hi⟩).val) hab
-  simpa using this
-
-theorem finPerm_inj {a b : PermOf n} : finPerm a = finPerm b ↔ a = b :=
-  finPerm_injective.eq_iff
-
 end FinPerm
 
 /--
@@ -882,24 +867,17 @@ variable {n : ℕ}
 
 @[simp]
 theorem ofFinPerm_getElem {e : Perm (Fin n)} {i : ℕ} (hi : i < n) :
-    (ofFinPerm e)[i] = (e ⟨i, hi⟩).val := by
-  unfold ofFinPerm
-  simp_rw [MonoidHom.coe_mk, OneHom.coe_mk, getElem_ofFn]
+    (ofFinPerm e)[i] = (e ⟨i, hi⟩).val := by simp [ofFinPerm]
 
 @[simp]
 theorem ofFinPerm_smul {e : Perm (Fin n)} {i : ℕ} :
-    (ofFinPerm e) • i = if h : i < n then (e ⟨i, h⟩).val else i := by
-  simp_rw [smul_eq_dite, ofFinPerm_getElem]
+    (ofFinPerm e) • i = if h : i < n then (e ⟨i, h⟩).val else i := by simp [smul_eq_dite]
 
 @[simp]
-theorem finPerm_ofFinPerm {e : Perm (Fin n)} : finPerm (ofFinPerm e) = e := by
-  ext ⟨i, hi⟩
-  simp [ofFinPerm_getElem]
+theorem finPerm_ofFinPerm {e : Perm (Fin n)} : finPerm (ofFinPerm e) = e := by ext; simp
 
 @[simp]
-theorem ofFinPerm_finPerm {a : PermOf n} : ofFinPerm (finPerm a) = a := by
-  ext i hi
-  simp [ofFinPerm_getElem]
+theorem ofFinPerm_finPerm {a : PermOf n} : ofFinPerm (finPerm a) = a := by ext; simp
 
 end OfFinPerm
 
@@ -911,16 +889,6 @@ def finPermEquiv {n : ℕ} : PermOf n ≃* Perm (Fin n) :=
   MonoidHom.toMulEquiv finPerm ofFinPerm
     (MonoidHom.ext <| fun _ => ofFinPerm_finPerm)
     (MonoidHom.ext <| fun _ => finPerm_ofFinPerm)
-
-section FinPermEquiv
-
-variable {n : ℕ}
-
-@[simp]
-theorem finPermEquiv_symm_apply_getElem {e : Perm (Fin n)} {i : ℕ} (hi : i < n) :
-    (finPermEquiv.symm e)[i] = (e ⟨i, hi⟩).val := ofFinPerm_getElem _
-
-end FinPermEquiv
 
 def minLen {n : ℕ} (a : PermOf n) : ℕ := match n with
   | 0 => 0
